@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: coin-tracker-web
+    env: python
+    plan: free
+    buildCommand: "cd web && pip install -r requirements.txt"
+    startCommand: "cd web && gunicorn app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
