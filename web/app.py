@@ -68,23 +68,28 @@ class WebCoinTracker:
                 doc = doc_ref.get()
                 if doc.exists:
                     data = doc.to_dict()
-                    transactions_dict = data.get('transactions', {})
+                    transactions_data = data.get('transactions', [])
                     settings = data.get('settings', {'goal': 13500})
 
-                    # Convert the dictionary to a sorted list
-                    transactions = [
-                        item[1] for item in sorted(
-                            transactions_dict.items(),
-                            key=lambda item: int(item[0])
-                        )
-                    ]
+                    # Check if transactions_data is a dictionary and convert it
+                    if isinstance(transactions_data, dict):
+                        transactions = [
+                            item[1] for item in sorted(
+                                transactions_data.items(),
+                                key=lambda item: int(item[0])
+                            )
+                        ]
+                    else:
+                        transactions = transactions_data
 
                     return transactions, settings
                 else:
+                    # Return empty data and a default settings dict if no document exists
                     return [], {'goal': 13500}
             except Exception as e:
+                # Log the error and return empty data to prevent app crash
                 print(f"Firebase load error: {e}")
-                return None, None
+                return [], {'goal': 13500}
         else:
             return session.get('transactions', []), session.get('settings', {'goal': 13500})
 
