@@ -66,18 +66,27 @@ class WebCoinTracker:
             try:
                 doc_ref = self.db.collection('users').document(self.user_id)
                 doc = doc_ref.get()
-                
                 if doc.exists:
                     data = doc.to_dict()
-                    return data.get('transactions', []), data.get('settings', {})
+                    transactions_dict = data.get('transactions', {})
+                    settings = data.get('settings', {'goal': 13500})
+
+                    # Convert the dictionary to a sorted list
+                    transactions = [
+                        item[1] for item in sorted(
+                            transactions_dict.items(),
+                            key=lambda item: int(item[0])
+                        )
+                    ]
+
+                    return transactions, settings
                 else:
-                    return [], {"goal": 13500, "dark_mode": False}
+                    return [], {'goal': 13500}
             except Exception as e:
                 print(f"Firebase load error: {e}")
-                return [], {"goal": 13500, "dark_mode": False}
+                return None, None
         else:
-            # Fallback to session
-            return session.get('transactions', []), session.get('settings', {"goal": 13500, "dark_mode": False})
+            return session.get('transactions', []), session.get('settings', {'goal': 13500})
 
     def save_data(self, transactions, settings):
         if self.db and FIREBASE_AVAILABLE:
