@@ -88,7 +88,7 @@ class WebCoinTracker:
                     'settings': settings,
                     'last_updated': dt_now_iso()
                 }
-                doc_ref.set(user_data)
+                doc_ref.set(user_data, merge=True) # <-- Add this part
                 return True
             except Exception as e:
                 print(f"Firebase save error: {e}")
@@ -246,4 +246,5 @@ def set_goal():
         return jsonify({'success': False, 'error': 'Failed to save goal'})
 
 if __name__ == '__main__':
+
     app.run(host='0.0.0.0', port=5000, debug=True)
