@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coin Tracker</title>
     <link rel="stylesheet" href="/static/css/style.css" />
-    <script src="/static/js/app.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div class="app-container">
-      <!-- Sidebar -->
       <div class="sidebar">
         <div class="logo">
           <div class="coin-icon">C</div>
@@ -36,11 +36,8 @@
         </div>
       </div>
 
-      <!-- Main Content -->
       <div class="main-content">
-        <!-- Dashboard Page -->
         <div id="dashboard" class="page active">
-          <!-- Balance Card -->
           <div class="card balance-card">
             <div class="goal-header">
               <span id="goalText">Progress to Goal: 13,500 coins</span>
@@ -53,11 +50,9 @@
             </div>
           </div>
 
-          <!-- Quick Actions -->
           <div class="card">
             <h3>Quick Actions</h3>
             <div class="quick-actions-grid">
-              <!-- Positive Actions -->
               <button
                 class="quick-btn positive"
                 data-action="Daily Login"
@@ -95,7 +90,6 @@
                 <div class="quick-amount">+300</div>
               </button>
 
-              <!-- Negative Actions -->
               <button
                 class="quick-btn negative"
                 data-action="Box Draw"
@@ -135,9 +129,7 @@
             </div>
           </div>
 
-          <!-- Add/Spend Coins -->
           <div class="transaction-row">
-            <!-- Add Coins Card -->
             <div class="card">
               <h3>Add Coins</h3>
               <div class="form-group">
@@ -163,7 +155,6 @@
               <button id="addCoinsBtn" class="btn success">Add Coins</button>
             </div>
 
-            <!-- Spend Coins Card -->
             <div class="card">
               <h3>Spend Coins</h3>
               <div class="form-group">
@@ -189,11 +180,9 @@
           </div>
         </div>
 
-        <!-- Analytics Page -->
         <div id="analytics" class="page">
           <h2>Analytics</h2>
 
-          <!-- Stats Row -->
           <div class="stats-row">
             <div class="stat-card">
               <div class="stat-label">Total Earnings</div>
@@ -209,7 +198,6 @@
             </div>
           </div>
 
-          <!-- Charts Row -->
           <div class="charts-row">
             <div class="card">
               <h3>Earnings by Source</h3>
@@ -218,13 +206,11 @@
             <div class="card">
               <h3>Source Breakdown</h3>
               <div id="sourceBreakdown" class="breakdown-list">
-                <!-- Will be populated by JavaScript -->
-              </div>
+                </div>
             </div>
           </div>
         </div>
 
-        <!-- History Page -->
         <div id="history" class="page">
           <div class="history-header">
             <h2>Transaction History</h2>
@@ -244,7 +230,6 @@
             </div>
           </div>
 
-          <!-- Filters -->
           <div class="filters">
             <div class="filter-group">
               <label>Search:</label>
@@ -269,7 +254,6 @@
             </div>
           </div>
 
-          <!-- History Table -->
           <div class="card">
             <table id="historyTable" class="history-table">
               <thead>
@@ -280,17 +264,14 @@
                 </tr>
               </thead>
               <tbody id="historyTableBody">
-                <!-- Will be populated by JavaScript -->
-              </tbody>
+                </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Settings Page -->
         <div id="settings" class="page">
           <h2>Settings</h2>
 
-          <!-- Goal Setting -->
           <div class="card">
             <h3>Goal Setting</h3>
             <p>Set your coin collection goal</p>
@@ -308,7 +289,6 @@
             </div>
           </div>
 
-          <!-- Data Management -->
           <div class="card">
             <h3>Data Management</h3>
             <p>Export or import your coin data</p>
@@ -322,7 +302,6 @@
             </div>
           </div>
 
-          <!-- Online Status -->
           <div class="card">
             <h3>Online Sync</h3>
             <div id="onlineStatus" class="online-status">
@@ -334,9 +313,9 @@
       </div>
     </div>
 
-    <!-- Toast Notifications -->
     <div id="toast" class="toast"></div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   </body>
 </html>
+{%- endraw -%}
