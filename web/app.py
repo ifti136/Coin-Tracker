@@ -57,51 +57,52 @@ def dt_now_iso():
     return datetime.now().isoformat()
 
 class WebCoinTracker:
-    def __init__(self, profile_name="NoBodyNub"):
-        self.profile_name = profile_name
+    def __init__(self, user_id="default_user"):
+        self.user_id = user_id
         self.db = db
         
     def get_data(self):
         if self.db and FIREBASE_AVAILABLE:
             try:
-                # Use the same structure as desktop app - documents named by profile name
-                doc_ref = self.db.collection('CoinTracker').document(self.profile_name)
+                doc_ref = self.db.collection('users').document(self.user_id)
                 doc = doc_ref.get()
                 if doc.exists:
                     data = doc.to_dict()
-                    # Desktop app stores data in this structure
-                    transactions = data.get('transactions', [])
-                    settings = data.get('settings', {'goal': 13500, 'dark_mode': False})
-                    
-                    # Ensure transactions is a list (not a dict)
-                    if isinstance(transactions, dict):
-                        # Convert dict to list if needed (legacy format)
-                        transactions = list(transactions.values())
-                    
+                    transactions_data = data.get('transactions', [])
+                    settings = data.get('settings', {'goal': 13500})
+
+                    # Check if transactions_data is a dictionary and convert it
+                    if isinstance(transactions_data, dict):
+                        transactions = [
+                            item[1] for item in sorted(
+                                transactions_data.items(),
+                                key=lambda item: int(item[0])
+                            )
+                        ]
+                    else:
+                        transactions = transactions_data
+
                     return transactions, settings
                 else:
-                    # Return empty data with default settings if no document exists
-                    return [], {'goal': 13500, 'dark_mode': False}
+                    # Return empty data and a default settings dict if no document exists
+                    return [], {'goal': 13500}
             except Exception as e:
                 # Log the error and return empty data to prevent app crash
                 print(f"Firebase load error: {e}")
-                return [], {'goal': 13500, 'dark_mode': False}
+                return [], {'goal': 13500}
         else:
-            # Fallback to session storage
-            return session.get('transactions', []), session.get('settings', {'goal': 13500, 'dark_mode': False})
+            return session.get('transactions', []), session.get('settings', {'goal': 13500})
 
     def save_data(self, transactions, settings):
         if self.db and FIREBASE_AVAILABLE:
             try:
-                # Use the same structure as desktop app
-                doc_ref = self.db.collection('CoinTracker').document(self.profile_name)
-                profile_data = {
-                    'profile_name': self.profile_name,
-                    'last_updated': dt_now_iso(),
+                doc_ref = self.db.collection('users').document(self.user_id)
+                user_data = {
                     'transactions': transactions,
-                    'settings': settings
+                    'settings': settings,
+                    'last_updated': dt_now_iso()
                 }
-                doc_ref.set(profile_data)
+                doc_ref.set(user_data, merge=True) # <-- Add this part
                 return True
             except Exception as e:
                 print(f"Firebase save error: {e}")
@@ -139,15 +140,10 @@ class WebCoinTracker:
                 breakdown[t['source']] += t['amount']
         return dict(breakdown)
 
-    def set_goal(self, goal):
-        transactions, settings = self.get_data()
-        settings['goal'] = goal
-        return self.save_data(transactions, settings)
-
 # Routes
 @app.route('/')
 def index():
-    tracker = WebCoinTracker("NoBodyNub")
+    tracker = WebCoinTracker()
     _, settings = tracker.get_data()
     return render_template('index.html', 
                          FIREBASE_AVAILABLE=FIREBASE_AVAILABLE,
@@ -156,7 +152,7 @@ def index():
 
 @app.route('/api/balance')
 def get_balance():
-    tracker = WebCoinTracker("NoBodyNub")
+    tracker = WebCoinTracker()
     transactions, settings = tracker.get_data()
     balance = tracker.get_balance(transactions)
     goal = settings.get('goal', 13500)
@@ -169,7 +165,7 @@ def get_balance():
 
 @app.route('/api/transactions')
 def get_transactions():
-    tracker = WebCoinTracker("NoBodyNub")
+    tracker = WebCoinTracker()
     transactions, _ = tracker.get_data()
     # Sort by date descending
     transactions.sort(key=lambda x: x['date'], reverse=True)
@@ -177,7 +173,7 @@ def get_transactions():
 
 @app.route('/api/analytics')
 def get_analytics():
-    tracker = WebCoinTracker("NoBodyNub")
+    tracker = WebCoinTracker()
     transactions, _ = tracker.get_data()
     
     total_earnings = sum(t['amount'] for t in transactions if t['amount'] > 0)
@@ -206,7 +202,7 @@ def add_transaction():
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid amount'})
     
-    tracker = WebCoinTracker("NoBodyNub")
+    tracker = WebCoinTracker()
     success = tracker.add_transaction(amount, source)
     
     if success:
@@ -230,7 +226,7 @@ def spend_coins():
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid amount'})
     
-    tracker = WebCoinTracker("NoBodyNub")
+    tracker = WebCoinTracker()
     success = tracker.add_transaction(-amount, category)
     
     if success:
@@ -253,8 +249,10 @@ def set_goal():
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid goal'})
     
-    tracker = WebCoinTracker("NoBodyNub")
-    success = tracker.set_goal(goal)
+    tracker = WebCoinTracker()
+    transactions, settings = tracker.get_data()
+    settings['goal'] = goal
+    success = tracker.save_data(transactions, settings)
     
     if success:
         return jsonify({'success': True, 'message': f'Goal set to {goal} coins'})
@@ -262,4 +260,5 @@ def set_goal():
         return jsonify({'success': False, 'error': 'Failed to save goal'})
 
 if __name__ == '__main__':
+
     app.run(host='0.0.0.0', port=5000, debug=True)
