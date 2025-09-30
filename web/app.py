@@ -57,52 +57,67 @@ def dt_now_iso():
     return datetime.now().isoformat()
 
 class WebCoinTracker:
-    def __init__(self, user_id="default_user"):
-        self.user_id = user_id
+    def __init__(self):
         self.db = db
         
     def get_data(self):
         if self.db and FIREBASE_AVAILABLE:
             try:
-                doc_ref = self.db.collection('users').document(self.user_id)
+                # Access the exact structure: users -> default_user -> NoBodyNub
+                doc_ref = self.db.collection('users').document('default_user')
                 doc = doc_ref.get()
+                
                 if doc.exists:
                     data = doc.to_dict()
-                    transactions_data = data.get('transactions', [])
-                    settings = data.get('settings', {'goal': 13500})
-
-                    # Check if transactions_data is a dictionary and convert it
-                    if isinstance(transactions_data, dict):
-                        transactions = [
-                            item[1] for item in sorted(
-                                transactions_data.items(),
-                                key=lambda item: int(item[0])
-                            )
-                        ]
-                    else:
-                        transactions = transactions_data
-
+                    nobody_nub_data = data.get('NoBodyNub', {})
+                    
+                    # Extract transactions and settings from NoBodyNub map
+                    transactions = nobody_nub_data.get('transactions', [])
+                    settings = nobody_nub_data.get('settings', {'goal': 13500, 'dark_mode': False})
+                    
+                    # Ensure transactions is a list and handle any format issues
+                    if isinstance(transactions, dict):
+                        # Convert from Firebase map format to list
+                        transactions = list(transactions.values())
+                    elif not isinstance(transactions, list):
+                        transactions = []
+                    
+                    # Ensure each transaction has the required fields
+                    for transaction in transactions:
+                        if 'previous_balance' not in transaction:
+                            transaction['previous_balance'] = 0
+                    
                     return transactions, settings
                 else:
-                    # Return empty data and a default settings dict if no document exists
-                    return [], {'goal': 13500}
+                    # Return empty data with default settings if no document exists
+                    return [], {'goal': 13500, 'dark_mode': False}
             except Exception as e:
                 # Log the error and return empty data to prevent app crash
                 print(f"Firebase load error: {e}")
-                return [], {'goal': 13500}
+                return [], {'goal': 13500, 'dark_mode': False}
         else:
-            return session.get('transactions', []), session.get('settings', {'goal': 13500})
+            # Fallback to session storage
+            return session.get('transactions', []), session.get('settings', {'goal': 13500, 'dark_mode': False})
 
     def save_data(self, transactions, settings):
         if self.db and FIREBASE_AVAILABLE:
             try:
-                doc_ref = self.db.collection('users').document(self.user_id)
-                user_data = {
-                    'transactions': transactions,
+                # Save to the exact structure: users -> default_user -> NoBodyNub
+                doc_ref = self.db.collection('users').document('default_user')
+                
+                # Create the NoBodyNub map with the exact structure
+                nobody_nub_data = {
+                    'last_updated': dt_now_iso(),
                     'settings': settings,
-                    'last_updated': dt_now_iso()
+                    'transactions': transactions
                 }
-                doc_ref.set(user_data, merge=True) # <-- Add this part
+                
+                # Update just the NoBodyNub field within the user document
+                update_data = {
+                    'NoBodyNub': nobody_nub_data
+                }
+                
+                doc_ref.set(update_data, merge=True)
                 return True
             except Exception as e:
                 print(f"Firebase save error: {e}")
@@ -116,11 +131,14 @@ class WebCoinTracker:
     def add_transaction(self, amount, source):
         transactions, settings = self.get_data()
         
+        # Calculate previous balance
+        previous_balance = sum(t['amount'] for t in transactions)
+        
         transaction = {
             "date": dt_now_iso(),
             "amount": amount,
             "source": source,
-            "previous_balance": self.get_balance(transactions)
+            "previous_balance": previous_balance
         }
         
         transactions.append(transaction)
@@ -139,6 +157,16 @@ class WebCoinTracker:
             if t['amount'] > 0:
                 breakdown[t['source']] += t['amount']
         return dict(breakdown)
+
+    def set_goal(self, goal):
+        transactions, settings = self.get_data()
+        settings['goal'] = goal
+        return self.save_data(transactions, settings)
+
+    def set_dark_mode(self, dark_mode):
+        transactions, settings = self.get_data()
+        settings['dark_mode'] = dark_mode
+        return self.save_data(transactions, settings)
 
 # Routes
 @app.route('/')
@@ -167,7 +195,7 @@ def get_balance():
 def get_transactions():
     tracker = WebCoinTracker()
     transactions, _ = tracker.get_data()
-    # Sort by date descending
+    # Sort by date descending (newest first)
     transactions.sort(key=lambda x: x['date'], reverse=True)
     return jsonify(transactions)
 
@@ -250,15 +278,29 @@ def set_goal():
         return jsonify({'success': False, 'error': 'Invalid goal'})
     
     tracker = WebCoinTracker()
-    transactions, settings = tracker.get_data()
-    settings['goal'] = goal
-    success = tracker.save_data(transactions, settings)
+    success = tracker.set_goal(goal)
     
     if success:
         return jsonify({'success': True, 'message': f'Goal set to {goal} coins'})
     else:
         return jsonify({'success': False, 'error': 'Failed to save goal'})
 
-if __name__ == '__main__':
+@app.route('/api/toggle-theme', methods=['POST'])
+def toggle_theme():
+    data = request.json
+    dark_mode = data.get('dark_mode')
+    
+    if dark_mode is None:
+        return jsonify({'success': False, 'error': 'Missing dark_mode parameter'})
+    
+    tracker = WebCoinTracker()
+    success = tracker.set_dark_mode(bool(dark_mode))
+    
+    if success:
+        theme = "dark" if dark_mode else "light"
+        return jsonify({'success': True, 'message': f'Theme set to {theme} mode'})
+    else:
+        return jsonify({'success': False, 'error': 'Failed to save theme preference'})
 
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
