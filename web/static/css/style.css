@@ -207,54 +207,57 @@ body {
 /* Quick Actions */
 .quick-actions-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns instead of 4 */
+    gap: 20px; /* Increased gap */
+    padding: 10px;
 }
 
 .quick-btn {
     background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px 8px;
+    border: 2px solid var(--border-color); /* Thicker border */
+    border-radius: 12px; /* Larger border radius */
+    padding: 20px 12px; /* More padding */
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease; /* Smoother transition */
     text-align: center;
+    min-height: 120px; /* Minimum height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .quick-btn:hover {
     border-color: var(--primary-color);
+    transform: translateY(-2px); /* Lift effect on hover */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .quick-btn.positive:hover {
     border-color: var(--success-color);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 .quick-btn.negative:hover {
     border-color: var(--danger-color);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 .quick-icon {
-    font-size: 18px;
+    font-size: 28px; /* Larger icon */
     font-weight: bold;
-    margin-bottom: 4px;
-}
-
-.quick-btn.positive .quick-icon {
-    color: var(--success-color);
-}
-
-.quick-btn.negative .quick-icon {
-    color: var(--danger-color);
+    margin-bottom: 8px;
 }
 
 .quick-text {
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 2px;
+    font-size: 14px; /* Slightly larger text */
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 
 .quick-amount {
-    font-size: 11px;
+    font-size: 13px; /* Slightly larger amount */
+    font-weight: 600;
     color: var(--muted-color);
 }
 
@@ -590,5 +593,15 @@ body {
     .history-stats {
         width: 100%;
         justify-content: space-between;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .quick-btn {
+        min-height: 100px;
+        padding: 15px 10px;
     }
 }
