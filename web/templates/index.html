@@ -4,39 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coin Tracker</title>
-    <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css" />
     
-    <!-- 
-      This script MUST come BEFORE your main app.js script.
-      It initializes the connection to your Firebase project.
-    -->
-    <script type="module">
-      // Import the functions you need from the SDKs
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-      import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyCeGnK0DXvo4AkRcg4tE1cHSX8KB48gf5c",
-        authDomain: "cointracker-80302.firebaseapp.com",
-        projectId: "cointracker-80302",
-        storageBucket: "cointracker-80302.appspot.com",
-        messagingSenderId: "458179656219",
-        appId: "1:458179656219:web:a4f4486fdf4317516896be"
-      };
-
-      // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
-      
-      // Initialize Firestore and make it available to your other scripts
-      // by attaching it to the global 'window' object.
-      window.db = getFirestore(app);
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-    <!-- All of your existing body content goes here -->
-    <!-- (The .app-container, sidebar, main-content, etc.) -->
     <div class="app-container">
       <div class="sidebar">
         <div class="logo">
@@ -65,10 +37,11 @@
       </div>
 
       <div class="main-content">
-        <!-- Dashboard Page -->
         <div id="dashboard" class="page active">
           <div class="card balance-card">
-            <div class="goal-header"><span id="goalText"></span></div>
+            <div class="goal-header">
+              <span id="goalText">Progress to Goal: 13,500 coins</span>
+            </div>
             <div class="balance-title">Current Balance</div>
             <div id="balanceAmount" class="balance-amount">0 coins</div>
             <div class="progress-bar">
@@ -80,53 +53,249 @@
           <div class="card">
             <h3>Quick Actions</h3>
             <div class="quick-actions-grid">
-              <button class="quick-btn positive" data-action="Event Rewards" data-amount="50"><div class="quick-icon">+</div><div class="quick-text">Event Rewards</div><div class="quick-amount">+50</div></button>
-              <button class="quick-btn positive" data-action="Ads" data-amount="10"><div class="quick-icon">+</div><div class="quick-text">Ads</div><div class="quick-amount">+10</div></button>
-              <button class="quick-btn negative" data-action="Box Draw" data-amount="100"><div class="quick-icon">–</div><div class="quick-text">Box Draw</div><div class="quick-amount">-100</div></button>
-              <button class="quick-btn positive" data-action="Daily Games" data-amount="100"><div class="quick-icon">+</div><div class="quick-text">Daily Games</div><div class="quick-amount">+100</div></button>
-              <button class="quick-btn positive" data-action="Login" data-amount="10"><div class="quick-icon">+</div><div class="quick-text">Login</div><div class="quick-amount">+10</div></button>
-              <button class="quick-btn positive" data-action="Login" data-amount="50"><div class="quick-icon">+</div><div class="quick-text">Login</div><div class="quick-amount">+50</div></button>
+              <button
+                class="quick-btn positive"
+                data-action="Event Rewards"
+                data-amount="50"
+              >
+                <div class="quick-icon">+</div>
+                <div class="quick-text">Event Rewards</div>
+                <div class="quick-amount">+50</div>
+              </button>
+              <button
+                class="quick-btn positive"
+                data-action="Ads"
+                data-amount="10"
+              >
+                <div class="quick-icon">+</div>
+                <div class="quick-text">Ads</div>
+                <div class="quick-amount">+10</div>
+              </button>
+              <button
+                class="quick-btn negative"
+                data-action="Box Draw"
+                data-amount="100"
+              >
+                <div class="quick-icon">–</div>
+                <div class="quick-text">Box Draw</div>
+                <div class="quick-amount">-100</div>
+              </button>
+              <button
+                class="quick-btn positive"
+                data-action="Daily Games"
+                data-amount="100"
+              >
+                <div class="quick-icon">+</div>
+                <div class="quick-text">Daily Games</div>
+                <div class="quick-amount">+100</div>
+              </button>
+              <button
+                class="quick-btn positive"
+                data-action="Login"
+                data-amount="10"
+              >
+                <div class="quick-icon">+</div>
+                <div class="quick-text">Login</div>
+                <div class="quick-amount">+10</div>
+              </button>
+              <button
+                class="quick-btn positive"
+                data-action="Login"
+                data-amount="50"
+              >
+                <div class="quick-icon">+</div>
+                <div class="quick-text">Login</div>
+                <div class="quick-amount">+50</div>
+              </button>
             </div>
           </div>
 
           <div class="transaction-row">
             <div class="card">
               <h3>Add Coins</h3>
-              <div class="form-group"><label>Amount</label><input type="number" id="addAmount" placeholder="Enter amount" min="1"/></div>
-              <div class="form-group"><label>Source</label><select id="addSource"><option value="Event Reward">Event Reward</option><option value="Login">Login</option><option value="Daily Games">Daily Games</option><option value="Achievements">Achievements</option><option value="Ads">Ads</option><option value="Others">Others</option></select></div>
+              <div class="form-group">
+                <label>Amount</label>
+                <input
+                  type="number"
+                  id="addAmount"
+                  placeholder="Enter amount"
+                  min="1"
+                />
+              </div>
+              <div class="form-group">
+                <label>Source</label>
+                <select id="addSource">
+                  <option value="Event Reward">Event Reward</option>
+                  <option value="Login">Login</option>
+                  <option value="Daily Games">Daily Games</option>
+                  <option value="Achievements">Achievements</option>
+                  <option value="Ads">Ads</option>
+                  <option value="Others">Others</option>
+                </select>
+              </div>
               <button id="addCoinsBtn" class="btn success">Add Coins</button>
             </div>
+
             <div class="card">
               <h3>Spend Coins</h3>
-              <div class="form-group"><label>Amount</label><input type="number" id="spendAmount" placeholder="Enter amount" min="1"/></div>
-              <div class="form-group"><label>Spending Category</label><select id="spendCategory"><option value="Box Draws">Box Draws</option><option value="Store Purchase">Store Purchase</option><option value="Upgrade">Upgrade</option><option value="Other Spending">Other Spending</option></select></div>
+              <div class="form-group">
+                <label>Amount</label>
+                <input
+                  type="number"
+                  id="spendAmount"
+                  placeholder="Enter amount"
+                  min="1"
+                />
+              </div>
+              <div class="form-group">
+                <label>Spending Category</label>
+                <select id="spendCategory">
+                  <option value="Box Draws">Box Draws</option>
+                  <option value="Store Purchase">Store Purchase</option>
+                  <option value="Upgrade">Upgrade</option>
+                  <option value="Other Spending">Other Spending</option>
+                </select>
+              </div>
               <button id="spendCoinsBtn" class="btn danger">Spend Coins</button>
             </div>
           </div>
         </div>
-        <!-- Other pages (Analytics, History, Settings) -->
-         <div id="analytics" class="page">
+
+        <div id="analytics" class="page">
           <h2>Analytics</h2>
-          <div class="stats-row"><div class="stat-card"><div class="stat-label">Total Earnings</div><div id="totalEarnings" class="stat-value positive">+0</div></div><div class="stat-card"><div class="stat-label">Total Spending</div><div id="totalSpending" class="stat-value negative">-0</div></div><div class="stat-card"><div class="stat-label">Net Balance</div><div id="netBalance" class="stat-value primary">+0</div></div></div>
-          <div class="charts-row"><div class="card"><h3>Earnings by Source</h3><canvas id="earningsChart" width="400" height="300"></canvas></div><div class="card"><h3>Source Breakdown</h3><div id="sourceBreakdown" class="breakdown-list"></div></div></div>
+
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Total Earnings</div>
+              <div id="totalEarnings" class="stat-value positive">+0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Spending</div>
+              <div id="totalSpending" class="stat-value negative">-0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Net Balance</div>
+              <div id="netBalance" class="stat-value primary">+0</div>
+            </div>
+          </div>
+
+          <div class="charts-row">
+            <div class="card">
+              <h3>Earnings by Source</h3>
+              <canvas id="earningsChart" width="400" height="300"></canvas>
+            </div>
+            <div class="card">
+              <h3>Source Breakdown</h3>
+              <div id="sourceBreakdown" class="breakdown-list">
+                </div>
+            </div>
+          </div>
         </div>
+
         <div id="history" class="page">
-          <div class="history-header"><h2>Transaction History</h2><div class="history-stats"><div class="history-stat"><div id="totalTransactions" class="stat-number">0</div><div class="stat-label">Transactions</div></div><div class="history-stat"><div id="historyEarned" class="stat-number positive">+0</div><div class="stat-label">Total Earned</div></div><div class="history-stat"><div id="historySpent" class="stat-number negative">-0</div><div class="stat-label">Total Spent</div></div></div></div>
-          <div class="filters"><div class="filter-group"><label>Search:</label><input type="text" id="historySearch" placeholder="Search by source..."/></div><div class="filter-group"><label>Source:</label><select id="historySourceFilter"><option value="all">All Sources</option></select></div></div>
-          <div class="card"><table id="historyTable" class="history-table"><thead><tr><th>Date</th><th>Amount</th><th>Source</th></tr></thead><tbody id="historyTableBody"></tbody></table></div>
+          <div class="history-header">
+            <h2>Transaction History</h2>
+            <div class="history-stats">
+              <div class="history-stat">
+                <div id="totalTransactions" class="stat-number">0</div>
+                <div class="stat-label">Transactions</div>
+              </div>
+              <div class="history-stat">
+                <div id="historyEarned" class="stat-number positive">+0</div>
+                <div class="stat-label">Total Earned</div>
+              </div>
+              <div class="history-stat">
+                <div id="historySpent" class="stat-number negative">-0</div>
+                <div class="stat-label">Total Spent</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filters">
+            <div class="filter-group">
+              <label>Search:</label>
+              <input
+                type="text"
+                id="historySearch"
+                placeholder="Search by source..."
+              />
+            </div>
+            <div class="filter-group">
+              <label>Source:</label>
+              <select id="historySourceFilter">
+                <option value="all">All Sources</option>
+                <option value="Event Reward">Event Reward</option>
+                <option value="Login">Login</option>
+                <option value="Daily Games">Daily Games</option>
+                <option value="Achievements">Achievements</option>
+                <option value="Box Draws">Box Draws</option>
+                <option value="Ads">Ads</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <table id="historyTable" class="history-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                </tbody>
+            </table>
+          </div>
         </div>
+
         <div id="settings" class="page">
           <h2>Settings</h2>
-          <div class="card"><h3>Goal Setting</h3><p>Set your coin collection goal</p><div class="goal-input-row"><input type="number" id="goalInput" placeholder="Enter goal amount" min="0"/><button id="setGoalBtn" class="btn primary">Set Goal</button></div><div id="currentGoal" class="current-goal"></div></div>
-          <div class="card"><h3>Data Management</h3><p>This app syncs with Firebase in real-time.</p></div>
+
+          <div class="card">
+            <h3>Goal Setting</h3>
+            <p>Set your coin collection goal</p>
+            <div class="goal-input-row">
+              <input
+                type="number"
+                id="goalInput"
+                placeholder="Enter goal amount"
+                min="0"
+              />
+              <button id="setGoalBtn" class="btn primary">Set Goal</button>
+            </div>
+            <div id="currentGoal" class="current-goal">
+              Current goal: 13,500 coins
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Data Management</h3>
+            <p>Export or import your coin data</p>
+            <div class="data-buttons">
+              <button id="exportDataBtn" class="btn secondary">
+                Export Data
+              </button>
+              <button id="importDataBtn" class="btn secondary">
+                Import Data
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Online Sync</h3>
+            <div id="onlineStatus" class="online-status">
+              {% if FIREBASE_AVAILABLE and db %} ✅ Online {% else %} ❌ Offline
+              (Local storage only) {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    
+
     <div id="toast" class="toast"></div>
 
-    <!-- Your app.js script now has access to the initialized `window.db` -->
-    <script src="app.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   </body>
 </html>
-
