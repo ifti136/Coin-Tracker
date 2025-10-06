@@ -3,6 +3,7 @@ services:
     name: coin-tracker-web
     env: python
     plan: free
-    workingDirectory: web
+    workingDirectory: Web
     buildCommand: "pip install -r requirements.txt"
+
     startCommand: "gunicorn app:app"
