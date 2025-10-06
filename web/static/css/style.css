@@ -253,6 +253,7 @@ body {
     font-size: 14px; /* Slightly larger text */
     font-weight: 600;
     margin-bottom: 6px;
+    color: var(--text-color);
 }
 
 .quick-amount {
