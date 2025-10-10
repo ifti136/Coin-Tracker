@@ -40,7 +40,7 @@ Track coins, view analytics, manage goals, and keep your data synced online.
 1. **Clone the repository**
 
     ```bash
-    git clone https://github.com/yourusername/CoinTracker.git
+    git clone https://github.com/ifti136/coin-tracker.git
     cd CoinTracker
     ```
 
@@ -147,8 +147,8 @@ After deployment, your web app will be live online, syncing data with Firebase.
 
 ## 📷 Screenshots
 
-    ![Desktop Dashboard](https://github.com/ifti136/Coin-Tracker/blob/main/screenshots/desktop_dashboard.png)
-    ![Web Dashboard](https://github.com/ifti136/Coin-Tracker/blob/main/screenshots/web_dashboard.png)
+![Desktop Dashboard](screenshots/desktop_dashboard.png)
+![Web Dashboard](screenshots/web_dashboard.png)
 
 ---
 
