@@ -325,8 +325,8 @@ class QuickActionButton(QPushButton):
     def setPalette(self, palette):
         self.palette = palette
         self.icon_text.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {self.palette['primary' if self.is_positive else 'danger']}; background: transparent;")
-        self.title.setStyleSheet(f"font-size: 13px; color: {self.palette['text']}; font-weight: 500; background: transparent;")
-        self.amount.setStyleSheet(f"font-size: 11px; color: {self.palette['muted']}; background: transparent;")
+        self.title.setStyleSheet(f"font-size: 11px; color: {self.palette['text']}; font-weight: 500; background: transparent;")
+        self.amount.setStyleSheet(f"font-size: 9px; color: {self.palette['muted']}; background: transparent;")
         self.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
