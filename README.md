@@ -62,10 +62,10 @@ Track coins, view analytics, manage goals, and keep your data synced online.
     python build.py
     ```
 
-5. **Run Desktop App**
+5. **Download & Run (Easiest Method)**
 
-- After building, go to `dist/` folder  
-- Run `CoinTracker.exe` on Windows (or the executable on your OS)  
+- You can download the latest standalone executable from the **[Releases Page](https://github.com/ifti136/Coin-Tracker/releases/tag/v1.0)**.
+- Download `CoinTracker.exe`, place it anywhere on your system, and run it.
 
 ---
 
