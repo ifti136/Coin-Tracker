@@ -17,7 +17,11 @@ app = Flask(__name__,
     template_folder='templates',
     static_folder='static'
 )
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
+app.secret_key = os.environ.get('SECRET_KEY')
+
+# Check if the secret key is set (Good practice for public repos)
+if not app.secret_key:
+    raise ValueError("FATAL ERROR: SECRET_KEY environment variable not set. This is required for session security.")
 
 # Firebase initialization
 if FIREBASE_AVAILABLE:
@@ -303,4 +307,5 @@ def toggle_theme():
         return jsonify({'success': False, 'error': 'Failed to save theme preference'})
 
 if __name__ == '__main__':
+
     app.run(host='0.0.0.0', port=5000, debug=True)
