@@ -1,235 +1,167 @@
-# CoinTracker — eFootball 26 Coin Tracker
+# CoinTracker 🪙
 
-A simple, sleek desktop app to track the coins you **earn** and **spend** in eFootball 26 — including when and how you got them, plus spending via **Box Draws**. Built with PyQt5 and ships with a one-click PyInstaller build script.&#x20;
+CoinTracker 🪙 is a dual-version coin tracking app with a **PyQt5 desktop GUI** and a **Flask web app**. Track coins, manage goals, view analytics, and sync your data locally or online via Firebase. Perfect for managing personal finances or digital tokens across platforms.
 
----
+- **Desktop App**: PyQt5 GUI with local JSON storage + optional Firebase sync.  
+- **Web App**: Flask-based web interface hosted online via Render with Firebase backend.  
 
-## 1) Features
-
-1. **Add earnings & spending (Box Draws)**
-
-   * Track positive coin gains by source (Event Reward, Login, Daily Games, Achievements, Ads, Others). For **Box Draws**, amounts are recorded as spending (negative) automatically and the main button switches to “Use Coins.”&#x20;
-2. **Live balance + goal tracking**
-
-   * Always-visible balance card and a goal progress bar you can set/update anytime.&#x20;
-3. **Dark/Light theme toggle (persisted)**
-
-   * One click dark mode that’s saved per profile.&#x20;
-4. **Transaction history with smart filters**
-
-   * Search by source, filter by source/type (Earnings/Spending), and date range (defaults to the last month), with sortable columns.&#x20;
-5. **Breakdown charts (Earnings & Spending)**
-
-   * Beautiful pie charts (Qt Charts) showing totals by source, with separate tabs for **Earnings** and **Spending**.&#x20;
-6. **Import/Export JSON**
-
-   * Backup or reuse your data as JSON.&#x20;
-7. **Multiple profiles**
-
-   * Keep separate datasets (e.g., alt accounts) and switch instantly. Data is stored per profile.&#x20;
-8. **Custom app icon generator**
-
-   * Optional script to create a coin-themed app icon (`coin.ico`).&#x20;
-9. **One-file desktop build**
-
-   * PyInstaller script to create a single EXE (`--onefile`, `--windowed`) with your icon. Output goes to `dist/`.&#x20;
+Track coins, view analytics, manage goals, and keep your data synced online.
 
 ---
 
-## 2) Required Python Libraries (to download)
+## 🗂️ Project Structure
 
-Install these from PyPI:
-
-* `PyQt5` — UI toolkit
-* `PyQtChart` — Qt Charts add-on used for the pie charts (imported as `from PyQt5.QtChart import ...`)
-* `pyinstaller` — **only** if you plan to build a desktop executable
-
-> The app code imports `PyQt5` UI modules and `PyQt5.QtChart` for charts; the build script imports `PyInstaller`. &#x20;
-
-**Quick install:**
-
-```bash
-pip install PyQt5 PyQtChart pyinstaller
-```
-
-Optionally, add a `requirements.txt`:
-
-```txt
-PyQt5
-PyQtChart
-pyinstaller
-```
+CoinTracker/
+    web/
+        static/                 # Web App static files (CSS, JS)
+            css/
+                style.css
+            js/
+                app.js
+        templates/              # Web App HTML templates
+            index.html
+        render.yaml             # Render deployment configuration
+        requirements.txt        # Python dependencies
+        app.py                  # Flask Web App core logic
+    LICENSE                     # MIT License
+    README.md                   # This file
+    coin_tracker.py             # PyQt5 Desktop App logic
+    build.py                    # PyInstaller build script
+    coin_icon.py                # Script to generate desktop icon
 
 ---
 
-## 3) Project Structure
+## 💻 Desktop App
 
-```
-/your-repo
-├─ coin_tracker.py     # Main PyQt5 app (GUI, storage, charts, filters, profiles)
-├─ coin_icon.py        # Optional: generate coin.ico programmatically
-├─ build.py            # PyInstaller build script (onefile, windowed, icon)
-└─ README.md
-```
+### Features
 
-* App logic/UI live in `coin_tracker.py`.&#x20;
-* Icon generation is in `coin_icon.py`.&#x20;
-* Packaging is handled by `build.py`.&#x20;
+- PyQt5 GUI with PyQtChart for visual analytics  
+- Local JSON storage at `~/Documents/CoinTracker/<Profile>.json`  
+- Optional Firebase sync for online backup  
+- Quick transaction buttons, manual entries, and goal tracking  
 
----
+### Setup
 
-## 4) Step-by-Step: Getting Started
+1. **Clone the repository**
 
-1. **Clone & enter the repo**
+    ```bash
+    git clone https://github.com/yourusername/CoinTracker.git
+    cd CoinTracker
+    ```
 
-   ```bash
-   git clone https://github.com/<you>/<repo>.git
-   cd <repo>
-   ```
-2. **Create & activate a virtual environment (recommended)**
+2. **Install dependencies**
 
-   ```bash
-   python -m venv .venv
-   # Windows
-   .venv\Scripts\activate
-   # macOS/Linux
-   source .venv/bin/activate
-   ```
-3. **Install dependencies**
+    ```bash
+    pip install -r web/requirements.txt
+    ```
 
-   ```bash
-   pip install PyQt5 PyQtChart
-   ```
-4. **(Optional) Create the app icon**
+3. **Generate Desktop Icon (optional)**
 
-   ```bash
-   python coin_icon.py
-   ```
+    ```bash
+    python coin_icon.py
+    ```
 
-   This generates `coin.ico` in the repo root.&#x20;
-5. **Run the app**
+4. **Build Desktop App**
 
-   ```bash
-   python coin_tracker.py
-   ```
+    ```bash
+    python build.py
+    ```
 
-   * A `Documents/CoinTracker/<Profile>.json` file will be created to store your data. Default profile is **“Default”**.&#x20;
+5. **Run Desktop App**
+
+- After building, go to `dist/` folder  
+- Run `CoinTracker.exe` on Windows (or the executable on your OS)  
 
 ---
 
-## 5) Step-by-Step: Using the App
+## 🌐 Web App
 
-1. **Set a goal**
+### Features
 
-   * Enter a number and click **Set Goal** to see a progress bar update as your balance grows.&#x20;
-2. **Record earnings**
-
-   * Type an **Amount** (or use quick buttons like **+10 / +20 / +50**) and choose a **Source** (Event Reward, Login, etc.), then click **Add Transaction**.&#x20;
-3. **Record spending (Box Draws)**
-
-   * Select **Box Draws**, enter the coins you used, and click **Use Coins**. The app saves a **negative** amount for spending and labels it accordingly.&#x20;
-4. **Search, filter & sort history**
-
-   * Use **Search**, **Source**, **Type** (Earnings/Spending), and **From/To** date pickers (defaults to one month back) to narrow results; click column headers to sort.&#x20;
-5. **See breakdown charts**
-
-   * Click **View Coin Breakdown** to open tabs for **Earnings** and **Spending**, each with totals by source and a pie chart.&#x20;
-6. **Import/Export JSON**
-
-   * Use **Import JSON** to add transactions from a file or **Export JSON** to back up/share your data.&#x20;
-7. **Manage profiles**
-
-   * Switch profiles from the top bar or click **+ New Profile**. Each profile stores its own JSON file.&#x20;
-8. **Toggle Dark Mode**
-
-   * Use the **Dark Mode** checkbox. The preference is saved per profile.&#x20;
+- Flask-based web interface with dynamic dashboards  
+- Analytics charts and transaction history  
+- Goal management and data import/export  
+- Syncs with Firebase for online storage  
 
 ---
 
-## 6) Step-by-Step: Build a Single-File App (Windows)
+### Step 1: Set Up Firebase
 
-1. **Ensure you have the icon (optional but recommended)**
+1. Go to [Firebase Console](https://console.firebase.google.com/) → Create a new project  
+2. Go to **Project Settings → Service Accounts → Generate new private key**  
+3. Save the JSON file safely. You’ll need values like:  
+   - `client_email`  
+   - `private_key`  
+   - `private_key_id`  
+   - `project_id`  
 
-   ```bash
-   python coin_icon.py
-   ```
-
-   Saves `coin.ico` for branding.&#x20;
-2. **Install PyInstaller**
-
-   ```bash
-   pip install pyinstaller
-   ```
-3. **Run the build script**
-
-   ```bash
-   python build.py
-   ```
-
-   * Produces `dist/CoinTracker.exe` using `--onefile --windowed --icon=coin.ico`.
-   * Build intermediates go to `build/`.&#x20;
-
-> Advanced: You can also call PyInstaller directly against `coin_tracker.py` with similar flags if you prefer. The provided script already sets sensible defaults.&#x20;
+4. Optional: Enable **Firestore Database** for real-time syncing  
 
 ---
 
-## 7) Data Storage & Format
+### Step 2: Environment Variables
 
-* **Location:** `~/Documents/CoinTracker/<Profile>.json`
-* **What’s stored:**
+Create a `.env` file inside `web/`:
 
-  * `transactions`: list of entries `{ date (ISO), amount, source, previous_balance }`
-  * `settings`: `{ goal, dark_mode }`
-  * `profile_name`, `last_updated`
-    All of this is handled automatically by the app.&#x20;
+    SECRET_KEY=your_flask_secret
+    FIREBASE_CLIENT_EMAIL=your_client_email
+    FIREBASE_PRIVATE_KEY="your_private_key_with_newlines_escaped"
+    FIREBASE_PRIVATE_KEY_ID=your_private_key_id
+    FIREBASE_PROJECT_ID=your_project_id
 
----
-
-## 8) Troubleshooting
-
-1. **`ModuleNotFoundError: No module named 'PyQt5.QtChart'`**
-   Install the charts add-on:
-
-   ```bash
-   pip install PyQtChart
-   ```
-
-   The code imports `PyQt5.QtChart` for pie charts.&#x20;
-2. **No icon in the EXE**
-   Make sure `coin.ico` exists before running `build.py`.&#x20;
-3. **Can’t find or save data**
-   Verify your OS user has write access to `Documents/CoinTracker/`. The app writes JSON per profile there.&#x20;
-4. **Dark mode state not persisting**
-   Settings (including dark mode and goal) are saved per profile in the same JSON.&#x20;
+> ⚠️ For `FIREBASE_PRIVATE_KEY`, replace newlines with `\n` if copying from JSON.
 
 ---
 
-## 9) Contributing
+### Step 3: Install Dependencies
 
-* Open issues/PRs for feature requests or fixes.
-* Ideas: per-source targets, CSV export, multi-currency support.
+    cd web
+    pip install -r requirements.txt
 
 ---
 
-### Run commands (copy-paste)
+### Step 4: Run Web App Locally
 
-```bash
-# 1) Setup
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
+    flask run
 
-pip install PyQt5 PyQtChart
+- Open [http://127.0.0.1:5000](http://127.0.0.1:5000)  
+- You should see the CoinTracker dashboard  
 
-# 2) Run
-python coin_tracker.py
+---
 
-# 3) (Optional) Build icon + EXE
-python coin_icon.py
-pip install pyinstaller
-python build.py
-```
+### Step 5: Deploy on Render
 
-Happy tracking & good luck with those Box Draws! 🎯
+1. Create a new **Web Service** on [Render](https://render.com/)  
+2. Connect your GitHub repo  
+3. Set **Environment** to Python  
+4. Add environment variables from your `.env` file  
+5. Use `pip install -r requirements.txt` as the **Build Command**  
+6. Use `gunicorn app:app` as the **Start Command**  
+7. Click **Deploy**  
+
+After deployment, your web app will be live online, syncing data with Firebase.
+
+---
+
+## 📝 Usage
+
+- **Desktop**: Launch executable → manage coins → view goals → export/import data  
+- **Web**: Open in browser → navigate sidebar → track coins → view analytics  
+
+---
+
+## 📷 Screenshots
+
+    ![Desktop Dashboard](screenshots/desktop_dashboard.png)
+    ![Web Dashboard](screenshots/web_dashboard.png)
+
+---
+
+## 🛠️ Contributing
+
+1. Fork the repository  
+2. Create a new branch: `git checkout -b feature-name`  
+3. Make changes → `git commit -m "Add feature"`  
+4. Push branch → Open Pull Request  
+
+---
