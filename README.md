@@ -147,8 +147,8 @@ After deployment, your web app will be live online, syncing data with Firebase.
 
 ## 📷 Screenshots
 
-    ![Desktop Dashboard](screenshots/desktop_dashboard.png)
-    ![Web Dashboard](screenshots/web_dashboard.png)
+    ![Desktop Dashboard](https://github.com/ifti136/Coin-Tracker/blob/main/screenshots/desktop_dashboard.png)
+    ![Web Dashboard](https://github.com/ifti136/Coin-Tracker/blob/main/screenshots/web_dashboard.png)
 
 ---
 
