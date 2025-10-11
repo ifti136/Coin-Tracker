@@ -37,35 +37,37 @@ Track coins, view analytics, manage goals, and keep your data synced online.
 
 ### Setup
 
-1. **Clone the repository**
+1. **Download & Run (Easiest Method)**
+
+- You can download the latest standalone executable from the **[Releases Page](https://github.com/ifti136/Coin-Tracker/releases/tag/v1.0)**.
+- Download `CoinTracker.exe`, place it anywhere on your system, and run it.
+
+2. **Otherwise Clone the repository**
 
     ```bash
     git clone https://github.com/ifti136/coin-tracker.git
     cd CoinTracker
     ```
 
-2. **Install dependencies**
+3. **Install dependencies**
 
     ```bash
     pip install -r web/requirements.txt
     ```
 
-3. **Generate Desktop Icon (optional)**
+4. **Generate Desktop Icon (optional)**
 
     ```bash
     python coin_icon.py
     ```
 
-4. **Build Desktop App**
+5. **Build Desktop App**
 
     ```bash
     python build.py
     ```
 
-5. **Download & Run (Easiest Method)**
 
-- You can download the latest standalone executable from the **[Releases Page](https://github.com/ifti136/Coin-Tracker/releases/tag/v1.0)**.
-- Download `CoinTracker.exe`, place it anywhere on your system, and run it.
 
 ---
 
