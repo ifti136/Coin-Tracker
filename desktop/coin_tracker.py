@@ -106,12 +106,13 @@ class OnlineCoinTracker:
             "goal": 13500,
             "dark_mode": False,
             "quick_actions": [
-                {"text": "Event Rewards", "value": 50, "is_positive": True},
-                {"text": "Watch Ads", "value": 10, "is_positive": True},
+                {"text": "Event Reward", "value": 50, "is_positive": True},
+                {"text": "Ads", "value": 10, "is_positive": True},
                 {"text": "Daily Games", "value": 100, "is_positive": True},
-                {"text": "Box Draw", "value": 100, "is_positive": False},
-                {"text": "Login Bonus", "value": 50, "is_positive": True},
-                {"text": "Achievement", "value": 25, "is_positive": True}
+                {"text": "Login", "value": 50, "is_positive": True},
+                {"text": "Campaign Reward", "value": 50, "is_positive": True},
+                {"text": "Box Draw (Single Spin)", "value": 100, "is_positive": False},
+                {"text": "Box Draw (10 Spins)", "value": 900, "is_positive": False}
             ]
         }
 
@@ -126,14 +127,14 @@ class OnlineCoinTracker:
                     base_path = os.path.dirname(sys.executable)
                 else:
                     base_path = os.path.dirname(os.path.abspath(__file__))
-
+                
                 key_file = os.path.join(base_path, "firebase-key.json")
-
+                
                 if not os.path.exists(key_file):
                     print(f"Firebase key file not found at: {key_file}")
                     self.db = None
                     return
-
+                    
                 cred = credentials.Certificate(key_file)
                 firebase_admin.initialize_app(cred)
             self.db = firestore.client()
@@ -142,44 +143,48 @@ class OnlineCoinTracker:
             print(f"❌ Firebase init error: {e}")
             self.db = None
 
+    @staticmethod
+    def get_last_active_profile(user_id="default_user"):
+        """Reads the last active profile name from the database."""
+        if FIREBASE_AVAILABLE and firebase_admin._apps:
+            try:
+                db = firestore.client()
+                doc_ref = db.collection('users').document(user_id)
+                doc = doc_ref.get()
+                if doc.exists:
+                    return doc.to_dict().get('last_active_profile', 'Default')
+            except Exception as e:
+                print(f"Error fetching last active profile: {e}")
+        return 'Default'
+
+    def set_last_active_profile(self):
+        """Saves the current profile name as the last active one in the database."""
+        if self.db and FIREBASE_AVAILABLE:
+            try:
+                doc_ref = self.db.collection('users').document(self.user_id)
+                doc_ref.set({'last_active_profile': self.profile_name}, merge=True)
+                print(f"Set last active profile to: {self.profile_name}")
+            except Exception as e:
+                print(f"Error setting last active profile: {e}")
 
     def validate_and_fix_data(self):
-        """Ensures all transactions have necessary fields, especially a unique ID."""
         valid_transactions = []
         needs_save = False
-        loaded_settings = self.settings.copy() # Work with a copy
+        loaded_settings = self.settings.copy() 
 
-        default_quick_actions = [ # Define default structure without icon
-            {"text": "Event Rewards", "value": 50, "is_positive": True},
-            {"text": "Watch Ads", "value": 10, "is_positive": True},
-            {"text": "Daily Games", "value": 100, "is_positive": True},
-            {"text": "Box Draw", "value": 100, "is_positive": False},
-            {"text": "Login Bonus", "value": 50, "is_positive": True},
-            {"text": "Achievement", "value": 25, "is_positive": True}
+        default_quick_actions = [
+            {"text": "Event Reward", "value": 50, "is_positive": True}, 
+            {"text": "Ads", "value": 10, "is_positive": True},
+            {"text": "Daily Games", "value": 100, "is_positive": True}, 
+            {"text": "Login", "value": 50, "is_positive": True},
+            {"text": "Campaign Reward", "value": 50, "is_positive": True},
+            {"text": "Box Draw (Single Spin)", "value": 100, "is_positive": False},
+            {"text": "Box Draw (10 Spins)", "value": 900, "is_positive": False} 
         ]
         if not isinstance(loaded_settings.get("quick_actions"), list):
              loaded_settings["quick_actions"] = default_quick_actions
              needs_save = True
-        else:
-            cleaned_actions = []
-            actions_changed = False
-            for action in loaded_settings["quick_actions"]:
-                if isinstance(action, dict):
-                    if 'icon' in action:
-                        del action['icon']
-                        actions_changed = True
-                    if all(k in action for k in ['text', 'value', 'is_positive']):
-                        cleaned_actions.append(action)
-                    else:
-                        actions_changed = True # Mark for save if structure is wrong
-                else:
-                    actions_changed = True # Mark for save if item is not a dict
-
-            if actions_changed:
-                loaded_settings["quick_actions"] = cleaned_actions
-                needs_save = True
-
-
+        
         for i, transaction in enumerate(self.transactions):
             if not isinstance(transaction, dict):
                 needs_save = True
@@ -197,19 +202,16 @@ class OnlineCoinTracker:
                 continue
             valid_transactions.append(transaction)
 
-
         self.transactions = valid_transactions
         if needs_save or self.settings != loaded_settings:
             self.settings = loaded_settings
-            needs_save = True # Ensure save happens if settings changed
+            needs_save = True
 
         if needs_save:
-            print("Data validated, potentially fixed, and resaving...")
+            print("Data validated, saving...")
             self.save_data(recalculate=True)
 
-
     def recalculate_balances(self):
-        """Sorts all transactions and recalculates the 'previous_balance' field."""
         self.transactions.sort(key=lambda x: x.get('date', ''))
         balance = 0
         for t in self.transactions:
@@ -217,18 +219,7 @@ class OnlineCoinTracker:
             balance += t.get('amount', 0)
 
     def load_data(self):
-        default_settings = {
-            "goal": 13500,
-            "dark_mode": False,
-            "quick_actions": [
-                {"text": "Event Rewards", "value": 50, "is_positive": True},
-                {"text": "Watch Ads", "value": 10, "is_positive": True},
-                {"text": "Daily Games", "value": 100, "is_positive": True},
-                {"text": "Box Draw", "value": 100, "is_positive": False},
-                {"text": "Login Bonus", "value": 50, "is_positive": True},
-                {"text": "Achievement", "value": 25, "is_positive": True}
-            ]
-        }
+        default_settings = self.settings.copy()
         loaded_settings = {}
 
         if self.db and FIREBASE_AVAILABLE:
@@ -240,26 +231,17 @@ class OnlineCoinTracker:
                     profiles_data = data.get('profiles', {})
                     profile_data = profiles_data.get(self.profile_name, {})
                     self.transactions = profile_data.get('transactions', [])
-                    loaded_settings = profile_data.get('settings', {}) # Load settings
-                    print(f"Loaded {len(self.transactions)} transactions from Firebase for profile '{self.profile_name}'")
-                else:
-                    print(f"No Firebase data found for user '{self.user_id}', profile '{self.profile_name}'. Saving defaults.")
-                    self.transactions = [] # Start fresh
-                    loaded_settings = default_settings.copy() # Use defaults
-                    self.settings = loaded_settings # Apply defaults before saving
-                    self.save_data(recalculate=True) # Save initial structure with defaults
+                    loaded_settings = profile_data.get('settings', {})
             except Exception as e:
                 print(f"Online load error for profile '{self.profile_name}': {e}")
-                self.load_local_data() # Fallback
+                self.load_local_data() 
         else:
-            self.load_local_data() # Load local if Firebase unavailable
+            self.load_local_data() 
 
-        temp_settings = default_settings.copy()
-        temp_settings.update(loaded_settings)
-        self.settings = temp_settings
+        default_settings.update(loaded_settings)
+        self.settings = default_settings
         
         self.validate_and_fix_data()
-
 
     def save_data(self, recalculate=True):
         if recalculate:
@@ -274,34 +256,20 @@ class OnlineCoinTracker:
 
                 profile_data = {
                     'transactions': self.transactions,
-                    'settings': self.settings, # Save potentially updated settings
+                    'settings': self.settings,
                     'last_updated': dt_now_iso()
                 }
 
                 profiles_data[self.profile_name] = profile_data
-
                 doc_ref.set({'profiles': profiles_data, 'last_updated': dt_now_iso()}, merge=True)
-                print(f"✅ Saved {len(self.transactions)} transactions to Firebase for profile '{self.profile_name}'")
             except Exception as e:
                 print(f"❌ Online save error for profile '{self.profile_name}': {e}")
                 self.save_local_data(recalculate=False)
         else:
             self.save_local_data(recalculate=False)
 
-
     def load_local_data(self):
-        default_settings = {
-            "goal": 13500,
-            "dark_mode": False,
-            "quick_actions": [
-                {"text": "Event Rewards", "value": 50, "is_positive": True},
-                {"text": "Watch Ads", "value": 10, "is_positive": True},
-                {"text": "Daily Games", "value": 100, "is_positive": True},
-                {"text": "Box Draw", "value": 100, "is_positive": False},
-                {"text": "Login Bonus", "value": 50, "is_positive": True},
-                {"text": "Achievement", "value": 25, "is_positive": True}
-            ]
-        }
+        default_settings = self.settings.copy()
         loaded_settings = {}
         data_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'CoinTracker')
         data_file = os.path.join(data_dir, f"{self.profile_name}.json")
@@ -309,21 +277,16 @@ class OnlineCoinTracker:
             with open(data_file, 'r') as f:
                 data = json.load(f)
                 self.transactions = data.get('transactions', [])
-                loaded_settings = data.get('settings', {}) # Load settings
-                print(f"Loaded {len(self.transactions)} transactions from local storage for profile '{self.profile_name}'")
+                loaded_settings = data.get('settings', {})
         except (FileNotFoundError, json.JSONDecodeError):
-            print(f"Local file not found or corrupt for profile '{self.profile_name}'. Using defaults.")
             self.transactions = []
-
-        temp_settings = default_settings.copy()
-        temp_settings.update(loaded_settings)
-        self.settings = temp_settings
-
+        
+        default_settings.update(loaded_settings)
+        self.settings = default_settings
 
     def save_local_data(self, recalculate=True):
         if recalculate:
             self.recalculate_balances()
-
         data_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'CoinTracker')
         os.makedirs(data_dir, exist_ok=True)
         data_file = os.path.join(data_dir, f"{self.profile_name}.json")
@@ -336,19 +299,12 @@ class OnlineCoinTracker:
         try:
             with open(data_file, 'w') as f:
                 json.dump(data, f, indent=2)
-            print(f"Saved data locally for profile '{self.profile_name}'")
         except Exception as e:
             print(f"Error saving data locally for profile '{self.profile_name}': {e}")
 
-
     def add_transaction(self, amount, source, date=None):
         if amount == 0: return False
-        transaction = {
-            "id": str(uuid.uuid4()),
-            "date": date or dt_now_iso(),
-            "amount": amount,
-            "source": source
-        }
+        transaction = {"id": str(uuid.uuid4()), "date": date or dt_now_iso(), "amount": amount, "source": source}
         self.transactions.append(transaction)
         self.save_data(recalculate=True)
         return True
@@ -356,9 +312,7 @@ class OnlineCoinTracker:
     def update_transaction(self, transaction_id, new_data):
         for t in self.transactions:
             if t.get('id') == transaction_id:
-                t['amount'] = new_data['amount']
-                t['source'] = new_data['source']
-                t['date'] = new_data['date']
+                t.update(new_data)
                 self.save_data(recalculate=True)
                 return True
         return False
@@ -383,26 +337,21 @@ class OnlineCoinTracker:
     def get_source_breakdown(self):
         breakdown = defaultdict(int)
         for t in self.transactions:
-            if t.get('amount', 0) > 0:
-                breakdown[t['source']] += t['amount']
+            if t.get('amount', 0) > 0: breakdown[t['source']] += t['amount']
         return breakdown
 
     def get_spending_breakdown(self):
         breakdown = defaultdict(int)
         for t in self.transactions:
-            if t.get('amount', 0) < 0:
-                breakdown[t['source']] += abs(t['amount'])
+            if t.get('amount', 0) < 0: breakdown[t['source']] += abs(t['amount'])
         return breakdown
 
     def get_balance_timeline(self):
         timeline = []
         if not self.transactions: return timeline
         for t in self.transactions:
-            try: # Add error handling for date parsing
-                timeline.append({
-                    'date': datetime.fromisoformat(t['date']),
-                    'balance': t.get('previous_balance', 0) + t.get('amount', 0)
-                })
+            try:
+                timeline.append({'date': datetime.fromisoformat(t['date']), 'balance': t.get('previous_balance', 0) + t.get('amount', 0)})
             except ValueError:
                  print(f"Skipping timeline point due to invalid date: {t.get('date')}")
         return timeline
@@ -410,27 +359,19 @@ class OnlineCoinTracker:
     def export_data(self, file_path):
         try:
             with open(file_path, 'w') as f:
-                json.dump({
-                    'transactions': self.transactions,
-                    'settings': self.settings
-                }, f, indent=2)
+                json.dump({'transactions': self.transactions, 'settings': self.settings}, f, indent=2)
             return True
-        except Exception as e:
-            print(f"Export error: {e}")
-            return False
+        except Exception as e: print(f"Export error: {e}"); return False
 
     def import_data(self, file_path):
         try:
             with open(file_path, 'r') as f:
                 data = json.load(f)
                 self.transactions = data.get('transactions', [])
-                loaded_settings = data.get('settings', {})
-                self.settings.update(loaded_settings)
-                self.validate_and_fix_data() # Validates and saves
+                self.settings.update(data.get('settings', {}))
+                self.validate_and_fix_data()
             return True
-        except Exception as e:
-            print(f"Import error: {e}")
-            return False
+        except Exception as e: print(f"Import error: {e}"); return False
 
     def set_goal(self, goal_value: int):
         self.settings["goal"] = max(0, int(goal_value))
@@ -449,55 +390,22 @@ class OnlineCoinTracker:
     @staticmethod
     def get_profile_names(user_id="default_user"):
         profiles = ['Default']
-        if FIREBASE_AVAILABLE:
+        if FIREBASE_AVAILABLE and firebase_admin._apps:
             try:
-                if not firebase_admin._apps:
-                    print("Warning: Firebase not initialized in get_profile_names.")
-                    raise Exception("Firebase not initialized")
                 db = firestore.client()
                 if not db: raise Exception("Firebase client not available")
-
-                doc_ref = db.collection('users').document(user_id)
-                doc = doc_ref.get()
+                doc = db.collection('users').document(user_id).get()
                 if doc.exists:
-                    profiles_data = doc.to_dict().get('profiles', {})
-                    profiles.extend([p for p in profiles_data.keys() if p != 'Default'])
-            except Exception as e:
-                print(f"Firebase profiles error: {e}")
-                
+                    profiles.extend([p for p in doc.to_dict().get('profiles', {}).keys() if p != 'Default'])
+            except Exception as e: print(f"Firebase profiles error: {e}")
         try:
             data_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'CoinTracker')
             if os.path.exists(data_dir):
                 local_profiles = [f[:-5] for f in os.listdir(data_dir) if f.endswith('.json')]
                 for lp in local_profiles:
-                    if lp not in profiles:
-                        profiles.append(lp)
-        except Exception as e:
-            print(f"Error reading local profiles: {e}")
-
-        if 'Default' in profiles and profiles[0] != 'Default':
-             profiles.remove('Default')
-             profiles.insert(0, 'Default')
-        elif 'Default' not in profiles:
-             profiles.insert(0, 'Default')
-
-        return profiles
-
-
-    def create_profile(self, profile_name):
-        if profile_name in self.get_profile_names(self.user_id):
-            return False, "Profile already exists"
-        try:
-             new_tracker = OnlineCoinTracker(profile_name, self.user_id)
-             if not new_tracker.transactions and not new_tracker.settings.get('goal'): # Basic check if it's default
-                  new_tracker.save_data()
-             print(f"Profile '{profile_name}' created structure.")
-             return True, f"Profile '{profile_name}' created successfully"
-        except Exception as e:
-             print(f"Error creating profile '{profile_name}': {e}")
-             return False, f"Failed to create profile: {e}"
-
-
+                    if lp not in profiles: profiles.append(lp)
+        except Exception as e: print(f"Error reading local profiles: {e}")
+        return sorted(list(set(profiles)))
 
 # --------------------------
 # CUSTOM WIDGETS
@@ -752,11 +660,11 @@ class TransactionDialog(QDialog):
         self.source_combo.clear()
         if self.is_income:
             self.source_label.setText("Source")
-            common_sources = ["Event Reward", "Login", "Daily Games", "Achievements", "Ads", "Other"]
+            common_sources = ["Event Reward", "Login", "Daily Games", "Achievements", "Ads", "Campaign Reward", "Other"]
             self.source_combo.addItems(common_sources)
         else:
             self.source_label.setText("Category")
-            common_categories = ["Box Draw", "Store Purchase", "Upgrade", "Other Spending"]
+            common_categories = ["Box Draw", "Store Purchase", "Pack Purchase", "Manager Purchase" "Other"]
             self.source_combo.addItems(common_categories)
         self.update_combo_style() # Update style after items are added
 
@@ -960,10 +868,19 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        profiles = self.get_profile_names()
-        self.current_profile = profiles[0] if profiles else "Default"
+        # --- THIS INITIALIZATION LOGIC IS MODIFIED ---
+        # 1. Get the primary profile from the database first
+        primary_profile = OnlineCoinTracker.get_last_active_profile()
+
+        # 2. Get all available profiles
+        self.profiles = self.get_profile_names()
+        
+        # 3. Set current profile, with a fallback to 'Default'
+        self.current_profile = primary_profile if primary_profile in self.profiles else "Default"
+        
+        # 4. Initialize the tracker with the determined profile
         self.tracker = OnlineCoinTracker(self.current_profile)
-        self.profiles = profiles or ["Default"]
+        # --- END OF MODIFIED LOGIC ---
 
         self.palette_colors = DARK if self.tracker.get_dark_mode() else LIGHT
         self.toast_widget = None
@@ -988,7 +905,7 @@ class MainWindow(QMainWindow):
 
         self.themed_widgets = []
         self.quick_action_buttons = []
-        self.chart_views = {} # Use dict to store chart views by name
+        self.chart_views = {}
 
         self.dashboard_page = self.create_modern_dashboard()
         self.analytics_page = self.create_modern_analytics()
@@ -1000,10 +917,9 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.history_page)
         self.stacked_widget.addWidget(self.settings_page)
 
-        self.update_all_data() # Load data first
-        self.apply_modern_theme() # Then apply theme based on loaded data
+        self.update_all_data()
+        self.apply_modern_theme()
         self.update_active_nav("Dashboard")
-
 
     @staticmethod
     def get_profile_names():
@@ -1071,14 +987,32 @@ class MainWindow(QMainWindow):
         layout.addWidget(profile_section)
 
         self.dark_toggle = QPushButton("🌙 Switch Mode")
-        self.dark_toggle.setObjectName("ModernThemeToggle") # Consistent name
-        # Removed setFixedHeight to allow auto-sizing
+        self.dark_toggle.setObjectName("ModernThemeToggle")
         self.dark_toggle.clicked.connect(self.toggle_dark_mode)
         layout.addWidget(self.dark_toggle)
 
         return sidebar
-
-
+        
+    def change_profile(self, profile_name):
+        if not profile_name or profile_name == self.current_profile: return
+        print(f"Changing profile to: {profile_name}")
+        self.current_profile = profile_name
+        self.tracker = OnlineCoinTracker(self.current_profile)
+        
+        # --- NEWLY ADDED LINE ---
+        # Save the new profile choice to the database
+        self.tracker.set_last_active_profile()
+        # --- END OF NEW LINE ---
+        
+        self.palette_colors = DARK if self.tracker.get_dark_mode() else LIGHT
+        self.rebuild_analytics_page()
+        self.apply_modern_theme()
+        self.update_all_data()
+        self.update_modern_quick_actions()
+        if hasattr(self, 'goal_input'):
+            self.goal_input.setText(str(self.tracker.get_goal()))
+        self.show_toast(f"Switched to profile: {profile_name}", "success")
+        
     def create_modern_nav_button(self, icon, text):
         # ... (Nav button creation remains the same) ...
         btn = QPushButton()
@@ -1210,9 +1144,9 @@ class MainWindow(QMainWindow):
         source_combo = QComboBox()
         source_combo.setEditable(True)
         if is_add:
-            source_combo.addItems(["Event Reward", "Login", "Daily Games", "Achievements", "Ads", "Other"])
+            source_combo.addItems(["Event Reward", "Login", "Daily Games", "Achievements", "Ads", "Campaign Reward", "Other"])
         else:
-            source_combo.addItems(["Box Draw", "Store Purchase", "Upgrade", "Other Spending"])
+            source_combo.addItems(["Box Draw", "Store Purchase", "Pack Purchase", "Manager Purchase" "Other"])
         layout.addWidget(source_combo)
 
         layout.addStretch() # Push button to bottom
@@ -2233,20 +2167,7 @@ class MainWindow(QMainWindow):
             painter.drawText(pixmap.rect(), Qt.AlignCenter, "C")
             painter.end()
             return QIcon(pixmap)
-    def change_profile(self, profile_name):
-        if not profile_name or profile_name == self.current_profile: return
-        print(f"Changing profile to: {profile_name}")
-        self.current_profile = profile_name
-        self.tracker = OnlineCoinTracker(self.current_profile, self.tracker.user_id if hasattr(self.tracker, 'user_id') else "default_user")
-        self.palette_colors = DARK if self.tracker.get_dark_mode() else LIGHT
-        self.rebuild_analytics_page()
-        self.apply_modern_theme()
-        self.update_all_data()
-        self.update_modern_quick_actions()
-        if hasattr(self, 'goal_input'):
-            self.goal_input.setText(str(self.tracker.get_goal()))
-        self.show_toast(f"Switched to profile: {profile_name}", "success")
-
+        
     def create_new_profile(self):
         name, ok = QInputDialog.getText(self, "New Profile", "Enter new profile name:")
         if ok and name and name.strip():
@@ -2486,4 +2407,3 @@ if __name__ == "__main__":
          except Exception as e2:
               print(f"Could not show error message box: {e2}")
          sys.exit(1)
-
