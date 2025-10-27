@@ -81,9 +81,13 @@ class WebCoinTracker:
         return {
             'goal': 13500, 'dark_mode': False,
             'quick_actions': [
-                {"text": "Event Rewards", "value": 50, "is_positive": True}, {"text": "Watch Ads", "value": 10, "is_positive": True},
-                {"text": "Daily Games", "value": 100, "is_positive": True}, {"text": "Box Draw", "value": 100, "is_positive": False},
-                {"text": "Login Bonus", "value": 50, "is_positive": True}, {"text": "Achievement", "value": 25, "is_positive": True}
+                {"text": "Event Reward", "value": 50, "is_positive": True},
+                {"text": "Ads", "value": 10, "is_positive": True},
+                {"text": "Daily Games", "value": 100, "is_positive": True},
+                {"text": "Login", "value": 50, "is_positive": True},
+                {"text": "Campaign Reward", "value": 50, "is_positive": True},
+                {"text": "Box Draw (Single)", "value": 100, "is_positive": False},
+                {"text": "Box Draw (10)", "value": 900, "is_positive": False}
             ]
         }
 
