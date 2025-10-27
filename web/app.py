@@ -21,25 +21,56 @@ app.secret_key = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-dev')
 db = None
 if FIREBASE_AVAILABLE:
     try:
-        if os.path.exists('firebase-key.json'):
+        # --- THIS IS THE CORRECTED LOGIC BLOCK ---
+        # Define required environment variable keys
+        required_env_vars = ['FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL']
+        
+        # Check if all required environment variables are present and not empty
+        if all(os.getenv(key) for key in required_env_vars):
+            print("Attempting to initialize Firebase with environment variables...")
+            # Sanitize the private key
+            private_key = os.getenv('FIREBASE_PRIVATE_KEY').replace('\\n', '\n')
+            
+            firebase_config = {
+                "type": "service_account",
+                "project_id": os.getenv('FIREBASE_PROJECT_ID'),
+                "private_key_id": os.getenv('FIREBASE_PRIVATE_KEY_ID', ''), # Optional
+                "private_key": private_key,
+                "client_email": os.getenv('FIREBASE_CLIENT_EMAIL'),
+                "client_id": os.getenv('FIREBASE_CLIENT_ID', ''), # Optional
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            }
+            cred = credentials.Certificate(firebase_config)
+            print("Firebase credentials loaded from environment.")
+        # Fallback to local file if environment variables are not set
+        elif os.path.exists('firebase-key.json'):
+            print("Attempting to initialize Firebase with firebase-key.json...")
             cred = credentials.Certificate('firebase-key.json')
-            if not firebase_admin._apps:
-                firebase_admin.initialize_app(cred)
-            db = firestore.client()
-            print("✅ Firebase initialized successfully")
+            print("Firebase credentials loaded from file.")
+        # If neither method works, raise an exception
         else:
-            print("⚠️ Firebase key file not found. Running in offline mode.")
-            FIREBASE_AVAILABLE = False
+            raise Exception("No Firebase configuration found. Set environment variables or provide firebase-key.json.")
+        
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app(cred)
+        
+        db = firestore.client()
+        print("✅ Firebase initialized successfully")
+        # --- END OF CORRECTED LOGIC BLOCK ---
+
     except Exception as e:
         print(f"❌ Firebase init error: {e}")
         db = None
+        FIREBASE_AVAILABLE = False # Explicitly set to false on failure
 else:
     print("⚠️ Firebase library not found. Running in offline mode.")
 
+# (The rest of the file remains the same)
 def dt_now_iso():
     return datetime.now().isoformat()
 
-# --- Core Data Handler Class (No changes needed here) ---
 class WebCoinTracker:
     def __init__(self, profile_name="Default", user_id="default_user"):
         self.profile_name = profile_name
@@ -138,7 +169,6 @@ class WebCoinTracker:
         profiles.extend([p for p in session.get('profiles', {}).keys() if p not in profiles])
         return sorted(list(set(profiles)))
 
-# --- API Routes ---
 @app.route('/api/data')
 def get_all_data():
     profile_name = session.get('current_profile', 'Default')
@@ -146,7 +176,6 @@ def get_all_data():
     transactions, settings = tracker.get_data()
     balance = sum(t.get('amount', 0) for t in transactions)
     goal = settings.get('goal', 13500)
-    # (Dashboard stats and Analytics calculations remain the same)
     today, week_start, month_start = datetime.now().date(), datetime.now().date() - timedelta(days=datetime.now().weekday()), datetime.now().date().replace(day=1)
     today_earn, week_earn, month_earn = 0, 0, 0
     for t in transactions:
@@ -166,6 +195,9 @@ def get_all_data():
     for t in transactions:
         if t['amount'] < 0: spending_breakdown[t['source']] += abs(t['amount'])
     timeline = [{'date': t['date'], 'balance': t.get('previous_balance', 0) + t.get('amount', 0)} for t in sorted(transactions, key=lambda x: x.get('date', ''))]
+
+    # Add firebase availability to settings
+    settings['firebase_available'] = FIREBASE_AVAILABLE and db is not None
 
     return jsonify({
         'profile': profile_name, 'transactions': transactions, 'settings': settings, 'balance': balance, 'goal': goal,
@@ -213,20 +245,14 @@ def get_profiles():
     tracker = WebCoinTracker()
     return jsonify({'profiles': tracker.get_profiles(), 'current_profile': session.get('current_profile', 'Default')})
 
-# --- THIS FUNCTION IS MODIFIED ---
 @app.route('/api/switch-profile', methods=['POST'])
 def switch_profile():
     profile_name = request.json.get('profile_name')
     session['current_profile'] = profile_name
-
-    # Also save this choice to the database
     if db and FIREBASE_AVAILABLE:
         try:
-            doc_ref = db.collection('users').document('default_user')
-            doc_ref.set({'last_active_profile': profile_name}, merge=True)
-        except Exception as e:
-            print(f"Error saving last active profile: {e}")
-
+            db.collection('users').document('default_user').set({'last_active_profile': profile_name}, merge=True)
+        except Exception as e: print(f"Error saving last active profile: {e}")
     return jsonify({'success': True})
 
 @app.route('/api/create-profile', methods=['POST'])
@@ -240,22 +266,17 @@ def create_profile():
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Failed to create profile'}), 500
 
-# --- THIS FUNCTION IS MODIFIED ---
 @app.route('/')
 def index():
-    # On first load, try to get the primary profile from the database
     if 'current_profile' not in session:
         primary_profile = 'Default'
         if db and FIREBASE_AVAILABLE:
             try:
-                doc_ref = db.collection('users').document('default_user')
-                doc = doc_ref.get()
+                doc = db.collection('users').document('default_user').get()
                 if doc.exists:
                     primary_profile = doc.to_dict().get('last_active_profile', 'Default')
-            except Exception as e:
-                print(f"Error fetching primary profile: {e}")
+            except Exception as e: print(f"Error fetching primary profile: {e}")
         session['current_profile'] = primary_profile
-        
     return render_template('index.html')
 
 if __name__ == '__main__':
