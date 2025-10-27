@@ -12,6 +12,10 @@ Track coins, view analytics, manage goals, and keep your data synced online.
 ## 🗂️ Project Structure
 
 ```
+├── desktop/
+│ ├── coin_tracker.py # PyQt5 Desktop App logic
+│ ├── build.py # PyInstaller build script
+│ ├── coin_icon.py # Script to generate desktop icon
 ├── web/
 │ ├── static/ # Web App static files (CSS, JS)
 │ ├── templates/ # Web App HTML templates
@@ -20,9 +24,6 @@ Track coins, view analytics, manage goals, and keep your data synced online.
 │ └── app.py # Flask Web App core logic
 ├── LICENSE # MIT License
 ├── README.md # This file
-├── coin_tracker.py # PyQt5 Desktop App logic
-├── build.py # PyInstaller build script
-└── coin_icon.py # Script to generate desktop icon
 ```
 ---
 
