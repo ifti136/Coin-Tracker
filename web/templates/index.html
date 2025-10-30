@@ -22,31 +22,35 @@
                 <div class="profile-header"><span class="profile-label">PROFILE</span></div>
                 <div class="profile-selector">
                     <select id="profileSelect" class="profile-dropdown"></select>
-                    <button id="newProfileBtn" class="btn-secondary profile-btn">＋ New</button>
+                    <button id="newProfileBtn" class="btn-secondary profile-btn">＋ New Profile</button>
                 </div>
             </div>
             <div class="theme-toggle"><button id="themeToggle">🌙 Switch Mode</button></div>
         </div>
 
         <div class="main-content">
+            <button class="hamburger-btn" id="hamburgerBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
             <div id="dashboard" class="page active">
                 <div class="page-header">
                     <h1 class="page-title">Dashboard Overview</h1>
                     <div class="quick-stats">
-                        <div class="stat-item"><div class="stat-label">Today</div><div id="todayEarnings" class="stat-value positive">+0</div></div>
-                        <div class="stat-item"><div class="stat-label">This Week</div><div id="weekEarnings" class="stat-value positive">+0</div></div>
-                        <div class="stat-item"><div class="stat-label">This Month</div><div id="monthEarnings" class="stat-value positive">+0</div></div>
+                        <div class="stat-item"><div id="todayEarnings" class="stat-value positive">+0</div><div class="stat-label">Today</div></div>
+                        <div class="stat-item"><div id="weekEarnings" class="stat-value positive">+0</div><div class="stat-label">This Week</div></div>
+                        <div class="stat-item"><div id="monthEarnings" class="stat-value positive">+0</div><div class="stat-label">This Month</div></div>
                     </div>
                 </div>
                 <div class="card balance-card">
                     <div class="balance-header">
-                        <div>
-                            <div id="goalText" class="goal-text"></div>
-                            <div class="current-balance-label">Current Balance</div>
-                            <div id="balanceAmount" class="balance-amount">0 coins</div>
-                        </div>
+                        <div id="goalText" class="goal-text"></div>
                         <div id="progressPercent" class="progress-percent">0%</div>
                     </div>
+                    <div class="current-balance-label">Current Balance</div>
+                    <div id="balanceAmount" class="balance-amount">0 coins</div>
                     <div class="progress-bar"><div id="progressBar" class="progress-fill"></div></div>
                 </div>
                 
@@ -64,7 +68,7 @@
                         <div class="form-group"><label for="addAmount">Amount</label><input type="number" id="addAmount" placeholder="e.g., 50" min="1"></div>
                         <div class="form-group"><label for="addSource">Source</label>
                             <select id="addSource">
-                                <option>Event Reward</option><option>Login</option><option>Daily Games</option><option>Achievements</option><option>Ads</option><option>Campaign Reward</option><option>Other</option>
+                                <option>Event Reward</option><option>Login</option><option>Daily Games</option><option>Other</option>
                             </select>
                         </div>
                         <button id="addCoinsBtn" class="btn success">Add Coins</button>
@@ -74,7 +78,7 @@
                         <div class="form-group"><label for="spendAmount">Amount</label><input type="number" id="spendAmount" placeholder="e.g., 100" min="1"></div>
                         <div class="form-group"><label for="spendCategory">Category</label>
                             <select id="spendCategory">
-                                <option>Box Draw</option><option>Store Purchase</option><option>Pack Purchase</option><option>Manager Purchase</option><option>Other</option>
+                                <option>Box Draw</option><option>Store Purchase</option><option>Upgrade</option><option>Other Spending</option>
                             </select>
                         </div>
                         <button id="spendCoinsBtn" class="btn danger">Spend Coins</button>
@@ -114,7 +118,7 @@
                                 <div class="chart-wrapper"><canvas id="timelineChart"></canvas></div>
                             </div>
                         </div>
-                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -172,6 +176,8 @@
         </div>
     </div>
     
+    <div class="overlay" id="overlay"></div>
+
     <div id="transactionModal" class="modal">
         <div class="modal-content">
             <div class="modal-header"><h3 class="modal-title"></h3><span class="close">&times;</span></div>
