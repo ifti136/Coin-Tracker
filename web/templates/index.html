@@ -12,6 +12,14 @@
     <div class="app-container">
         <div class="sidebar">
             <div class="logo"><div class="coin-icon">C</div><span>Coin Tracker</span></div>
+
+            <div class="sidebar-header">
+                <button class="hamburger-btn" id="hamburgerBtn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
             <nav class="nav">
                 <button class="nav-btn active" data-page="dashboard"><span>📊</span> Dashboard</button>
                 <button class="nav-btn" data-page="analytics"><span>📈</span> Analytics</button>
@@ -29,12 +37,6 @@
         </div>
 
         <div class="main-content">
-            <button class="hamburger-btn" id="hamburgerBtn">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-
             <div id="dashboard" class="page active">
                 <div class="page-header">
                     <h1 class="page-title">Dashboard Overview</h1>
@@ -176,8 +178,6 @@
         </div>
     </div>
     
-    <div class="overlay" id="overlay"></div>
-
     <div id="transactionModal" class="modal">
         <div class="modal-content">
             <div class="modal-header"><h3 class="modal-title"></h3><span class="close">&times;</span></div>
