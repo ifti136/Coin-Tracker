@@ -306,10 +306,12 @@ body {
     box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
 }
 .quick-btn.positive:hover {
+    transform: translateY(-4px); /* ADDED THIS LINE */
     border-color: var(--success-color);
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
 }
 .quick-btn.negative:hover {
+    transform: translateY(-4px); /* ADDED THIS LINE */
     border-color: var(--danger-color);
     box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
 }
