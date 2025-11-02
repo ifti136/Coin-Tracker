@@ -403,7 +403,12 @@ class CoinTrackerApp {
 
         if (result && result.success) {
           this.showToast(`Quick action '${action.text}' recorded.`, "success");
-          this.data = result.data; // Update local state with fresh data from server
+          
+          // --- THIS IS THE FIX ---
+          // The server returns the data as the root object
+          this.data = result; // NOT result.data
+          // --- END FIX ---
+
           this.updateAllUI(); // Refresh UI with new state
         }
       };
@@ -566,7 +571,11 @@ class CoinTrackerApp {
     if (result && result.success) {
       this.showToast(`Added ${amount} coins!`, "success");
       amountEl.value = ""; // Clear input
-      this.data = result.data; // Update local state
+      
+      // --- THIS IS THE FIX ---
+      this.data = result; // NOT result.data
+      // --- END FIX ---
+      
       this.updateAllUI(); // Refresh UI
     }
   }
@@ -590,7 +599,11 @@ class CoinTrackerApp {
     if (result && result.success) {
       this.showToast(`Spent ${amount} coins.`, "success");
       amountEl.value = ""; // Clear input
-      this.data = result.data; // Update local state
+
+      // --- THIS IS THE FIX ---
+      this.data = result; // NOT result.data
+      // --- END FIX ---
+
       this.updateAllUI(); // Refresh UI
     }
   }
@@ -604,10 +617,11 @@ class CoinTrackerApp {
       });
       if (result && result.success) {
         this.showToast("Goal updated!", "success");
-        // Update local state from server response
-        this.data.settings.goal = result.data.settings.goal;
-        this.data.goal = result.data.goal;
-        this.data.progress = result.data.progress;
+
+        // --- THIS IS THE FIX ---
+        this.data = result; // NOT result.data
+        // --- END FIX ---
+
         // Targeted UI updates
         this.updateBalanceAndGoalUI(
           this.data.balance,
@@ -853,7 +867,11 @@ class CoinTrackerApp {
     if (result && result.success) {
       this.showToast(result.message, "success");
       document.getElementById("transactionModal").style.display = "none";
-      this.data = result.data; // Update local state
+      
+      // --- THIS IS THE FIX ---
+      this.data = result; // NOT result.data
+      // --- END FIX ---
+      
       this.updateAllUI(); // Refresh UI
     }
   }
@@ -888,7 +906,11 @@ class CoinTrackerApp {
       );
       if (result && result.success) {
         this.showToast(result.message, "success");
-        this.data = result.data; // Update local state
+        
+        // --- THIS IS THE FIX ---
+        this.data = result; // NOT result.data
+        // --- END FIX ---
+        
         this.updateAllUI(); // Refresh UI
       }
       this.removeContextMenu();
@@ -1018,7 +1040,11 @@ class CoinTrackerApp {
     
     if (result && result.success) {
         this.showToast("Quick Action added!", "success");
-        this.data = result.data; // Refresh all data from server
+        
+        // --- THIS IS THE FIX ---
+        this.data = result; // NOT result.data
+        // --- END FIX ---
+
         this.updateAllUI(); // Redraw everything
         
         // Clear inputs
@@ -1036,7 +1062,11 @@ class CoinTrackerApp {
     
     if (result && result.success) {
         this.showToast("Quick Action removed!", "success");
-        this.data = result.data; // Refresh all data from server
+        
+        // --- THIS IS THE FIX ---
+        this.data = result; // NOT result.data
+        // --- END FIX ---
+
         this.updateAllUI(); // Redraw everything
     }
   }
