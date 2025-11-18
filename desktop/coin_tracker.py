@@ -93,6 +93,111 @@ def dt_now_iso():
     return datetime.now().isoformat()
 
 # --------------------------
+# ACHIEVEMENT CALCULATION
+# --------------------------
+
+def calculate_achievements(transactions, balance, goal):
+    """Calculate achievements based on transactions, balance, and goal."""
+    achievements = []
+    today = datetime.now().date()
+
+    # --- 1. Milestone Achievements ---
+    if balance >= 1000:
+        achievements.append({
+            "icon": "💰",
+            "name": "Getting Started",
+            "desc": "Reach 1,000 coins"
+        })
+    if balance >= 5000:
+        achievements.append({
+            "icon": "📈",
+            "name": "Serious Saver",
+            "desc": "Reach 5,000 coins"
+        })
+    if balance >= 10000:
+        achievements.append({
+            "icon": "🏦",
+            "name": "Coin Hoarder",
+            "desc": "Reach 10,000 coins"
+        })
+    if balance >= goal:
+        achievements.append({
+            "icon": "👑",
+            "name": "Epic Box Secured!",
+            "desc": f"You reached the {goal:,} coin goal!"
+        })
+
+    # --- 2. Login Streak Achievement ---
+    try:
+        # Find all "Login" transactions
+        login_transactions = [
+            t for t in transactions 
+            if t.get('source', '').lower() == 'login' and t.get('amount', 0) > 0
+        ]
+        
+        # Get a set of unique dates (as date objects)
+        login_dates = set()
+        for t in login_transactions:
+            try:
+                login_dates.add(datetime.fromisoformat(t['date'].replace('Z', '+00:00')).date())
+            except (ValueError, AttributeError):
+                pass
+
+        streak = 0
+        if today in login_dates:
+            streak = 1
+            current_day = today - timedelta(days=1)
+            while current_day in login_dates:
+                streak += 1
+                current_day -= timedelta(days=1)
+
+        if streak >= 3:
+            achievements.append({
+                "icon": "🔥",
+                "name": f"{streak}-Day Streak",
+                "desc": f"Logged in {streak} days in a row!"
+            })
+    except Exception as e:
+        print(f"Error calculating streak: {e}")
+
+    # --- 3. No-Spend Streak ---
+    try:
+        # Sort transactions by date ascending to get first transaction
+        sorted_tx = sorted(transactions, key=lambda x: x.get('date', ''))
+        
+        last_spend_date = None
+        for t in reversed(sorted_tx):  # Check from newest to oldest
+            if t.get('amount', 0) < 0:
+                try:
+                    last_spend_date = datetime.fromisoformat(t['date'].replace('Z', '+00:00')).date()
+                except (ValueError, AttributeError):
+                    pass
+                break
+        
+        no_spend_days = 0
+        if last_spend_date:
+            no_spend_days = (today - last_spend_date).days
+        else:
+            # Never spent? That's a full streak!
+            if sorted_tx:  # Check if there are any transactions at all
+                try:
+                    first_tx_date = datetime.fromisoformat(sorted_tx[0]['date'].replace('Z', '+00:00')).date()
+                    no_spend_days = (today - first_tx_date).days
+                except (ValueError, AttributeError):
+                    pass
+                
+        if no_spend_days >= 7:
+            achievements.append({
+                "icon": "🛡️",
+                "name": "Disciplined",
+                "desc": f"No spending for {no_spend_days} days!"
+            })
+    except Exception as e:
+        print(f"Error calculating no-spend streak: {e}")
+
+    return achievements
+
+# --------------------------
 # DATA HANDLER
 # --------------------------
 
@@ -1119,6 +1224,10 @@ class MainWindow(QMainWindow):
         layout.addLayout(transaction_row)
         # --- End Reverted Transaction Input ---
 
+        # Achievements Card
+        achievements_card = self.create_achievements_card()
+        layout.addWidget(achievements_card)
+
         recent_card = self.create_recent_transactions_card()
         layout.addWidget(recent_card)
         layout.addStretch()
@@ -1291,6 +1400,123 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.recent_table)
         return card
 
+    def create_achievements_card(self):
+        """Create the achievements card to display earned achievements."""
+        card = ModernCard(self.palette_colors)
+        self.themed_widgets.append(card)
+        layout = QVBoxLayout(card)
+        layout.setSpacing(15)
+        
+        header = QLabel("🏆 Achievements")
+        header.setObjectName("ModernCardTitle")
+        layout.addWidget(header)
+        
+        # Create a scroll area for achievements
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFixedHeight(180)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setFrameShape(QFrame.NoFrame)
+        
+        achievements_widget = QWidget()
+        self.achievements_layout = QVBoxLayout(achievements_widget)
+        self.achievements_layout.setSpacing(10)
+        self.achievements_layout.setContentsMargins(5, 5, 5, 5)
+        
+        scroll.setWidget(achievements_widget)
+        layout.addWidget(scroll)
+        
+        return card
+
+    def update_achievements_display(self):
+        """Update the achievements display with current achievements."""
+        # Clear existing achievements
+        while self.achievements_layout.count():
+            item = self.achievements_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+        
+        # Calculate current achievements
+        balance = self.tracker.get_balance()
+        goal = self.tracker.get_goal()
+        transactions = self.tracker.get_transaction_history()
+        achievements = calculate_achievements(transactions, balance, goal)
+        
+        if not achievements:
+            # Show a message if no achievements yet
+            no_achievements = QLabel("🎯 Keep tracking to unlock achievements!")
+            no_achievements.setObjectName("MutedLabel")
+            no_achievements.setAlignment(Qt.AlignCenter)
+            no_achievements.setStyleSheet("padding: 20px;")
+            self.achievements_layout.addWidget(no_achievements)
+        else:
+            # Display each achievement
+            for achievement in achievements:
+                achievement_item = self.create_achievement_item(
+                    achievement['icon'],
+                    achievement['name'],
+                    achievement['desc']
+                )
+                self.achievements_layout.addWidget(achievement_item)
+        
+        self.achievements_layout.addStretch()
+
+    def create_achievement_item(self, icon, name, description):
+        """Create a single achievement item widget."""
+        item = QFrame()
+        item.setObjectName("AchievementItem")
+        item.setFrameShape(QFrame.StyledPanel)
+        item.setStyleSheet(f"""
+            QFrame#AchievementItem {{
+                background-color: {self.palette_colors['primaryLight']};
+                border: 1px solid {self.palette_colors['primary']};
+                border-radius: 8px;
+                padding: 10px;
+            }}
+        """)
+        
+        layout = QHBoxLayout(item)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(12)
+        
+        # Icon
+        icon_label = QLabel(icon)
+        icon_label.setStyleSheet("font-size: 24px; background: transparent; border: none;")
+        icon_label.setFixedWidth(32)
+        layout.addWidget(icon_label)
+        
+        # Text content
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(2)
+        
+        name_label = QLabel(name)
+        name_label.setObjectName("AchievementName")
+        name_label.setStyleSheet(f"""
+            color: {self.palette_colors['text']};
+            font-weight: 600;
+            font-size: 13px;
+            background: transparent;
+            border: none;
+        """)
+        
+        desc_label = QLabel(description)
+        desc_label.setObjectName("AchievementDesc")
+        desc_label.setStyleSheet(f"""
+            color: {self.palette_colors['muted']};
+            font-size: 11px;
+            background: transparent;
+            border: none;
+        """)
+        
+        text_layout.addWidget(name_label)
+        text_layout.addWidget(desc_label)
+        
+        layout.addLayout(text_layout)
+        layout.addStretch()
+        
+        return item
 
     def update_modern_quick_actions(self):
         # ... (Update quick actions - adapted for no icon) ...
@@ -1809,6 +2035,8 @@ class MainWindow(QMainWindow):
             self.update_quick_stats()
         if hasattr(self, 'status_icon'):
             self.update_online_status_display()
+        if hasattr(self, 'achievements_layout'):
+            self.update_achievements_display()
 
 
     # ... (update_online_status_display, update_quick_stats, update_recent_transactions remain the same) ...
