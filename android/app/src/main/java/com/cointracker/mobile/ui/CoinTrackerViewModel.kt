@@ -1,40 +1,61 @@
 package com.cointracker.mobile.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.cointracker.mobile.data.AdminStats
-import com.cointracker.mobile.data.AdminUserRow
-import com.cointracker.mobile.data.FirestoreRepository
-import com.cointracker.mobile.data.ProfileEnvelope
-import com.cointracker.mobile.data.QuickAction
-import com.cointracker.mobile.data.Settings
-import com.cointracker.mobile.data.Transaction
-import com.cointracker.mobile.data.UserSession
+import com.cointracker.mobile.data.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import javax.inject.Inject
 
-data class AppUiState(
-    val session: UserSession? = null,
-    val loading: Boolean = false,
-    val error: String? = null,
-    val profileEnvelope: ProfileEnvelope? = null,
-    val profiles: List<String> = listOf("Default"),
-    val adminStats: AdminStats? = null,
-    val adminUsers: List<AdminUserRow> = emptyList()
-)
-
-// FIX: Added @HiltViewModel and @Inject constructor
 @HiltViewModel
 class CoinTrackerViewModel @Inject constructor(
-    private val repo: FirestoreRepository
-) : ViewModel() {
+    private val repo: FirestoreRepository,
+    application: Application
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState
+
+    // Theme State
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode
+
+    private val prefs = application.getSharedPreferences("cointracker_prefs", Context.MODE_PRIVATE)
+
+    init {
+        checkSession()
+    }
+
+    private fun checkSession() {
+        val sessionJson = prefs.getString("user_session", null)
+        if (sessionJson != null) {
+            try {
+                val json = JSONObject(sessionJson)
+                val session = UserSession(
+                    userId = json.getString("userId"),
+                    username = json.getString("username"),
+                    role = json.getString("role"),
+                    currentProfile = json.optString("currentProfile", "Default")
+                )
+
+                _uiState.update { it.copy(session = session) }
+                refreshData()
+                loadProfiles()
+            } catch (e: Exception) {
+                logout()
+            }
+        }
+    }
+
+    fun toggleTheme() {
+        _isDarkMode.value = !_isDarkMode.value
+    }
 
     fun register(username: String, password: String) {
         viewModelScope.launch {
@@ -54,6 +75,7 @@ class CoinTrackerViewModel @Inject constructor(
             val result = repo.login(username, password)
             if (result.isSuccess) {
                 val session = result.getOrThrow()
+                saveSession(session)
                 _uiState.update { it.copy(session = session) }
                 refreshData()
                 loadProfiles()
@@ -63,7 +85,18 @@ class CoinTrackerViewModel @Inject constructor(
         }
     }
 
+    private fun saveSession(session: UserSession) {
+        val json = JSONObject().apply {
+            put("userId", session.userId)
+            put("username", session.username)
+            put("role", session.role)
+            put("currentProfile", session.currentProfile)
+        }
+        prefs.edit().putString("user_session", json.toString()).apply()
+    }
+
     fun logout() {
+        prefs.edit().remove("user_session").apply()
         _uiState.value = AppUiState()
         repo.logout()
     }
@@ -87,6 +120,7 @@ class CoinTrackerViewModel @Inject constructor(
             val result = repo.switchProfile(session, profile)
             if (result.isSuccess) {
                 val updatedSession = result.getOrThrow()
+                saveSession(updatedSession) // Update stored session
                 _uiState.update { it.copy(session = updatedSession) }
                 refreshData()
                 loadProfiles()
@@ -103,7 +137,34 @@ class CoinTrackerViewModel @Inject constructor(
             val result = repo.createProfile(session, profile)
             if (result.isSuccess) {
                 _uiState.update { it.copy(profiles = result.getOrThrow(), loading = false) }
-                refreshData()
+                switchProfile(profile)
+            } else {
+                _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            }
+        }
+    }
+
+    fun deleteProfile(profile: String) {
+        val session = _uiState.value.session ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(loading = true, error = null) }
+            val result = repo.deleteProfile(session, profile)
+            if (result.isSuccess) {
+                _uiState.update { it.copy(profiles = result.getOrThrow(), loading = false) }
+                switchProfile("Default")
+            } else {
+                _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            }
+        }
+    }
+
+    fun deleteAllData() {
+        val session = _uiState.value.session ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(loading = true, error = null) }
+            val result = repo.deleteAllData(session)
+            if (result.isSuccess) {
+                switchProfile("Default")
             } else {
                 _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
             }
@@ -170,6 +231,18 @@ class CoinTrackerViewModel @Inject constructor(
         }
     }
 
+    fun updateQuickAction(index: Int, action: QuickAction) {
+        val session = _uiState.value.session ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(loading = true, error = null) }
+            val result = repo.updateQuickAction(session, index, action)
+            _uiState.update { state ->
+                if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false)
+                else state.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
+        }
+    }
+
     fun deleteQuickAction(index: Int) {
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
@@ -228,3 +301,14 @@ class CoinTrackerViewModel @Inject constructor(
         }
     }
 }
+
+// UI STATE
+data class AppUiState(
+    val session: UserSession? = null,
+    val loading: Boolean = false,
+    val error: String? = null,
+    val profileEnvelope: ProfileEnvelope? = null,
+    val profiles: List<String> = emptyList(),
+    val adminStats: AdminStats? = null,
+    val adminUsers: List<AdminUserRow> = emptyList()
+)

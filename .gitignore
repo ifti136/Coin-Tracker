@@ -324,6 +324,7 @@ temp/
 .env.local
 .env.*.local
 .env.production
+android/app/google-services.json
 
 # API keys and secrets
 secrets.json
@@ -351,7 +352,6 @@ firebase-debug.log
 # But keep important config files:
 !package.json
 !tsconfig.json
-!android/app/google-services.json
 
 # ================================
 # Misc
