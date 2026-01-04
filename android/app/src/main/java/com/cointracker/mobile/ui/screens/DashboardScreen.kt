@@ -3,8 +3,13 @@ package com.cointracker.mobile.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,12 +19,16 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cointracker.mobile.data.ProfileEnvelope
 import com.cointracker.mobile.data.UserSession
 import com.cointracker.mobile.ui.components.GlassCard
+import com.cointracker.mobile.ui.theme.WebSuccess
+import com.cointracker.mobile.ui.theme.WebDanger
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     envelope: ProfileEnvelope?,
@@ -34,7 +43,16 @@ fun DashboardScreen(
     var spendAmount by remember { mutableStateOf("") }
     var spendCategory by remember { mutableStateOf("Other") }
 
-    // Support Dialog State
+    // Bottom Sheet State
+    var showSourceSheet by remember { mutableStateOf(false) }
+    var showCategorySheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    // Predefined Lists
+    val incomeSources = listOf("Event Reward", "Login", "Daily Games", "Campaign Reward", "Ads", "Achievements", "Other")
+    val expenseCategories = listOf("Box Draw", "Manager Purchase", "Pack Purchase", "Store Purchase", "Other")
+
+    // Support Dialog
     var showSupportDialog by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -42,48 +60,49 @@ fun DashboardScreen(
     if (showSupportDialog) {
         AlertDialog(
             onDismissRequest = { showSupportDialog = false },
-            title = { Text("Buy me a Coffee ☕") },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant, // Darker background
+            title = { Text("Buy me a Coffee ☕", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "If you find this app useful, consider supporting the dev!",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    DonationOption(
-                        name = "bKash",
-                        number = "01678713786",
-                        color = Color(0xFFE2136E),
-                        clipboardManager = clipboardManager,
-                        context = context
-                    )
-                    DonationOption(
-                        name = "Nagad",
-                        number = "01678713786",
-                        color = Color(0xFFF6921E),
-                        clipboardManager = clipboardManager,
-                        context = context
-                    )
-                    DonationOption(
-                        name = "Rocket",
-                        number = "01678713786",
-                        color = Color(0xFF8C3494),
-                        clipboardManager = clipboardManager,
-                        context = context
-                    )
-
-                    Text(
-                        "Tap a card to copy number",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
+                    Text("If you find this app useful, consider supporting the dev!")
+                    DonationOption("bKash", "01678713786", Color(0xFFE2136E), clipboardManager, context)
+                    DonationOption("Nagad", "01678713786", Color(0xFFF6921E), clipboardManager, context)
+                    DonationOption("Rocket", "01678713786", Color(0xFF8C3494), clipboardManager, context)
+                    Text("Tap a card to copy number", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showSupportDialog = false }) { Text("Close") }
             }
         )
+    }
+
+    // Source Selection Sheet
+    if (showSourceSheet) {
+        ModalBottomSheet(onDismissRequest = { showSourceSheet = false }, sheetState = sheetState) {
+            LazyColumn(modifier = Modifier.padding(16.dp)) {
+                items(incomeSources) { src ->
+                    ListItem(
+                        headlineContent = { Text(src) },
+                        modifier = Modifier.clickable { addSource = src; showSourceSheet = false }
+                    )
+                }
+            }
+        }
+    }
+
+    // Category Selection Sheet
+    if (showCategorySheet) {
+        ModalBottomSheet(onDismissRequest = { showCategorySheet = false }, sheetState = sheetState) {
+            LazyColumn(modifier = Modifier.padding(16.dp)) {
+                items(expenseCategories) { cat ->
+                    ListItem(
+                        headlineContent = { Text(cat) },
+                        modifier = Modifier.clickable { spendCategory = cat; showCategorySheet = false }
+                    )
+                }
+            }
+        }
     }
 
     Column(
@@ -103,7 +122,7 @@ fun DashboardScreen(
                     progress = { (envelope?.progress ?: 0) / 100f },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
-                Text("Goal: ${envelope?.goal ?: 0} • ${envelope?.progress ?: 0}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text("Goal: ${envelope?.goal ?: 0} • ${envelope?.progress ?: 0}%", fontSize = 12.sp)
             }
         }
 
@@ -115,7 +134,7 @@ fun DashboardScreen(
                 GlassCard(modifier = Modifier.weight(1f)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                         Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.7f))
-                        Text("${value ?: 0}", fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                        Text("${value ?: 0}", fontWeight = FontWeight.Bold, color = WebSuccess)
                     }
                 }
             }
@@ -123,7 +142,7 @@ fun DashboardScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Quick Actions
+        // Quick Actions (unchanged logic)
         Text("Quick Actions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
         val actions = envelope?.settings?.quickActions ?: emptyList()
@@ -138,9 +157,7 @@ fun DashboardScreen(
                                 else onAddExpense(action.value, action.text, null)
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
                             shape = MaterialTheme.shapes.medium
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -148,7 +165,7 @@ fun DashboardScreen(
                                 Text(
                                     if (action.isPositive) "+${action.value}" else "-${action.value}",
                                     fontSize = 12.sp,
-                                    color = if (action.isPositive) Color(0xFF10B981) else Color(0xFFEF4444)
+                                    color = if (action.isPositive) WebSuccess else WebDanger
                                 )
                             }
                         }
@@ -163,43 +180,73 @@ fun DashboardScreen(
 
         // Add / Spend Forms
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // ADD CARD
             GlassCard(modifier = Modifier.weight(1f)) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Add Coins", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp), color = MaterialTheme.colorScheme.onSurface)
+                    Text("Add Coins", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     OutlinedTextField(
                         value = addAmount, onValueChange = { addAmount = it },
-                        placeholder = { Text("Amt") }, modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        placeholder = { Text("Amt") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(value = addSource, onValueChange = { addSource = it }, label = { Text("Source") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(
+                        value = addSource,
+                        onValueChange = {},
+                        label = { Text("Source") },
+                        modifier = Modifier.fillMaxWidth().clickable { showSourceSheet = true },
+                        enabled = false, // Disable typing, enable click
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
                             addAmount.toIntOrNull()?.let { onAddIncome(it, addSource, null); addAmount = "" }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        colors = ButtonDefaults.buttonColors(containerColor = WebSuccess),
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Add") }
                 }
             }
 
+            // SPEND CARD
             GlassCard(modifier = Modifier.weight(1f)) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Spend Coins", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp), color = MaterialTheme.colorScheme.onSurface)
+                    Text("Spend Coins", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     OutlinedTextField(
                         value = spendAmount, onValueChange = { spendAmount = it },
-                        placeholder = { Text("Amt") }, modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        placeholder = { Text("Amt") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(value = spendCategory, onValueChange = { spendCategory = it }, label = { Text("Category") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(
+                        value = spendCategory,
+                        onValueChange = {},
+                        label = { Text("Category") },
+                        modifier = Modifier.fillMaxWidth().clickable { showCategorySheet = true },
+                        enabled = false,
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
                             spendAmount.toIntOrNull()?.let { onAddExpense(it, spendCategory, null); spendAmount = "" }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                        colors = ButtonDefaults.buttonColors(containerColor = WebDanger),
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Spend") }
                 }
@@ -221,16 +268,9 @@ fun DashboardScreen(
                 Text("☕", fontSize = 24.sp)
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("Buy me a cha", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Support the developer", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.7f))
+                    Text("Buy me a cha", fontWeight = FontWeight.Bold)
+                    Text("Support the developer", style = MaterialTheme.typography.bodySmall)
                 }
-            }
-        }
-
-        if (session?.role == "admin") {
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { onNavigate("admin") }, modifier = Modifier.fillMaxWidth()) {
-                Text("Access Admin Panel")
             }
         }
 
@@ -257,9 +297,7 @@ fun DonationOption(
             }
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

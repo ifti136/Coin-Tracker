@@ -1,95 +1,131 @@
 package com.cointracker.mobile.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ThumbUp // Using placeholder for Moon/Sun if unavailable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.cointracker.mobile.ui.components.GlassCard
 
 @Composable
 fun LoginScreen(
     loading: Boolean,
     onLogin: (String, String) -> Unit,
     onRegister: (String, String) -> Unit,
+    onToggleTheme: () -> Unit,
+    isDark: Boolean,
     loggedIn: Boolean,
     onSuccess: () -> Unit,
     error: String?
 ) {
-    val username = remember { mutableStateOf("") }
-    val password = remember { mutableStateOf("") }
+    var isRegisterMode by remember { mutableStateOf(false) }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     LaunchedEffect(loggedIn) {
         if (loggedIn) onSuccess()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFF0F172A), Color(0xFF111827), Color(0xFF1E293B))
-                )
-            )
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Column(
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Theme Toggle (Top Right)
+        IconButton(
+            onClick = onToggleTheme,
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0x3DFFFFFF), RoundedCornerShape(20.dp))
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .statusBarsPadding()
         ) {
-            Text("Coin Tracker", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            TextField(
-                value = username.value,
-                onValueChange = { username.value = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Username") }
+            Text(
+                text = if (isDark) "☀️" else "🌙",
+                style = MaterialTheme.typography.headlineMedium
             )
-            TextField(
-                value = password.value,
-                onValueChange = { password.value = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation()
-            )
-            if (error != null) {
-                Text(error, color = Color.Red, style = MaterialTheme.typography.bodySmall)
+        }
+
+        // Center Content
+        Box(modifier = Modifier.align(Alignment.Center).padding(24.dp)) {
+            GlassCard {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (isRegisterMode) "Create Account" else "Welcome Back",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text("Username") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    if (error != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = {
+                            if (isRegisterMode) onRegister(username.trim(), password)
+                            else onLogin(username.trim(), password)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        enabled = !loading
+                    ) {
+                        if (loading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text(if (isRegisterMode) "Register" else "Login")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
+                        Text(
+                            text = if (isRegisterMode) "Already have an account? Login"
+                            else "Don't have an account? Register",
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
-            Button(
-                onClick = { onLogin(username.value.trim(), password.value) },
-                enabled = !loading,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (loading) CircularProgressIndicator(modifier = Modifier.padding(4.dp)) else Text("Login")
-            }
-            OutlinedButton(
-                onClick = { onRegister(username.value.trim(), password.value) },
-                enabled = !loading,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Register") }
         }
     }
 }
