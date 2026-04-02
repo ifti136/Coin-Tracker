@@ -6,7 +6,7 @@ import java.time.ZoneOffset
 
 data class Transaction(
     val id: String = "",
-    val date: String = Instant.now().atOffset(ZoneOffset.UTC).toString(),
+    val date: String = Instant.now().toString(),
     val amount: Int = 0,
     val source: String = "",
     val previousBalance: Int = 0
@@ -17,7 +17,10 @@ data class Settings(
     val darkMode: Boolean = false,
     val quickActions: List<QuickAction> = defaultQuickActions(),
     val firebaseAvailable: Boolean = true,
-    val allSources: List<String> = emptyList()
+    val allSources: List<String> = emptyList(),
+    // Custom category lists — fall back to hardcoded defaults if empty
+    val incomeCategories: List<String> = emptyList(),
+    val expenseCategories: List<String> = emptyList()
 )
 
 data class QuickAction(
@@ -82,6 +85,17 @@ data class AdminUserRow(
     val lastUpdated: String
 )
 
+// ---- Hardcoded fallback category lists ----
+
+val DEFAULT_INCOME_CATEGORIES = listOf(
+    "Event Reward", "Login", "Daily Games", "Campaign Reward",
+    "Ads", "Achievements", "Other"
+)
+
+val DEFAULT_EXPENSE_CATEGORIES = listOf(
+    "Box Draw", "Manager Purchase", "Pack Purchase", "Store Purchase", "Other"
+)
+
 fun defaultQuickActions(): List<QuickAction> = listOf(
     QuickAction("Event Reward", 50, true),
     QuickAction("Ads", 10, true),
@@ -94,4 +108,13 @@ fun defaultQuickActions(): List<QuickAction> = listOf(
 
 fun defaultSettings(): Settings = Settings()
 
-fun LocalDate.toIsoString(): String = this.atStartOfDay().toInstant(ZoneOffset.UTC).toString()
+fun LocalDate.toIsoString(): String =
+    this.atStartOfDay().toInstant(ZoneOffset.UTC).toString()
+
+/** Returns the effective income category list — custom if set, otherwise hardcoded fallback. */
+fun Settings.effectiveIncomeCategories(): List<String> =
+    if (incomeCategories.isNotEmpty()) incomeCategories else DEFAULT_INCOME_CATEGORIES
+
+/** Returns the effective expense category list — custom if set, otherwise hardcoded fallback. */
+fun Settings.effectiveExpenseCategories(): List<String> =
+    if (expenseCategories.isNotEmpty()) expenseCategories else DEFAULT_EXPENSE_CATEGORIES

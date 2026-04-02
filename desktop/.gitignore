@@ -1,0 +1,33 @@
+# =============================================================================
+#  desktop/.gitignore
+#  PyQt5 desktop-specific ignores. Place this file at desktop/.gitignore
+#  The root .gitignore already covers Python venvs, __pycache__, .env files,
+#  and Firebase keys globally. Only desktop/-specific additions live here.
+# =============================================================================
+
+# PyInstaller output directories
+build/
+dist/
+
+# PyInstaller spec file (auto-generated; build.py recreates it)
+*.spec
+*.manifest
+
+# Generated icon file (recreate with coin_icon.py)
+coin.ico
+coin.icns
+
+# Python virtual environment if created inside desktop/
+venv/
+.venv/
+
+# Compiled Python
+__pycache__/
+*.py[cod]
+
+# Firebase service account key placed inside desktop/ for local dev
+firebase-key.json
+
+# Local user data written by the app at runtime
+# Uncomment below to also exclude saved profile JSON files:
+# data/

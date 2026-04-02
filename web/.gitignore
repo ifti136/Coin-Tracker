@@ -1,0 +1,41 @@
+# =============================================================================
+#  web/.gitignore
+#  Flask-specific ignores. Place this file at web/.gitignore
+#  The root .gitignore already covers Python venvs, __pycache__, .env files,
+#  and Firebase keys globally. Only web/-specific additions live here.
+# =============================================================================
+
+# Flask instance folder (runtime config, dev SQLite DBs)
+instance/
+
+# Flask server-side session files
+flask_session/
+
+# SQLite databases used in local dev
+*.db
+*.sqlite
+*.sqlite3
+
+# Firebase service account key placed inside web/ for local dev
+firebase-key.json
+
+# Render deployment cache
+.render/
+
+# Python virtual environment if created inside web/
+venv/
+.venv/
+
+# Compiled Python
+__pycache__/
+*.py[cod]
+
+# Coverage reports
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
