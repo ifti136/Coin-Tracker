@@ -2,16 +2,14 @@ package com.cointracker.mobile.data
 
 import com.cointracker.mobile.domain.AchievementCalculator
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -23,9 +21,6 @@ import javax.inject.Singleton
 class FirestoreRepository @Inject constructor() {
 
     private val auth = FirebaseAuth.getInstance()
-    private val client = OkHttpClient()
-
-    private val BASE_URL = "http://34.19.86.210"
 
     private val db: FirebaseFirestore by lazy {
         FirebaseFirestore.getInstance().also { firestore ->
@@ -39,51 +34,73 @@ class FirestoreRepository @Inject constructor() {
 
     // ----------------------------------------------------------------
     // AUTHENTICATION
+    // Firebase Email/Password is used with a synthetic email:
+    //   <username_lowercase>@cointracker.app
+    // This lets us keep username-based UX while using standard Firebase auth.
     // ----------------------------------------------------------------
+
+    private fun toEmail(username: String) = "${username.trim().lowercase()}@cointracker.app"
 
     suspend fun login(username: String, password: String): Result<UserSession> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val json = JSONObject().apply {
-                    put("username", username)
-                    put("password", password)
+                val email = toEmail(username)
+                try {
+                    auth.signInWithEmailAndPassword(email, password).await()
+                } catch (e: FirebaseAuthInvalidCredentialsException) {
+                    throw Exception("Invalid username or password")
+                } catch (e: Exception) {
+                    throw Exception("Login failed: ${e.message}")
                 }
-                val body = json.toString().toRequestBody("application/json".toMediaType())
-                val request = Request.Builder().url("$BASE_URL/api/mobile-login").post(body).build()
-                val response = client.newCall(request).execute()
-                val responseBody = response.body?.string() ?: ""
-                if (!response.isSuccessful) throw Exception("Login failed: ${response.code}")
-                val jsonResponse = JSONObject(responseBody)
-                if (!jsonResponse.getBoolean("success"))
-                    throw Exception(jsonResponse.optString("error", "Unknown login error"))
-                val token = jsonResponse.getString("token")
-                auth.signInWithCustomToken(token).await()
                 val userId = auth.currentUser!!.uid
                 val userDoc = usersRef.document(userId).get().await()
                 val role = userDoc.getString("role") ?: "user"
+                val storedUsername = userDoc.getString("username") ?: username
                 val userDataDoc = userDataRef.document(userId).get().await()
                 val lastProfile = userDataDoc.getString("last_active_profile") ?: "Default"
-                UserSession(userId, username, role, lastProfile)
+                UserSession(userId, storedUsername, role, lastProfile)
             }
         }
 
     suspend fun register(username: String, password: String): Result<UserSession> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val json = JSONObject().apply {
-                    put("username", username)
-                    put("password", password)
+                val email = toEmail(username)
+                val result = try {
+                    auth.createUserWithEmailAndPassword(email, password).await()
+                } catch (e: FirebaseAuthUserCollisionException) {
+                    throw Exception("Username already taken")
+                } catch (e: FirebaseAuthWeakPasswordException) {
+                    throw Exception("Password is too weak")
+                } catch (e: Exception) {
+                    throw Exception("Registration failed: ${e.message}")
                 }
-                val body = json.toString().toRequestBody("application/json".toMediaType())
-                val request = Request.Builder().url("$BASE_URL/api/mobile-register").post(body).build()
-                val response = client.newCall(request).execute()
-                val responseBody = response.body?.string() ?: ""
-                if (!response.isSuccessful) throw Exception("Registration failed: ${response.code}")
-                val jsonResponse = JSONObject(responseBody)
-                if (!jsonResponse.getBoolean("success")) throw Exception(jsonResponse.getString("error"))
-                val token = jsonResponse.getString("token")
-                auth.signInWithCustomToken(token).await()
-                UserSession(auth.currentUser!!.uid, username, "user", "Default")
+                val userId = result.user!!.uid
+
+                // Create user profile document
+                usersRef.document(userId).set(
+                    mapOf(
+                        "username" to username,
+                        "role" to "user",
+                        "created_at" to nowIso()
+                    )
+                ).await()
+
+                // Create initial user_data document with a Default profile
+                userDataRef.document(userId).set(
+                    mapOf(
+                        "profiles" to mapOf(
+                            "Default" to mapOf(
+                                "transactions" to emptyList<Map<String, Any>>(),
+                                "settings" to settingsToMap(defaultSettings()),
+                                "last_updated" to nowIso()
+                            )
+                        ),
+                        "last_active_profile" to "Default"
+                    )
+                ).await()
+
+                UserSession(userId, username, "user", "Default")
             }
         }
 
@@ -95,7 +112,7 @@ class FirestoreRepository @Inject constructor() {
     }
 
     // ----------------------------------------------------------------
-    // DATA OPERATIONS
+    // DATA OPERATIONS  (unchanged from original)
     // ----------------------------------------------------------------
 
     suspend fun loadProfile(userId: String, profileName: String): Result<ProfileEnvelope> =
