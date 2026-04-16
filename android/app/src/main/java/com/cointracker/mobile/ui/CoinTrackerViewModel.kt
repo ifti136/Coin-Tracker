@@ -10,7 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -19,7 +22,7 @@ class CoinTrackerViewModel @Inject constructor(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(AppUiState())
+    private val _uiState   = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState
 
     private val _isDarkMode = MutableStateFlow(false)
@@ -32,14 +35,16 @@ class CoinTrackerViewModel @Inject constructor(
         checkSession()
     }
 
+    // ── Session ───────────────────────────────────────────────────────────────
+
     private fun checkSession() {
         val sessionJson = prefs.getString("user_session", null) ?: return
-        try {
-            val json = JSONObject(sessionJson)
+        runCatching {
+            val json    = JSONObject(sessionJson)
             val session = UserSession(
-                userId = json.getString("userId"),
-                username = json.getString("username"),
-                role = json.getString("role"),
+                userId         = json.getString("userId"),
+                username       = json.getString("username"),
+                role           = json.getString("role"),
                 currentProfile = json.optString("currentProfile", "Default")
             )
             _uiState.update { it.copy(session = session) }
@@ -48,18 +53,37 @@ class CoinTrackerViewModel @Inject constructor(
                 if (valid) { refreshData(); loadProfiles() }
                 else { logout(); _uiState.update { it.copy(error = "Session expired. Please log in again.") } }
             }
-        } catch (e: Exception) { logout() }
+        }.onFailure { logout() }
     }
+
+    private fun saveSession(session: UserSession) {
+        val json = JSONObject().apply {
+            put("userId",         session.userId)
+            put("username",       session.username)
+            put("role",           session.role)
+            put("currentProfile", session.currentProfile)
+        }
+        prefs.edit().putString("user_session", json.toString()).apply()
+    }
+
+    fun logout() {
+        prefs.edit().remove("user_session").apply()
+        _uiState.value = AppUiState()
+        repo.logout()
+    }
+
+    fun clearError() { _uiState.update { it.copy(error = null) } }
 
     fun toggleTheme() {
-        val newValue = !_isDarkMode.value
-        _isDarkMode.value = newValue
-        prefs.edit().putBoolean("is_dark_mode", newValue).apply()
+        val v = !_isDarkMode.value
+        _isDarkMode.value = v
+        prefs.edit().putBoolean("is_dark_mode", v).apply()
     }
 
+    // ── Auth ──────────────────────────────────────────────────────────────────
+
     fun register(username: String, password: String) {
-        val err = validateCredentials(username, password)
-        if (err != null) { _uiState.update { it.copy(error = err) }; return }
+        validateCredentials(username, password)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.register(username, password)
@@ -69,8 +93,7 @@ class CoinTrackerViewModel @Inject constructor(
     }
 
     fun login(username: String, password: String) {
-        val err = validateCredentials(username, password)
-        if (err != null) { _uiState.update { it.copy(error = err) }; return }
+        validateCredentials(username, password)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.login(username, password)
@@ -83,21 +106,24 @@ class CoinTrackerViewModel @Inject constructor(
         }
     }
 
-    private fun saveSession(session: UserSession) {
-        val json = JSONObject().apply {
-            put("userId", session.userId); put("username", session.username)
-            put("role", session.role); put("currentProfile", session.currentProfile)
+    // ── DELETE ACCOUNT ────────────────────────────────────────────────────────
+    // Requires user's current password for re-authentication with Firebase.
+
+    fun deleteAccount(password: String) {
+        val session = _uiState.value.session ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(loading = true, error = null) }
+            val result = repo.deleteAccount(session, password)
+            if (result.isSuccess) {
+                prefs.edit().remove("user_session").apply()
+                _uiState.value = AppUiState()
+            } else {
+                _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            }
         }
-        prefs.edit().putString("user_session", json.toString()).apply()
     }
 
-    fun logout() {
-        prefs.edit().remove("user_session").apply()
-        _uiState.value = AppUiState()
-        repo.logout()
-    }
-
-    fun clearError() { _uiState.update { it.copy(error = null) } }
+    // ── Data ──────────────────────────────────────────────────────────────────
 
     fun refreshData() {
         val session = _uiState.value.session ?: return
@@ -117,9 +143,9 @@ class CoinTrackerViewModel @Inject constructor(
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.switchProfile(session, profile)
             if (result.isSuccess) {
-                val updatedSession = result.getOrThrow()
-                saveSession(updatedSession)
-                _uiState.update { it.copy(session = updatedSession) }
+                val updated = result.getOrThrow()
+                saveSession(updated)
+                _uiState.update { it.copy(session = updated) }
                 refreshData(); loadProfiles()
             } else _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
@@ -128,9 +154,7 @@ class CoinTrackerViewModel @Inject constructor(
     fun createProfile(profile: String) {
         val trimmed = profile.trim()
         if (trimmed.isBlank()) { _uiState.update { it.copy(error = "Profile name cannot be empty") }; return }
-        if (trimmed.any { it in listOf('/', '.', '#', '$', '[', ']') }) {
-            _uiState.update { it.copy(error = "Profile name contains invalid characters") }; return
-        }
+        if (trimmed.any { it in listOf('/', '.', '#', '$', '[', ']') }) { _uiState.update { it.copy(error = "Profile name contains invalid characters") }; return }
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
@@ -161,22 +185,22 @@ class CoinTrackerViewModel @Inject constructor(
     }
 
     fun addTransaction(amount: Int, source: String, dateIso: String?) {
-        val err = validateTransactionAmount(amount); if (err != null) { _uiState.update { it.copy(error = err) }; return }
+        validateTransactionAmount(amount)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.addTransaction(session, amount, source, dateIso)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
     fun updateTransaction(transactionId: String, amount: Int, source: String, dateIso: String) {
-        val err = validateTransactionAmount(amount); if (err != null) { _uiState.update { it.copy(error = err) }; return }
+        validateTransactionAmount(amount)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.updateTransaction(session, transactionId, amount, source, dateIso)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
@@ -185,7 +209,7 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.deleteTransaction(session, transactionId)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
@@ -194,7 +218,7 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.updateSettings(session, settings)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
@@ -203,7 +227,7 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.addQuickAction(session, action)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
@@ -212,7 +236,7 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.updateQuickAction(session, index, action)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
@@ -221,27 +245,57 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.deleteQuickAction(session, index)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
-    fun importData(transactions: List<Transaction>, settings: Settings) {
-        val session = _uiState.value.session ?: return
-        viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
-            val result = repo.importData(session, transactions, settings)
-            _uiState.update { state -> if (result.isSuccess) state.copy(profileEnvelope = result.getOrThrow(), loading = false) else state.copy(loading = false, error = result.exceptionOrNull()?.message) }
+    // ── JSON IMPORT ───────────────────────────────────────────────────────────
+    // Parses the exported JSON array into Transactions, merges current settings,
+    // then calls importData so the profile is fully replaced with the backup.
+
+    fun importFromJson(jsonString: String) {
+        val session  = _uiState.value.session ?: return
+        val settings = _uiState.value.profileEnvelope?.settings ?: Settings()
+        runCatching {
+            val arr  = JSONArray(jsonString)
+            val txns = (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                Transaction(
+                    id              = obj.optString("id").ifBlank { UUID.randomUUID().toString() },
+                    date            = obj.optString("date").ifBlank { Instant.now().toString() },
+                    amount          = obj.optInt("amount", 0),
+                    source          = obj.optString("source", "Import"),
+                    previousBalance = obj.optInt("previous_balance", 0)
+                )
+            }
+            txns
+        }.onFailure {
+            _uiState.update { s -> s.copy(error = "Invalid backup file: ${it.message}") }
+            return
+        }.onSuccess { txns ->
+            viewModelScope.launch {
+                _uiState.update { it.copy(loading = true, error = null) }
+                val result = repo.importData(session, txns, settings)
+                _uiState.update { s ->
+                    if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false)
+                    else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+                }
+            }
         }
     }
+
+    // ── Admin ─────────────────────────────────────────────────────────────────
 
     fun loadAdmin() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val stats = repo.loadAdminStats()
             val users = repo.loadAdminUsers()
-            _uiState.update { state ->
-                state.copy(adminStats = stats.getOrNull(), adminUsers = users.getOrDefault(emptyList()),
-                    loading = false, error = stats.exceptionOrNull()?.message ?: users.exceptionOrNull()?.message)
+            _uiState.update { s ->
+                s.copy(adminStats  = stats.getOrNull(),
+                    adminUsers  = users.getOrDefault(emptyList()),
+                    loading     = false,
+                    error       = stats.exceptionOrNull()?.message ?: users.exceptionOrNull()?.message)
             }
         }
     }
@@ -263,28 +317,30 @@ class CoinTrackerViewModel @Inject constructor(
         }
     }
 
+    // ── Validation ────────────────────────────────────────────────────────────
+
     private fun validateCredentials(username: String, password: String): String? = when {
-        username.isBlank() -> "Username cannot be empty"
-        username.length < 3 -> "Username must be at least 3 characters"
-        username.contains(" ") -> "Username cannot contain spaces"
-        password.isBlank() -> "Password cannot be empty"
-        password.length < 4 -> "Password must be at least 4 characters"
-        else -> null
+        username.isBlank()         -> "Username cannot be empty"
+        username.length < 3        -> "Username must be at least 3 characters"
+        username.contains(" ")     -> "Username cannot contain spaces"
+        password.isBlank()         -> "Password cannot be empty"
+        password.length < 4        -> "Password must be at least 4 characters"
+        else                       -> null
     }
 
     private fun validateTransactionAmount(amount: Int): String? = when {
-        amount == 0 -> "Amount cannot be zero"
-        kotlin.math.abs(amount) > 999_999 -> "Amount is too large (max 999,999)"
-        else -> null
+        amount == 0                         -> "Amount cannot be zero"
+        kotlin.math.abs(amount) > 999_999   -> "Amount is too large (max 999,999)"
+        else                                -> null
     }
 }
 
 data class AppUiState(
-    val session: UserSession? = null,
-    val loading: Boolean = false,
-    val error: String? = null,
-    val profileEnvelope: ProfileEnvelope? = null,
-    val profiles: List<String> = emptyList(),
-    val adminStats: AdminStats? = null,
-    val adminUsers: List<AdminUserRow> = emptyList()
+    val session        : UserSession?       = null,
+    val loading        : Boolean            = false,
+    val error          : String?            = null,
+    val profileEnvelope: ProfileEnvelope?   = null,
+    val profiles       : List<String>       = emptyList(),
+    val adminStats     : AdminStats?        = null,
+    val adminUsers     : List<AdminUserRow> = emptyList()
 )

@@ -205,15 +205,20 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                         onEdit = { id, amt, src, date -> viewModel.updateTransaction(id, amt, src, date) })
                                 }
                                 composable("settings") {
-                                    SettingsScreen(envelope = uiState.profileEnvelope, profiles = uiState.profiles,
-                                        onUpdateSettings = { viewModel.updateSettings(it) },
-                                        onAddQuickAction = { viewModel.addQuickAction(it) },
+                                    SettingsScreen(
+                                        envelope            = uiState.profileEnvelope,
+                                        profiles            = uiState.profiles,
+                                        onUpdateSettings    = { viewModel.updateSettings(it) },
+                                        onAddQuickAction    = { viewModel.addQuickAction(it) },
                                         onUpdateQuickAction = { idx, action -> viewModel.updateQuickAction(idx, action) },
                                         onDeleteQuickAction = { viewModel.deleteQuickAction(it) },
-                                        onCreateProfile = { viewModel.createProfile(it) },
-                                        onDeleteProfile = { viewModel.deleteProfile(it) },
-                                        onDeleteAllData = { viewModel.deleteAllData() },
-                                        onImportData = {}, onExportData = {}, context = context)
+                                        onCreateProfile     = { viewModel.createProfile(it) },
+                                        onDeleteProfile     = { viewModel.deleteProfile(it) },
+                                        onDeleteAllData     = { viewModel.deleteAllData() },
+                                        onImportJson        = { viewModel.importFromJson(it) },
+                                        onDeleteAccount     = { password -> viewModel.deleteAccount(password) },
+                                        context             = context
+                                    )
                                 }
                                 composable("admin") {
                                     LaunchedEffect(Unit) { viewModel.loadAdmin() }
