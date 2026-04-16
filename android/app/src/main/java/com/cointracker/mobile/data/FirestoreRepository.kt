@@ -61,7 +61,7 @@ class FirestoreRepository @Inject constructor() {
 
                 // ── 2. Legacy path: find user doc by username ─────────────
                 val querySnap = usersRef
-                    .whereEqualTo("username", username)
+                    .whereEqualTo("username_lower", username)
                     .limit(1)
                     .get()
                     .await()
