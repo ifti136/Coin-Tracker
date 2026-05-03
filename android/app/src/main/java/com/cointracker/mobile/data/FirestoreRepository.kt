@@ -448,57 +448,6 @@ class FirestoreRepository @Inject constructor() {
         userDataRef.document(userId).set(existing).await()
     }
 
-    private fun buildEnvelope(profileName: String, transactions: List<Transaction>, settings: Settings): ProfileEnvelope {
-        val balance    = transactions.sumOf { it.amount }
-        val goal       = settings.goal
-        val today      = LocalDate.now(ZoneOffset.UTC)
-        val weekStart  = today.minusDays(today.dayOfWeek.ordinal.toLong())
-        val monthStart = today.withDayOfMonth(1)
-        var todayEarn = 0; var weekEarn = 0; var monthEarn = 0
-        var totalEarnings = 0; var firstEarningDate: Instant? = null
-        transactions.forEach { t ->
-            if (t.amount > 0) {
-                totalEarnings += t.amount
-                val inst = parseInstantSafe(t.date) ?: return@forEach
-                if (firstEarningDate == null || inst.isBefore(firstEarningDate)) firstEarningDate = inst
-                val d = inst.atZone(ZoneOffset.UTC).toLocalDate()
-                if (d == today) todayEarn += t.amount
-                if (!d.isBefore(weekStart)) weekEarn += t.amount
-                if (!d.isBefore(monthStart)) monthEarn += t.amount
-            }
-        }
-        val estimatedDays: Int? = if (totalEarnings > 0 && firstEarningDate != null) {
-            val days = maxOf(1, (Instant.now().epochSecond - firstEarningDate!!.epochSecond).div(86400).toInt())
-            val avg  = totalEarnings / days.toDouble()
-            val rem  = goal - balance
-            when { rem <= 0 -> 0; avg > 0 -> (rem / avg).toInt(); else -> null }
-        } else null
-        val earningsBreakdown = mutableMapOf<String, Int>()
-        val spendingBreakdown = mutableMapOf<String, Int>()
-        transactions.forEach { t ->
-            if (t.amount > 0) earningsBreakdown[t.source] = (earningsBreakdown[t.source] ?: 0) + t.amount
-            if (t.amount < 0) spendingBreakdown[t.source] = (spendingBreakdown[t.source] ?: 0) + -t.amount
-        }
-        return ProfileEnvelope(
-            profile = profileName, transactions = transactions,
-            settings = settings.copy(firebaseAvailable = true),
-            balance = balance, goal = goal,
-            progress = if (goal > 0) minOf(100, ((balance.toDouble() / goal) * 100).toInt()) else 0,
-            estimatedDays = estimatedDays,
-            dashboardStats = DashboardStats(todayEarn, weekEarn, monthEarn),
-            analytics = AnalyticsSnapshot(
-                totalEarnings = totalEarnings,
-                totalSpending = -transactions.filter { it.amount < 0 }.sumOf { it.amount },
-                netBalance    = balance,
-                earningsBreakdown = earningsBreakdown,
-                spendingBreakdown = spendingBreakdown,
-                timeline = transactions.sortedBy { it.date }
-                    .map { t -> TimelinePoint(t.date, t.previousBalance + t.amount) }
-            ),
-            achievements = AchievementCalculator().calculate(transactions, balance, goal)
-        )
-    }
-
     private fun parseTransactions(raw: Any?): List<Transaction>? =
         (raw as? List<*>)?.mapNotNull { item ->
             val map = item as? Map<*, *> ?: return@mapNotNull null

@@ -146,7 +146,11 @@ Requires `google-services.json` in `android/app/` before building.
 
 ## Changelog
 
-### v3.0.0 — 2025
+### v3.1.0 — 2026
+**Minor Code Bug Fixed**
+- Fixed minor build errors
+
+### v3.0.0 — 2026
 **Analytics & Intelligence**
 - Estimated days to goal now uses 7-day rolling average instead of all-time lifetime average — far more accurate for active players
 - Best earning week card added to Analytics screen showing highest single-week income and date range
@@ -186,7 +190,7 @@ Requires `google-services.json` in `android/app/` before building.
 
 ---
 
-### v2.1.0 — 2025
+### v2.1.0 — 2026
 **Firebase Direct Auth (Flask Removed)**
 - Removed Flask/OkHttp backend dependency entirely — app authenticates directly with Firebase Auth
 - Synthetic email format (`username@cointracker.app`) preserves username/password UX without exposing email
@@ -216,7 +220,7 @@ Requires `google-services.json` in `android/app/` before building.
 
 ---
 
-### v2.0.0 — 2025
+### v2.0.0 — 2026
 **UI Overhaul**
 - New app icon — coin design in mipmap folders
 - Animated gradient background (light and dark variants matching web palette)

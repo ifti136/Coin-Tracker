@@ -5,14 +5,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.*
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.*
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.components.Scaffold
-import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.cornerRadius
+import android.content.Intent
+import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.layout.*
+import androidx.glance.background
+import androidx.glance.currentState
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
+import androidx.glance.layout.padding
+import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -23,23 +42,31 @@ import com.cointracker.mobile.MainActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 // ── State keys ───────────────────────────────────────────────────────────────
 
-private val KEY_BALANCE  = androidx.datastore.preferences.core.intPreferencesKey("w_balance")
-private val KEY_GOAL     = androidx.datastore.preferences.core.intPreferencesKey("w_goal")
-private val KEY_PROGRESS = androidx.datastore.preferences.core.intPreferencesKey("w_progress")
-private val KEY_RATE     = androidx.datastore.preferences.core.stringPreferencesKey("w_rate")
-private val KEY_PROFILE  = androidx.datastore.preferences.core.stringPreferencesKey("w_profile")
+private val KEY_BALANCE  = intPreferencesKey("w_balance")
+private val KEY_GOAL     = intPreferencesKey("w_goal")
+private val KEY_PROGRESS = intPreferencesKey("w_progress")
+private val KEY_RATE     = stringPreferencesKey("w_rate")
+private val KEY_PROFILE  = stringPreferencesKey("w_profile")
 
-// ── Widget class ─────────────────────────────────────────────────────────────
+// ── Widget ───────────────────────────────────────────────────────────────────
 
 class CoinTrackerWidget : GlanceAppWidget() {
 
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        provideContent {
+            WidgetContent(context)
+        }
+    }
+
     @Composable
-    override fun Content() {
+    private fun WidgetContent(context: Context) {
         val prefs    = currentState<androidx.datastore.preferences.core.Preferences>()
         val balance  = prefs[KEY_BALANCE]  ?: 0
         val goal     = prefs[KEY_GOAL]     ?: 13500
@@ -53,13 +80,13 @@ class CoinTrackerWidget : GlanceAppWidget() {
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .background(GlanceTheme.colors.widgetBackground)
-                    .clickable(actionStartActivity<MainActivity>())
+                    .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
                     .padding(16.dp),
                 contentAlignment = Alignment.TopStart
             ) {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
 
-                    // Header
+                    // Header row
                     Row(
                         modifier = GlanceModifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -86,7 +113,7 @@ class CoinTrackerWidget : GlanceAppWidget() {
 
                     // Balance
                     Text(
-                        "${balance.toString().reversed().chunked(3).joinToString(",").reversed()} coins",
+                        "${balance.formatCoins()} coins",
                         style = TextStyle(
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
@@ -96,9 +123,9 @@ class CoinTrackerWidget : GlanceAppWidget() {
 
                     Spacer(GlanceModifier.height(4.dp))
 
-                    // Goal text
+                    // Goal + percent
                     Text(
-                        "Goal: ${goal.toString().reversed().chunked(3).joinToString(",").reversed()}  •  $pct%",
+                        "Goal: ${goal.formatCoins()}  •  $pct%",
                         style = TextStyle(
                             fontSize = 12.sp,
                             color = GlanceTheme.colors.onSurface
@@ -107,7 +134,8 @@ class CoinTrackerWidget : GlanceAppWidget() {
 
                     Spacer(GlanceModifier.height(8.dp))
 
-                    // Progress bar (manual via Box)
+                    // Progress bar — min widget width ~250dp, 32dp padding = ~218dp usable
+                    val fillDp = (218 * pct / 100).dp
                     Box(
                         modifier = GlanceModifier
                             .fillMaxWidth()
@@ -115,13 +143,15 @@ class CoinTrackerWidget : GlanceAppWidget() {
                             .background(ColorProvider(Color(0xFFE2E8F0)))
                             .cornerRadius(4.dp)
                     ) {
-                        Box(
-                            modifier = GlanceModifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(pct / 100f)
-                                .background(ColorProvider(Color(0xFF10B981)))
-                                .cornerRadius(4.dp)
-                        ) {}
+                        if (pct > 0) {
+                            Box(
+                                modifier = GlanceModifier
+                                    .width(fillDp)
+                                    .height(8.dp)
+                                    .background(ColorProvider(Color(0xFF10B981)))
+                                    .cornerRadius(4.dp)
+                            ) {}
+                        }
                     }
 
                     Spacer(GlanceModifier.height(8.dp))
@@ -138,6 +168,9 @@ class CoinTrackerWidget : GlanceAppWidget() {
             }
         }
     }
+
+    private fun Int.formatCoins(): String =
+        toString().reversed().chunked(3).joinToString(",").reversed()
 }
 
 // ── Receiver ─────────────────────────────────────────────────────────────────
@@ -156,22 +189,23 @@ object WidgetUpdater {
         val profile = prefs.getString("last_profile", "Default") ?: "Default"
 
         try {
-            val doc  = FirebaseFirestore.getInstance()
+            val doc      = FirebaseFirestore.getInstance()
                 .collection("user_data").document(uid).get().await()
             val profiles = doc.data?.get("profiles") as? Map<*, *> ?: return
-            val pd   = profiles[profile] as? Map<*, *> ?: return
-            val txns = pd["transactions"] as? List<*> ?: emptyList<Any>()
+            val pd       = profiles[profile] as? Map<*, *> ?: return
+            val txns     = pd["transactions"] as? List<*> ?: emptyList<Any>()
             val settings = pd["settings"] as? Map<*, *>
-            val goal = (settings?.get("goal") as? Number)?.toInt() ?: 13500
+            val goal     = (settings?.get("goal") as? Number)?.toInt() ?: 13500
 
-            val balance = txns.sumOf { (it as? Map<*, *>)?.get("amount")?.let { a -> (a as? Number)?.toInt() } ?: 0 }
+            val balance = txns.sumOf {
+                (it as? Map<*, *>)?.get("amount")?.let { a -> (a as? Number)?.toInt() } ?: 0
+            }
             val progress = if (goal > 0) ((balance.toDouble() / goal) * 100).toInt().coerceIn(0, 100) else 0
 
             // 7-day rate
-            import java.time.Instant; import java.time.LocalDate; import java.time.ZoneOffset
             val sevenAgo = LocalDate.now(ZoneOffset.UTC).minusDays(7).toString()
             val earnings7d = txns.sumOf { tx ->
-                val m = tx as? Map<*, *> ?: return@sumOf 0
+                val m   = tx as? Map<*, *> ?: return@sumOf 0
                 val amt = (m["amount"] as? Number)?.toInt() ?: 0
                 val date = m["date"] as? String ?: return@sumOf 0
                 if (amt > 0 && date >= sevenAgo) amt else 0
@@ -181,8 +215,8 @@ object WidgetUpdater {
             GlanceAppWidgetManager(ctx)
                 .getGlanceIds(CoinTrackerWidget::class.java)
                 .forEach { id ->
-                    updateAppWidgetState(ctx, PreferencesGlanceStateDefinition, id) { prefs ->
-                        prefs.toMutablePreferences().apply {
+                    updateAppWidgetState(ctx, PreferencesGlanceStateDefinition, id) { p ->
+                        p.toMutablePreferences().apply {
                             this[KEY_BALANCE]  = balance
                             this[KEY_GOAL]     = goal
                             this[KEY_PROGRESS] = progress
