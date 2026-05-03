@@ -1,7 +1,6 @@
 package com.cointracker.mobile.ui.screens
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -25,22 +24,20 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 
-// ── Period selector ──────────────────────────────────────────────────────────
-
 private enum class Period { LIFETIME, MONTHLY, WEEKLY, CUSTOM }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnalyticsScreen(envelope: ProfileEnvelope?) {
     val allTransactions = envelope?.transactions ?: emptyList()
-    val textColor = MaterialTheme.colorScheme.onSurface
+    val textColor       = MaterialTheme.colorScheme.onSurface
 
-    var period by remember { mutableStateOf(Period.LIFETIME) }
-    var customStart by remember { mutableStateOf<LocalDate?>(null) }
-    var customEnd   by remember { mutableStateOf<LocalDate?>(null) }
-    var showPicker  by remember { mutableStateOf(false) }
+    var period       by remember { mutableStateOf(Period.LIFETIME) }
+    var customStart  by remember { mutableStateOf<LocalDate?>(null) }
+    var customEnd    by remember { mutableStateOf<LocalDate?>(null) }
+    var showPicker   by remember { mutableStateOf(false) }
     val datePickerState = rememberDateRangePickerState()
-    val displayFmt = DateTimeFormatter.ofPattern("MM/dd")
+    val displayFmt   = DateTimeFormatter.ofPattern("MM/dd")
 
     if (showPicker) {
         DatePickerDialog(
@@ -61,7 +58,6 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
         ) { DateRangePicker(state = datePickerState) }
     }
 
-    // ── Compute window ───────────────────────────────────────────────────────
     val today = LocalDate.now(ZoneOffset.UTC)
     val filtered: List<Transaction> = remember(allTransactions, period, customStart, customEnd) {
         val (winStart, winEnd) = when (period) {
@@ -72,9 +68,8 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
         }
         if (winStart == null) allTransactions
         else allTransactions.filter { tx ->
-            val d = runCatching {
-                Instant.parse(tx.date).atZone(ZoneOffset.UTC).toLocalDate()
-            }.getOrNull() ?: return@filter false
+            val d = runCatching { Instant.parse(tx.date).atZone(ZoneOffset.UTC).toLocalDate() }.getOrNull()
+                ?: return@filter false
             !d.isBefore(winStart) && (winEnd == null || !d.isAfter(winEnd))
         }
     }
@@ -90,56 +85,44 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
         filtered.filter { it.amount < 0 }.forEach { m[it.source] = (m[it.source] ?: 0) + (-it.amount) }
     }
 
-    // ── UI ───────────────────────────────────────────────────────────────────
+    // Pull pre-computed values from analytics snapshot (LIFETIME only)
+    val bestWeekEarnings = envelope?.analytics?.bestWeekEarnings ?: 0
+    val bestWeekLabel    = envelope?.analytics?.bestWeekLabel ?: "N/A"
+    val dailyRate7d      = envelope?.analytics?.dailyRate7d ?: 0.0
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { Spacer(Modifier.height(16.dp)) }
 
-        // Title
-        item {
-            Text("Analytics", style = MaterialTheme.typography.headlineMedium, color = textColor)
-        }
+        item { Text("Analytics", style = MaterialTheme.typography.headlineMedium, color = textColor) }
 
         // Period chips
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     listOf(Period.LIFETIME to "Lifetime", Period.MONTHLY to "Monthly", Period.WEEKLY to "Weekly")
                         .forEach { (p, label) ->
-                            FilterChip(
-                                selected = period == p,
-                                onClick = { period = p },
-                                label = { Text(label, fontSize = 13.sp) },
-                                modifier = Modifier.weight(1f)
-                            )
+                            FilterChip(selected = period == p, onClick = { period = p },
+                                label = { Text(label, fontSize = 13.sp) }, modifier = Modifier.weight(1f))
                         }
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = period == Period.CUSTOM,
                         onClick = { showPicker = true },
                         label = {
                             if (period == Period.CUSTOM && customStart != null && customEnd != null)
                                 Text("${customStart!!.format(displayFmt)} – ${customEnd!!.format(displayFmt)}", fontSize = 12.sp)
-                            else
-                                Text("Custom Range", fontSize = 13.sp)
+                            else Text("Custom Range", fontSize = 13.sp)
                         },
                         leadingIcon = { Icon(Icons.Default.DateRange, null, modifier = Modifier.size(16.dp)) },
                         modifier = Modifier.weight(1f)
                     )
                     if (period == Period.CUSTOM) {
-                        IconButton(
-                            onClick = { period = Period.LIFETIME; customStart = null; customEnd = null },
-                            modifier = Modifier.size(32.dp)
-                        ) {
+                        IconButton(onClick = { period = Period.LIFETIME; customStart = null; customEnd = null },
+                            modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
                         }
                     }
@@ -188,32 +171,75 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
         // Earnings breakdown
         item {
             Text("Earnings Breakdown", style = MaterialTheme.typography.titleMedium, color = textColor)
-            if (earningsBreakdown.isNotEmpty())
-                PieChartWithLegend(data = earningsBreakdown, textColor = textColor)
-            else
-                Text("No earnings for this period", color = Color.Gray)
+            if (earningsBreakdown.isNotEmpty()) PieChartWithLegend(earningsBreakdown, textColor)
+            else Text("No earnings for this period", color = Color.Gray)
         }
 
         // Spending breakdown
         item {
             Text("Spending Breakdown", style = MaterialTheme.typography.titleMedium, color = textColor)
-            if (spendingBreakdown.isNotEmpty())
-                PieChartWithLegend(data = spendingBreakdown, textColor = textColor)
-            else
-                Text("No spending for this period", color = Color.Gray)
+            if (spendingBreakdown.isNotEmpty()) PieChartWithLegend(spendingBreakdown, textColor)
+            else Text("No spending for this period", color = Color.Gray)
+        }
+
+        // ── NEW: 7-day rate card ──────────────────────────────────────────────
+        item {
+            GlassCard {
+                Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        Text("7-Day Earning Rate", style = MaterialTheme.typography.titleSmall,
+                            color = textColor.copy(alpha = 0.7f))
+                        Text("${dailyRate7d.toInt()} coins/day",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF3B82F6))
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Last 7 days total", style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = 0.5f))
+                        Text("${(dailyRate7d * 7).toInt()} coins",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF10B981))
+                    }
+                }
+            }
+        }
+
+        // ── NEW: Best earning week card ───────────────────────────────────────
+        if (bestWeekEarnings > 0) {
+            item {
+                GlassCard {
+                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("🏆 Best Earning Week", style = MaterialTheme.typography.titleSmall,
+                                color = textColor.copy(alpha = 0.7f))
+                            Text(bestWeekLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textColor.copy(alpha = 0.5f))
+                        }
+                        Text("+$bestWeekEarnings coins",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF59E0B))  // amber/gold
+                    }
+                }
+            }
         }
 
         item { Spacer(Modifier.height(80.dp)) }
     }
 }
 
-// ── Shared composables (StatBox & PieChartWithLegend unchanged) ──────────────
-
 @Composable
 fun StatBox(label: String, value: String, color: Color) {
     GlassCard(modifier = Modifier.width(100.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
-            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            Text(label, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
             Text(value, style = MaterialTheme.typography.titleMedium, color = color)
         }
     }
@@ -232,7 +258,7 @@ fun PieChartWithLegend(data: Map<String, Int>, textColor: Color) {
                 var startAngle = -90f
                 data.values.forEachIndexed { index, value ->
                     val sweep = (value / total) * 360f
-                    drawArc(color = colors[index % colors.size], startAngle = startAngle, sweepAngle = sweep, useCenter = true)
+                    drawArc(colors[index % colors.size], startAngle, sweep, useCenter = true)
                     startAngle += sweep
                 }
             }
@@ -240,9 +266,11 @@ fun PieChartWithLegend(data: Map<String, Int>, textColor: Color) {
             Column {
                 data.entries.forEachIndexed { index, entry ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(modifier = Modifier.size(12.dp), color = colors[index % colors.size], shape = MaterialTheme.shapes.small) {}
+                        Surface(modifier = Modifier.size(12.dp), color = colors[index % colors.size],
+                            shape = MaterialTheme.shapes.small) {}
                         Spacer(Modifier.width(8.dp))
-                        Text("${entry.key}: ${entry.value}", style = MaterialTheme.typography.bodySmall, color = textColor)
+                        Text("${entry.key}: ${entry.value}",
+                            style = MaterialTheme.typography.bodySmall, color = textColor)
                     }
                 }
             }

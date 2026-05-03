@@ -1,11 +1,19 @@
 package com.cointracker.mobile.ui
 
+import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cointracker.mobile.data.*
+import com.cointracker.mobile.notifications.DailyReminderWorker
+import com.cointracker.mobile.notifications.NotificationHelper
+import com.cointracker.mobile.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -64,9 +72,12 @@ class CoinTrackerViewModel @Inject constructor(
             put("currentProfile", session.currentProfile)
         }
         prefs.edit().putString("user_session", json.toString()).apply()
+        // Persist last profile for worker + widget
+        prefs.edit().putString("last_profile", session.currentProfile).apply()
     }
 
     fun logout() {
+        DailyReminderWorker.cancel(getApplication())
         prefs.edit().remove("user_session").apply()
         _uiState.value = AppUiState()
         repo.logout()
@@ -101,13 +112,14 @@ class CoinTrackerViewModel @Inject constructor(
                 val session = result.getOrThrow()
                 saveSession(session)
                 _uiState.update { it.copy(session = session) }
-                refreshData(); loadProfiles()
+                refreshData()
+                loadProfiles()
+                DailyReminderWorker.schedule(getApplication())
             } else _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
         }
     }
 
     // ── DELETE ACCOUNT ────────────────────────────────────────────────────────
-    // Requires user's current password for re-authentication with Firebase.
 
     fun deleteAccount(password: String) {
         val session = _uiState.value.session ?: return
@@ -115,6 +127,7 @@ class CoinTrackerViewModel @Inject constructor(
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.deleteAccount(session, password)
             if (result.isSuccess) {
+                DailyReminderWorker.cancel(getApplication())
                 prefs.edit().remove("user_session").apply()
                 _uiState.value = AppUiState()
             } else {
@@ -131,8 +144,11 @@ class CoinTrackerViewModel @Inject constructor(
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.loadProfile(session.userId, session.currentProfile)
             _uiState.update {
-                if (result.isSuccess) it.copy(profileEnvelope = result.getOrThrow(), loading = false)
-                else it.copy(error = result.exceptionOrNull()?.message ?: "Failed to load data", loading = false)
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    it.copy(profileEnvelope = env, loading = false)
+                } else it.copy(error = result.exceptionOrNull()?.message ?: "Failed to load data", loading = false)
             }
         }
     }
@@ -154,7 +170,9 @@ class CoinTrackerViewModel @Inject constructor(
     fun createProfile(profile: String) {
         val trimmed = profile.trim()
         if (trimmed.isBlank()) { _uiState.update { it.copy(error = "Profile name cannot be empty") }; return }
-        if (trimmed.any { it in listOf('/', '.', '#', '$', '[', ']') }) { _uiState.update { it.copy(error = "Profile name contains invalid characters") }; return }
+        if (trimmed.any { it in listOf('/', '.', '#', '$', '[', ']') }) {
+            _uiState.update { it.copy(error = "Profile name contains invalid characters") }; return
+        }
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
@@ -190,7 +208,13 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.addTransaction(session, amount, source, dateIso)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
@@ -200,7 +224,13 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.updateTransaction(session, transactionId, amount, source, dateIso)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
@@ -209,7 +239,13 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.deleteTransaction(session, transactionId)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
@@ -218,7 +254,13 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.updateSettings(session, settings)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
@@ -227,7 +269,13 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.addQuickAction(session, action)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
@@ -236,7 +284,13 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.updateQuickAction(session, index, action)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
@@ -245,13 +299,17 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
             val result = repo.deleteQuickAction(session, index)
-            _uiState.update { s -> if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false) else s.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            _uiState.update { s ->
+                if (result.isSuccess) {
+                    val env = result.getOrThrow()
+                    onDataUpdated(env)
+                    s.copy(profileEnvelope = env, loading = false)
+                } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+            }
         }
     }
 
     // ── JSON IMPORT ───────────────────────────────────────────────────────────
-    // Parses the exported JSON array into Transactions, merges current settings,
-    // then calls importData so the profile is fully replaced with the backup.
 
     fun importFromJson(jsonString: String) {
         val session  = _uiState.value.session ?: return
@@ -277,8 +335,11 @@ class CoinTrackerViewModel @Inject constructor(
                 _uiState.update { it.copy(loading = true, error = null) }
                 val result = repo.importData(session, txns, settings)
                 _uiState.update { s ->
-                    if (result.isSuccess) s.copy(profileEnvelope = result.getOrThrow(), loading = false)
-                    else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+                    if (result.isSuccess) {
+                        val env = result.getOrThrow()
+                        onDataUpdated(env)
+                        s.copy(profileEnvelope = env, loading = false)
+                    } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
                 }
             }
         }
@@ -292,10 +353,12 @@ class CoinTrackerViewModel @Inject constructor(
             val stats = repo.loadAdminStats()
             val users = repo.loadAdminUsers()
             _uiState.update { s ->
-                s.copy(adminStats  = stats.getOrNull(),
-                    adminUsers  = users.getOrDefault(emptyList()),
-                    loading     = false,
-                    error       = stats.exceptionOrNull()?.message ?: users.exceptionOrNull()?.message)
+                s.copy(
+                    adminStats = stats.getOrNull(),
+                    adminUsers = users.getOrDefault(emptyList()),
+                    loading    = false,
+                    error      = stats.exceptionOrNull()?.message ?: users.exceptionOrNull()?.message
+                )
             }
         }
     }
@@ -317,30 +380,62 @@ class CoinTrackerViewModel @Inject constructor(
         }
     }
 
+    // ── Post-update side effects ──────────────────────────────────────────────
+
+    private fun onDataUpdated(env: ProfileEnvelope) {
+        // 1. Update home screen widget
+        viewModelScope.launch(Dispatchers.IO) {
+            WidgetUpdater.update(getApplication())
+        }
+
+        // 2. Fire milestone notifications for newly unlocked achievements
+        val ctx = getApplication<Application>()
+        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        } else true
+
+        if (!hasPermission) return
+
+        val knownKey = "known_achievements_${env.profile}"
+        val knownSet = prefs.getStringSet(knownKey, emptySet()) ?: emptySet()
+        val newAchievements = env.achievements.filter { it.name !in knownSet }
+
+        newAchievements.forEach { ach ->
+            NotificationHelper.notifyMilestone(ctx, ach.icon, ach.name, ach.desc)
+        }
+
+        if (newAchievements.isNotEmpty()) {
+            prefs.edit()
+                .putStringSet(knownKey, env.achievements.map { it.name }.toSet())
+                .apply()
+        }
+    }
+
     // ── Validation ────────────────────────────────────────────────────────────
 
     private fun validateCredentials(username: String, password: String): String? = when {
-        username.isBlank()         -> "Username cannot be empty"
-        username.length < 3        -> "Username must be at least 3 characters"
-        username.contains(" ")     -> "Username cannot contain spaces"
-        password.isBlank()         -> "Password cannot be empty"
-        password.length < 4        -> "Password must be at least 4 characters"
-        else                       -> null
+        username.isBlank()     -> "Username cannot be empty"
+        username.length < 3    -> "Username must be at least 3 characters"
+        username.contains(" ") -> "Username cannot contain spaces"
+        password.isBlank()     -> "Password cannot be empty"
+        password.length < 4    -> "Password must be at least 4 characters"
+        else                   -> null
     }
 
     private fun validateTransactionAmount(amount: Int): String? = when {
-        amount == 0                         -> "Amount cannot be zero"
-        kotlin.math.abs(amount) > 999_999   -> "Amount is too large (max 999,999)"
-        else                                -> null
+        amount == 0                       -> "Amount cannot be zero"
+        kotlin.math.abs(amount) > 999_999 -> "Amount is too large (max 999,999)"
+        else                              -> null
     }
 }
 
 data class AppUiState(
-    val session        : UserSession?       = null,
-    val loading        : Boolean            = false,
-    val error          : String?            = null,
-    val profileEnvelope: ProfileEnvelope?   = null,
-    val profiles       : List<String>       = emptyList(),
-    val adminStats     : AdminStats?        = null,
-    val adminUsers     : List<AdminUserRow> = emptyList()
+    val session         : UserSession?       = null,
+    val loading         : Boolean            = false,
+    val error           : String?            = null,
+    val profileEnvelope : ProfileEnvelope?   = null,
+    val profiles        : List<String>       = emptyList(),
+    val adminStats      : AdminStats?        = null,
+    val adminUsers      : List<AdminUserRow> = emptyList()
 )

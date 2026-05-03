@@ -1,5 +1,9 @@
 package com.cointracker.mobile.ui
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -82,6 +86,14 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                     SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
                 }
             } else {
+                val permLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) {}
+                LaunchedEffect(Unit) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
                 Box(modifier = Modifier.fillMaxSize()) {
                     Scaffold(
                         containerColor = Color.Transparent,

@@ -560,4 +560,94 @@ class FirestoreRepository @Inject constructor() {
     private fun parseInstantSafe(s: String): Instant? =
         runCatching { Instant.parse(s) }
             .getOrElse { runCatching { java.time.OffsetDateTime.parse(s).toInstant() }.getOrNull() }
+
+    private fun buildEnvelope(profileName: String, transactions: List<Transaction>, settings: Settings): ProfileEnvelope {
+        val balance    = transactions.sumOf { it.amount }
+        val goal       = settings.goal
+        val today      = LocalDate.now(ZoneOffset.UTC)
+        val weekStart  = today.minusDays(today.dayOfWeek.ordinal.toLong())
+        val monthStart = today.withDayOfMonth(1)
+        val sevenAgo   = today.minusDays(7)
+
+        var todayEarn = 0; var weekEarn = 0; var monthEarn = 0
+        var totalEarnings = 0; var firstEarningDate: Instant? = null
+        var earnings7d = 0
+
+        transactions.forEach { t ->
+            if (t.amount > 0) {
+                totalEarnings += t.amount
+                val inst = parseInstantSafe(t.date) ?: return@forEach
+                if (firstEarningDate == null || inst.isBefore(firstEarningDate)) firstEarningDate = inst
+                val d = inst.atZone(ZoneOffset.UTC).toLocalDate()
+                if (d == today)            todayEarn += t.amount
+                if (!d.isBefore(weekStart)) weekEarn  += t.amount
+                if (!d.isBefore(monthStart)) monthEarn += t.amount
+                if (!d.isBefore(sevenAgo))  earnings7d += t.amount   // ← NEW: 7d window
+            }
+        }
+
+        // ── Estimated days using 7-day rate (falls back to lifetime if <7d data) ──
+        val dailyRate7d = earnings7d / 7.0
+        val hasEnoughHistory = firstEarningDate != null &&
+            (Instant.now().epochSecond - firstEarningDate!!.epochSecond) >= 7 * 86400
+
+        val estimatedDays: Int? = when {
+            balance >= goal -> 0
+            hasEnoughHistory && dailyRate7d > 0 -> ((goal - balance) / dailyRate7d).toInt()
+            !hasEnoughHistory && totalEarnings > 0 && firstEarningDate != null -> {
+                val days = maxOf(1, (Instant.now().epochSecond - firstEarningDate!!.epochSecond).div(86400).toInt())
+                val avg  = totalEarnings / days.toDouble()
+                if (avg > 0) ((goal - balance) / avg).toInt() else null
+            }
+            else -> null
+        }
+
+        // ── Best earning week ─────────────────────────────────────────────────────
+        val weekMap = mutableMapOf<LocalDate, Int>()  // week-start → total income
+        transactions.filter { it.amount > 0 }.forEach { t ->
+            val d = parseInstantSafe(t.date)?.atZone(ZoneOffset.UTC)?.toLocalDate() ?: return@forEach
+            val ws = d.minusDays(d.dayOfWeek.ordinal.toLong())
+            weekMap[ws] = (weekMap[ws] ?: 0) + t.amount
+        }
+        val bestWeekEntry  = weekMap.maxByOrNull { it.value }
+        val bestWeekAmt    = bestWeekEntry?.value ?: 0
+        val bestWeekLabel  = bestWeekEntry?.key?.let {
+            val end = it.plusDays(6)
+            "${it.monthValue}/${it.dayOfMonth} – ${end.monthValue}/${end.dayOfMonth}"
+        } ?: "N/A"
+
+        // ── Breakdowns ────────────────────────────────────────────────────────────
+        val earningsBreakdown = mutableMapOf<String, Int>()
+        val spendingBreakdown = mutableMapOf<String, Int>()
+        transactions.forEach { t ->
+            if (t.amount > 0) earningsBreakdown[t.source] = (earningsBreakdown[t.source] ?: 0) + t.amount
+            if (t.amount < 0) spendingBreakdown[t.source] = (spendingBreakdown[t.source] ?: 0) + -t.amount
+        }
+
+        val achievements = AchievementCalculator().calculate(transactions, balance, goal)
+
+        return ProfileEnvelope(
+            profile             = profileName,
+            transactions        = transactions,
+            settings            = settings.copy(firebaseAvailable = true),
+            balance             = balance,
+            goal                = goal,
+            progress            = if (goal > 0) minOf(100, ((balance.toDouble() / goal) * 100).toInt()) else 0,
+            estimatedDays       = estimatedDays,
+            dashboardStats      = DashboardStats(todayEarn, weekEarn, monthEarn),
+            analytics           = AnalyticsSnapshot(
+                totalEarnings     = totalEarnings,
+                totalSpending     = -transactions.filter { it.amount < 0 }.sumOf { it.amount },
+                netBalance        = balance,
+                earningsBreakdown = earningsBreakdown,
+                spendingBreakdown = spendingBreakdown,
+                timeline          = transactions.sortedBy { it.date }
+                    .map { t -> TimelinePoint(t.date, t.previousBalance + t.amount) },
+                bestWeekEarnings  = bestWeekAmt,      // ← NEW
+                bestWeekLabel     = bestWeekLabel,     // ← NEW
+                dailyRate7d       = dailyRate7d        // ← NEW
+            ),
+            achievements        = achievements
+        )
+    }
 }
