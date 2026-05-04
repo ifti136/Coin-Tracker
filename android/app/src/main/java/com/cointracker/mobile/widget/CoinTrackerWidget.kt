@@ -1,6 +1,7 @@
 package com.cointracker.mobile.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -14,9 +15,10 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
+import android.content.res.Configuration
 import androidx.glance.appwidget.cornerRadius
-import android.content.Intent
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
@@ -44,14 +46,32 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.ZoneOffset
+import androidx.glance.appwidget.LinearProgressIndicator
+import android.annotation.SuppressLint
 
 // ── State keys ───────────────────────────────────────────────────────────────
 
-private val KEY_BALANCE  = intPreferencesKey("w_balance")
-private val KEY_GOAL     = intPreferencesKey("w_goal")
-private val KEY_PROGRESS = intPreferencesKey("w_progress")
-private val KEY_RATE     = stringPreferencesKey("w_rate")
-private val KEY_PROFILE  = stringPreferencesKey("w_profile")
+private val KEY_BALANCE   = intPreferencesKey("w_balance")
+private val KEY_GOAL      = intPreferencesKey("w_goal")
+private val KEY_PROGRESS  = intPreferencesKey("w_progress")
+private val KEY_RATE      = stringPreferencesKey("w_rate")
+private val KEY_PROFILE   = stringPreferencesKey("w_profile")
+private val KEY_IS_DARK   = stringPreferencesKey("w_is_dark")   // "true" / "false"
+
+// ── App gradient palette (matches CoinTrackerTheme) ──────────────────────────
+
+private val BG_DARK_START  = Color(0xFF1E1B3A)   // GradientDark1
+private val BG_DARK_END    = Color(0xFF0B3A5D)   // GradientDark3
+private val BG_LIGHT_START = Color(0xFFC3AED6)   // GradientLight1
+private val BG_LIGHT_END   = Color(0xFFA1C4FD)   // GradientLight3
+private val TEXT_DARK      = Color(0xFFE2E8F0)
+private val TEXT_LIGHT     = Color(0xFF1E293B)
+private val PRIMARY_DARK   = Color(0xFF60A5FA)
+private val PRIMARY_LIGHT  = Color(0xFF3B82F6)
+private val SUCCESS        = Color(0xFF10B981)
+private val MUTED_DARK     = Color(0xFF94A3B8)
+private val MUTED_LIGHT    = Color(0xFF64748B)
+private val TRACK          = Color(0x33FFFFFF)
 
 // ── Widget ───────────────────────────────────────────────────────────────────
 
@@ -59,12 +79,14 @@ class CoinTrackerWidget : GlanceAppWidget() {
 
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
+    // Allow any size — the layout adapts
+    override val sizeMode: SizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent {
-            WidgetContent(context)
-        }
+        provideContent { WidgetContent(context) }
     }
 
+    @SuppressLint("RestrictedApi")
     @Composable
     private fun WidgetContent(context: Context) {
         val prefs    = currentState<androidx.datastore.preferences.core.Preferences>()
@@ -73,98 +95,94 @@ class CoinTrackerWidget : GlanceAppWidget() {
         val progress = prefs[KEY_PROGRESS] ?: 0
         val rate     = prefs[KEY_RATE]     ?: "—"
         val profile  = prefs[KEY_PROFILE]  ?: "Default"
+        val isDark   = prefs[KEY_IS_DARK]  != "false"   // default dark
         val pct      = progress.coerceIn(0, 100)
 
-        GlanceTheme {
+        val bgColor    = if (isDark) BG_DARK_START  else BG_LIGHT_START
+        val textColor  = if (isDark) TEXT_DARK      else TEXT_LIGHT
+        val primary    = if (isDark) PRIMARY_DARK   else PRIMARY_LIGHT
+        val muted      = if (isDark) MUTED_DARK     else MUTED_LIGHT
+
+        // Outer container mimics app gradient with rounded corners + padding
+        Box(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(ColorProvider(bgColor))
+                .cornerRadius(20.dp)
+                .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
+                .padding(16.dp),
+            contentAlignment = Alignment.TopStart
+        ) {
+            // Subtle overlay for depth (dark strip at top-left)
             Box(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(GlanceTheme.colors.widgetBackground)
-                    .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
-                    .padding(16.dp),
-                contentAlignment = Alignment.TopStart
-            ) {
-                Column(modifier = GlanceModifier.fillMaxSize()) {
+                    .background(ColorProvider(Color(0x18FFFFFF)))
+                    .cornerRadius(20.dp)
+            ) {}
 
-                    // Header row
-                    Row(
-                        modifier = GlanceModifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "🪙 Coin Tracker",
-                            style = TextStyle(
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GlanceTheme.colors.onSurface
-                            )
-                        )
-                        Spacer(GlanceModifier.defaultWeight())
-                        Text(
-                            profile,
-                            style = TextStyle(
-                                fontSize = 11.sp,
-                                color = GlanceTheme.colors.secondary
-                            )
-                        )
-                    }
+            Column(modifier = GlanceModifier.fillMaxSize()) {
 
-                    Spacer(GlanceModifier.height(8.dp))
-
-                    // Balance
+                // ── Header ────────────────────────────────────────────────────
+                Row(
+                    modifier = GlanceModifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        "${balance.formatCoins()} coins",
+                        "🪙 Coin Tracker",
                         style = TextStyle(
-                            fontSize = 22.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GlanceTheme.colors.primary
+                            color = ColorProvider(textColor)
                         )
                     )
-
-                    Spacer(GlanceModifier.height(4.dp))
-
-                    // Goal + percent
+                    Spacer(GlanceModifier.defaultWeight())
                     Text(
-                        "Goal: ${goal.formatCoins()}  •  $pct%",
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            color = GlanceTheme.colors.onSurface
-                        )
-                    )
-
-                    Spacer(GlanceModifier.height(8.dp))
-
-                    // Progress bar — min widget width ~250dp, 32dp padding = ~218dp usable
-                    val fillDp = (218 * pct / 100).dp
-                    Box(
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .background(ColorProvider(Color(0xFFE2E8F0)))
-                            .cornerRadius(4.dp)
-                    ) {
-                        if (pct > 0) {
-                            Box(
-                                modifier = GlanceModifier
-                                    .width(fillDp)
-                                    .height(8.dp)
-                                    .background(ColorProvider(Color(0xFF10B981)))
-                                    .cornerRadius(4.dp)
-                            ) {}
-                        }
-                    }
-
-                    Spacer(GlanceModifier.height(8.dp))
-
-                    // 7-day rate
-                    Text(
-                        "7d avg: $rate coins/day",
-                        style = TextStyle(
-                            fontSize = 11.sp,
-                            color = GlanceTheme.colors.secondary
-                        )
+                        profile,
+                        style = TextStyle(fontSize = 11.sp, color = ColorProvider(muted))
                     )
                 }
+
+                Spacer(GlanceModifier.height(6.dp))
+
+                // ── Balance ───────────────────────────────────────────────────
+                Text(
+                    "${balance.formatCoins()} coins",
+                    style = TextStyle(
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorProvider(primary)
+                    )
+                )
+
+                Spacer(GlanceModifier.height(4.dp))
+
+                // ── Goal + percent ────────────────────────────────────────────
+                Text(
+                    "Goal: ${goal.formatCoins()}  •  $pct%",
+                    style = TextStyle(fontSize = 12.sp, color = ColorProvider(textColor))
+                )
+
+                Spacer(GlanceModifier.height(8.dp))
+
+                // Progress bar — automatically handles fractional width for any widget size
+                LinearProgressIndicator(
+                    progress = pct / 100f,
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .cornerRadius(4.dp),
+                    color = ColorProvider(Color(0xFF10B981)),         // Your green fill
+                    backgroundColor = ColorProvider(Color(0xFFE2E8F0)) // Your gray track
+                )
+
+                Spacer(GlanceModifier.height(8.dp))
+
+                // ── 7-day rate ────────────────────────────────────────────────
+                Text(
+                    "7d avg: $rate coins/day",
+                    style = TextStyle(fontSize = 11.sp, color = ColorProvider(muted))
+                )
             }
         }
     }
@@ -187,6 +205,7 @@ object WidgetUpdater {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val prefs = ctx.getSharedPreferences("cointracker_prefs", Context.MODE_PRIVATE)
         val profile = prefs.getString("last_profile", "Default") ?: "Default"
+        val isDark  = prefs.getBoolean("is_dark_mode", true)
 
         try {
             val doc      = FirebaseFirestore.getInstance()
@@ -222,6 +241,7 @@ object WidgetUpdater {
                             this[KEY_PROGRESS] = progress
                             this[KEY_RATE]     = rate.toString()
                             this[KEY_PROFILE]  = profile
+                            this[KEY_IS_DARK]  = isDark.toString()
                         }
                     }
                     CoinTrackerWidget().update(ctx, id)

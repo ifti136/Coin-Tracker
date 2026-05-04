@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -201,67 +202,92 @@ fun HistoryScreen(
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
                     if (value == SwipeToDismissBoxValue.EndToStart) {
-                        onDelete(tx.id)
-                        true
+                        onDelete(tx.id); true
                     } else false
                 },
-                positionalThreshold = { it * 0.4f }   // 40% swipe threshold
+                positionalThreshold = { it * 0.4f }
             )
+
+            // Only active when actually dragging EndToStart
+            val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
 
             SwipeToDismissBox(
                 state = dismissState,
-                enableDismissFromStartToEnd = false,   // only right-to-left swipe
+                enableDismissFromStartToEnd = false,
                 backgroundContent = {
-                    val color by animateColorAsState(
-                        if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart)
-                            WebDanger else Color.Transparent,
-                        label = "swipe_bg"
-                    )
+                    // Background only renders red content when actively swiping
                     Box(
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
                             .padding(vertical = 4.dp)
-                            .background(color, shape = MaterialTheme.shapes.medium),
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(
+                                if (isSwiping) WebDanger else Color.Transparent
+                            ),
                         contentAlignment = Alignment.CenterEnd
                     ) {
-                        Row(
-                            modifier = Modifier.padding(end = 20.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete",
-                                tint = Color.White, modifier = Modifier.size(24.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+                        // Only draw icon when visually swiping — prevents ghost rendering
+                        if (isSwiping) {
+                            Row(
+                                modifier = Modifier.padding(end = 20.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete",
+                                    tint = Color.White, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
             ) {
                 GlassCard {
-                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left: source + date
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(tx.source, style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold)
-                            Text(tx.date.take(10), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Text(
+                                tx.source,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                tx.date.take(10),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
                         }
-                        Column(horizontalAlignment = Alignment.End) {
+
+                        // Right: amount + edit button (clearly separate, no overlap)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
                                 if (tx.amount >= 0) "+${tx.amount}" else "${tx.amount}",
                                 color = if (tx.amount >= 0) WebSuccess else WebDanger,
-                                fontWeight = FontWeight.Bold, fontSize = 16.sp
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
                             )
-                            Row {
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        editingTxId = tx.id
-                                        editAmount  = tx.amount.toString()
-                                        editSource  = tx.source
-                                        editDate    = tx.date.take(10)
-                                    },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(Icons.Default.Edit, "Edit", modifier = Modifier.size(16.dp))
-                                }
+                            // Edit button clearly visible, no delete button here
+                            FilledTonalIconButton(
+                                onClick = {
+                                    editingTxId = tx.id
+                                    editAmount  = tx.amount.toString()
+                                    editSource  = tx.source
+                                    editDate    = tx.date.take(10)
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }

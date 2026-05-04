@@ -62,12 +62,15 @@ fun LoadingOverlay() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
-    val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
-    val isDark by viewModel.isDarkMode.collectAsState()
-    val context = LocalContext.current
+    val navController     = rememberNavController()
+    val uiState           by viewModel.uiState.collectAsState()
+    val isDark            by viewModel.isDarkMode.collectAsState()
+    val context           = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val scope             = rememberCoroutineScope()
+
+    // Count unread: achievements count as notification badges
+    val achievementCount = uiState.profileEnvelope?.achievements?.size ?: 0
 
     LaunchedEffect(uiState.error) {
         val msg = uiState.error ?: return@LaunchedEffect
@@ -102,59 +105,135 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                         topBar = {
                             Column(modifier = Modifier.statusBarsPadding()) {
                                 GlassCard(modifier = Modifier.padding(16.dp)) {
-                                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Logo
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(painter = painterResource(id = R.drawable.coin), contentDescription = "Logo",
-                                                tint = Color.Unspecified, modifier = Modifier.size(28.dp))
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.coin),
+                                                contentDescription = "Logo",
+                                                tint = Color.Unspecified,
+                                                modifier = Modifier.size(28.dp)
+                                            )
                                             Spacer(Modifier.width(12.dp))
-                                            Text("Coin Tracker", style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                            Text(
+                                                "Coin Tracker",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
                                         }
+
+                                        // Actions
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            IconButton(onClick = { viewModel.toggleTheme() }) {
-                                                Text(text = if (isDark) "☀️" else "🌙", style = MaterialTheme.typography.titleMedium)
+
+                                            // ── Bell icon with achievement badge ──────────────────
+                                            Box {
+                                                val currentBackStack by navController.currentBackStackEntryAsState()
+                                                val onNotif = currentBackStack?.destination?.route == "notifications"
+                                                IconButton(onClick = {
+                                                    if (!onNotif) navController.navigate("notifications")
+                                                }) {
+                                                    Icon(
+                                                        Icons.Default.Notifications,
+                                                        contentDescription = "Notifications",
+                                                        tint = if (onNotif)
+                                                            MaterialTheme.colorScheme.primary
+                                                        else
+                                                            MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                                // Badge dot when achievements exist
+                                                if (achievementCount > 0) {
+                                                    Badge(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .offset(x = (-4).dp, y = 4.dp),
+                                                        containerColor = Color(0xFFF59E0B)
+                                                    ) {
+                                                        Text(
+                                                            text = if (achievementCount > 9) "9+" else achievementCount.toString(),
+                                                            style = MaterialTheme.typography.labelSmall
+                                                        )
+                                                    }
+                                                }
                                             }
+
+                                            // Theme toggle
+                                            IconButton(onClick = { viewModel.toggleTheme() }) {
+                                                Text(
+                                                    text = if (isDark) "☀️" else "🌙",
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                            }
+
+                                            // Profile menu
                                             Box {
                                                 var showProfileMenu by remember { mutableStateOf(false) }
                                                 IconButton(onClick = { showProfileMenu = true }) {
-                                                    Icon(Icons.Default.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.onSurface)
+                                                    Icon(
+                                                        Icons.Default.Person,
+                                                        contentDescription = "Profile",
+                                                        tint = MaterialTheme.colorScheme.onSurface
+                                                    )
                                                 }
-                                                MaterialTheme(shapes = MaterialTheme.shapes.copy(extraSmall = MaterialTheme.shapes.medium)) {
-                                                    DropdownMenu(expanded = showProfileMenu, onDismissRequest = { showProfileMenu = false },
-                                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                                        Text("Profiles", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                MaterialTheme(shapes = MaterialTheme.shapes.copy(
+                                                    extraSmall = MaterialTheme.shapes.medium)) {
+                                                    DropdownMenu(
+                                                        expanded = showProfileMenu,
+                                                        onDismissRequest = { showProfileMenu = false },
+                                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    ) {
+                                                        Text("Profiles",
+                                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                         val activeProfile = uiState.session?.currentProfile
                                                         uiState.profiles.forEach { profile ->
                                                             val isActive = profile == activeProfile
                                                             DropdownMenuItem(
                                                                 text = {
-                                                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                                                        Text(text = profile,
-                                                                            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+                                                                    Row(verticalAlignment = Alignment.CenterVertically,
+                                                                        modifier = Modifier.fillMaxWidth()) {
+                                                                        Text(
+                                                                            text = profile,
+                                                                            color = if (isActive) MaterialTheme.colorScheme.primary
+                                                                            else MaterialTheme.colorScheme.onSurface,
+                                                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                                                                        )
                                                                         if (isActive) {
                                                                             Spacer(Modifier.weight(1f))
-                                                                            Icon(imageVector = Icons.Default.Check, contentDescription = "Active",
-                                                                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                                            Icon(Icons.Default.Check, "Active",
+                                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                                modifier = Modifier.size(18.dp))
                                                                         }
                                                                     }
                                                                 },
-                                                                onClick = { if (!isActive) viewModel.switchProfile(profile); showProfileMenu = false }
+                                                                onClick = {
+                                                                    if (!isActive) viewModel.switchProfile(profile)
+                                                                    showProfileMenu = false
+                                                                }
                                                             )
                                                         }
                                                         Divider()
-                                                        DropdownMenuItem(text = { Text("+ Add Profile") },
-                                                            onClick = { navController.navigate("settings"); showProfileMenu = false })
+                                                        DropdownMenuItem(
+                                                            text = { Text("+ Add Profile") },
+                                                            onClick = { navController.navigate("settings"); showProfileMenu = false }
+                                                        )
                                                         if (uiState.session?.role == "admin") {
                                                             DropdownMenuItem(
                                                                 text = { Text("👑 Admin Panel", color = MaterialTheme.colorScheme.primary) },
-                                                                onClick = { navController.navigate("admin"); showProfileMenu = false })
+                                                                onClick = { navController.navigate("admin"); showProfileMenu = false }
+                                                            )
                                                         }
                                                         DropdownMenuItem(
                                                             text = { Text("Log Out", color = MaterialTheme.colorScheme.error) },
-                                                            onClick = { viewModel.logout(); showProfileMenu = false })
+                                                            onClick = { viewModel.logout(); showProfileMenu = false }
+                                                        )
                                                     }
                                                 }
                                             }
@@ -164,14 +243,23 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                             }
                         },
                         bottomBar = {
-                            NavigationBar(containerColor = if (isDark) Color(0xFF1A1D23).copy(alpha = 0.9f) else Color.White,
-                                contentColor = MaterialTheme.colorScheme.primary, tonalElevation = 8.dp) {
+                            NavigationBar(
+                                containerColor = if (isDark) Color(0xFF1A1D23).copy(alpha = 0.9f) else Color.White,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                tonalElevation = 8.dp
+                            ) {
                                 val currentBackStack by navController.currentBackStackEntryAsState()
                                 val currentRoute = currentBackStack?.destination?.route ?: "dashboard"
-                                listOf("dashboard" to Icons.Default.Home, "analytics" to Icons.Default.DateRange,
-                                    "history" to Icons.Default.List, "settings" to Icons.Default.Settings
+
+                                // Main 4 tabs — notifications accessible via bell only
+                                listOf(
+                                    "dashboard"  to Icons.Default.Home,
+                                    "analytics"  to Icons.Default.DateRange,
+                                    "history"    to Icons.Default.List,
+                                    "settings"   to Icons.Default.Settings
                                 ).forEach { (route, icon) ->
-                                    NavigationBarItem(icon = { Icon(icon, contentDescription = route) },
+                                    NavigationBarItem(
+                                        icon = { Icon(icon, contentDescription = route) },
                                         label = { Text(route.replaceFirstChar { it.uppercase() }) },
                                         selected = currentRoute == route,
                                         onClick = {
@@ -185,7 +273,9 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                         colors = NavigationBarItemDefaults.colors(
                                             selectedIconColor = MaterialTheme.colorScheme.primary,
                                             selectedTextColor = MaterialTheme.colorScheme.primary,
-                                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)))
+                                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -193,28 +283,39 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                         Box(modifier = Modifier.padding(innerPadding)) {
                             NavHost(navController = navController, startDestination = "dashboard") {
                                 composable("dashboard") {
-                                    DashboardScreen(envelope = uiState.profileEnvelope, session = uiState.session,
-                                        loading = uiState.loading,
-                                        onAddIncome = { amt, src, date -> viewModel.addTransaction(amt, src, date) },
-                                        onAddExpense = { amt, src, date -> viewModel.addTransaction(-amt, src, date) },
-                                        onNavigate = { route -> navController.navigate(route) },
-                                        onShowSnackbar = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } })
+                                    DashboardScreen(
+                                        envelope       = uiState.profileEnvelope,
+                                        session        = uiState.session,
+                                        loading        = uiState.loading,
+                                        onAddIncome    = { amt, src, date -> viewModel.addTransaction(amt, src, date) },
+                                        onAddExpense   = { amt, src, date -> viewModel.addTransaction(-amt, src, date) },
+                                        onNavigate     = { route -> navController.navigate(route) },
+                                        onShowSnackbar = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
+                                    )
                                 }
-                                composable("analytics") { AnalyticsScreen(envelope = uiState.profileEnvelope) }
+                                composable("analytics") {
+                                    AnalyticsScreen(envelope = uiState.profileEnvelope)
+                                }
                                 composable("history") {
-                                    HistoryScreen(envelope = uiState.profileEnvelope,
+                                    HistoryScreen(
+                                        envelope = uiState.profileEnvelope,
                                         onDelete = { txId ->
                                             val tx = uiState.profileEnvelope?.transactions?.find { it.id == txId }
                                             if (tx != null) {
                                                 viewModel.deleteTransaction(txId)
                                                 scope.launch {
-                                                    val result = snackbarHostState.showSnackbar("Transaction deleted", "UNDO", duration = SnackbarDuration.Short)
+                                                    val result = snackbarHostState.showSnackbar(
+                                                        "Transaction deleted", "UNDO",
+                                                        duration = SnackbarDuration.Short)
                                                     if (result == SnackbarResult.ActionPerformed)
-                                                        viewModel.addTransaction(if (tx.amount < 0) -tx.amount else tx.amount, tx.source, tx.date)
+                                                        viewModel.addTransaction(
+                                                            if (tx.amount < 0) -tx.amount else tx.amount,
+                                                            tx.source, tx.date)
                                                 }
                                             }
                                         },
-                                        onEdit = { id, amt, src, date -> viewModel.updateTransaction(id, amt, src, date) })
+                                        onEdit = { id, amt, src, date -> viewModel.updateTransaction(id, amt, src, date) }
+                                    )
                                 }
                                 composable("settings") {
                                     SettingsScreen(
@@ -232,13 +333,20 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                         context             = context
                                     )
                                 }
+                                composable("notifications") {
+                                    NotificationsScreen(envelope = uiState.profileEnvelope)
+                                }
                                 composable("admin") {
                                     LaunchedEffect(Unit) { viewModel.loadAdmin() }
-                                    AdminScreen(session = uiState.session, stats = uiState.adminStats,
-                                        users = uiState.adminUsers, loading = uiState.loading,
-                                        onRefresh = { viewModel.loadAdmin() },
+                                    AdminScreen(
+                                        session      = uiState.session,
+                                        stats        = uiState.adminStats,
+                                        users        = uiState.adminUsers,
+                                        loading      = uiState.loading,
+                                        onRefresh    = { viewModel.loadAdmin() },
                                         onDeleteUser = { viewModel.deleteUser(it) },
-                                        onBack = { navController.popBackStack() })
+                                        onBack       = { navController.popBackStack() }
+                                    )
                                 }
                             }
                         }

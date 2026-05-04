@@ -146,6 +146,20 @@ Requires `google-services.json` in `android/app/` before building.
 
 ## Changelog
 
+### Version 3.1.1 - 2026
+
+**History screen**
+- fixed delete indicator bleeding behind edit button; swipe-to-delete background now only renders when actively swiping; edit button repositioned into amount row for clean separation
+
+**Home screen widget** 
+- now fully resizable (horizontal + vertical, 140×80dp min → 500×300dp max); background color matches app gradient palette (dark: #1E1B3A, light: #C3AED6); respects user's dark/light mode preference
+
+**Notifications hub**
+- new screen accessible via bell icon in top bar; shows unlocked achievements with checkmarks and activity alerts (goal milestones, strong earning days, best week summary, goal proximity warnings)
+
+**Bell icon**
+- added to top bar with amber badge showing achievement count; highlights when notifications screen is active
+
 ### v3.1.0 — 2026
 **Minor Code Bug Fixed**
 - Fixed minor build errors
