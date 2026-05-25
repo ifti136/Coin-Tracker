@@ -1,32 +1,16 @@
 // ─────────────────────────────────────────────────────────────
-//  login.js  —  Firebase Auth login/register for Coin Tracker
-//  Uses synthetic email: username@cointracker.app
+//  login.js  —  Firebase Auth + Firestore (matches mobile app)
+//  Mobile stores everything in ONE doc: user_data/{uid}
+//  Field names are snake_case matching FirestoreRepository.kt
 // ─────────────────────────────────────────────────────────────
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp }                    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword }
+                                             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, limit }
+                                             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyAJbO69ldcJf5CRI-1sJqim9Cau_dqV8Co",
-  authDomain: "cointrack-16ce2.firebaseapp.com",
-  projectId: "cointrack-16ce2",
-  storageBucket: "cointrack-16ce2.firebasestorage.app",
-  messagingSenderId: "1623415888",
-  appId: "1:1623415888:web:2e5966211e367808b64555",
-  measurementId: "G-VHRJ3KPH9Q"
-};
-// ─────────────────────────────────────────────────────────────
+import { firebaseConfig } from "/firebase-config.js";
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -34,7 +18,7 @@ const db   = getFirestore(app);
 
 const toEmail = (u) => `${u.trim().toLowerCase()}@cointracker.app`;
 
-// ── Default quick actions — snake_case to match mobile schema ─
+// Default quick actions — matches defaultQuickActions() in Models.kt
 const DEFAULT_QUICK_ACTIONS = [
   { text: "Event Reward",      value: 50,  is_positive: true  },
   { text: "Ads",               value: 10,  is_positive: true  },
@@ -45,14 +29,14 @@ const DEFAULT_QUICK_ACTIONS = [
   { text: "Box Draw (10)",     value: 900, is_positive: false },
 ];
 
-// ── Default settings — ALL keys in snake_case to match mobile ─
-function defaultSettings(darkMode = false) {
+// Default settings — matches settingsToMap() in FirestoreRepository.kt
+function defaultSettingsMap() {
   return {
     goal:               13500,
-    dark_mode:          darkMode,          // FIX: was "darkMode" (camelCase)
-    quick_actions:      DEFAULT_QUICK_ACTIONS, // FIX: was "quickActions" + wrong is_positive key
-    income_categories:  [],                // FIX: was "incomeCategories"
-    expense_categories: [],                // FIX: was "expenseCategories"
+    dark_mode:          false,
+    quick_actions:      DEFAULT_QUICK_ACTIONS,
+    income_categories:  [],
+    expense_categories: [],
   };
 }
 
@@ -83,8 +67,7 @@ const themeToggleBtn = document.getElementById("themeToggleBtn");
 let isRegisterMode = false;
 
 // ── Theme ─────────────────────────────────────────────────────
-let currentTheme = localStorage.getItem("theme") || document.documentElement.getAttribute("data-theme") || "light";
-document.documentElement.setAttribute("data-theme", currentTheme);
+let currentTheme = document.documentElement.getAttribute("data-theme") || "light";
 themeToggleBtn.textContent = currentTheme === "light" ? "🌙" : "☀️";
 themeToggleBtn.addEventListener("click", () => {
   currentTheme = currentTheme === "light" ? "dark" : "light";
@@ -103,9 +86,7 @@ function toggleAuthMode() {
     : "Need an account? Register";
   confirmPwGroup.style.display = isRegisterMode ? "block" : "none";
   errorEl.textContent = "";
-  usernameEl.value    = "";
-  passwordEl.value    = "";
-  confirmPwEl.value   = "";
+  usernameEl.value = passwordEl.value = confirmPwEl.value = "";
 }
 toggleBtn.addEventListener("click", toggleAuthMode);
 
@@ -117,13 +98,10 @@ async function handleSubmit() {
 
   const uErr = RULES.username(username);
   if (uErr) { errorEl.textContent = uErr; return; }
-
   const pErr = RULES.password(password);
   if (pErr) { errorEl.textContent = pErr; return; }
-
   if (isRegisterMode && password !== confirmPwEl.value) {
-    errorEl.textContent = "Passwords do not match.";
-    return;
+    errorEl.textContent = "Passwords do not match."; return;
   }
 
   setLoading(true);
@@ -140,82 +118,72 @@ async function handleSubmit() {
 
 // ── Register ──────────────────────────────────────────────────
 async function handleRegister(username, password) {
-  const lowerUsername = username.toLowerCase();
-  const email         = toEmail(lowerUsername);
-  const now           = new Date().toISOString();
+  const lower = username.toLowerCase();
+  const email = toEmail(lower);
+  const now   = new Date().toISOString();
 
-  // 1. Check username not taken (check both usernames index AND users collection
-  //    to be compatible with both web-registered and mobile-registered users)
-  const usernameRef  = doc(db, "usernames", lowerUsername);
-  const usernameSnap = await getDoc(usernameRef);
-  if (usernameSnap.exists()) {
-    errorEl.textContent = "Username already taken.";
-    return;
+  // 1. Check username not taken (matches mobile: query by "username" field)
+  const existing = await getDocs(
+    query(collection(db, "users"), where("username", "==", lower), limit(1))
+  );
+  if (!existing.empty) {
+    errorEl.textContent = "Username already taken."; return;
   }
 
-  // 2. Create Firebase Auth account
+  // 2. Create Firebase Auth
   let cred;
   try {
     cred = await createUserWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    throw err;
-  }
+  } catch (err) { throw err; }
 
   const uid = cred.user.uid;
 
-  // 3. Write ALL Firestore docs — if any fail, delete auth account (rollback)
+  // 3. Write Firestore — rollback auth if fails
   try {
-    // users/{uid}
+    // users/{uid} — matches mobile exactly
     await setDoc(doc(db, "users", uid), {
-      username:   lowerUsername,
+      username:   lower,
       role:       "user",
       created_at: now,
     });
 
-    // usernames/{username} — web-only index for fast username lookup
-    await setDoc(usernameRef, { uid });
-
-    // ── user_data/{uid} — nested-map format matching mobile schema ──────────
-    // FIX: Previously wrote profiles as a Firestore *subcollection* which the
-    // app cannot read. Mobile stores everything as nested maps in ONE document.
+    // user_data/{uid} — ONE document, profiles nested inside (matches mobile)
     await setDoc(doc(db, "user_data", uid), {
       last_active_profile: "Default",
       profiles: {
         Default: {
           transactions: [],
-          settings:     defaultSettings(currentTheme === "dark"),
+          settings:     defaultSettingsMap(),
           last_updated: now,
         },
       },
     });
 
   } catch (err) {
-    // Firestore writes failed — delete the Auth account so user can retry
-    console.error("Firestore write failed, rolling back auth:", err);
+    console.error("Firestore write failed, rolling back:", err);
     await cred.user.delete().catch(() => {});
     throw new Error("Account setup failed. Please try again.");
   }
 
-  showToast(`Welcome, ${lowerUsername}! Account created.`, "success");
+  showToast(`Welcome, ${lower}! Account created.`, "success");
   setTimeout(() => { window.location.href = "/"; }, 900);
 }
 
 // ── Login ─────────────────────────────────────────────────────
 async function handleLogin(username, password) {
-  const lowerUsername = username.toLowerCase();
-  const email         = toEmail(lowerUsername);
+  const lower = username.toLowerCase();
+  const email = toEmail(lower);
 
-  // Check username index (web-registered users have this; mobile users do not)
-  // We don't gate on this — just attempt Firebase Auth directly.
-  // If the username index is missing it's a mobile-registered user, that's fine.
-  const usernameSnap = await getDoc(doc(db, "usernames", lowerUsername));
-  if (!usernameSnap.exists()) {
-    // May be a mobile-registered user without the web index — still try auth
-    // If auth fails the friendlyError handler will show the right message.
+  // Check user exists by querying users collection (matches mobile)
+  const snap = await getDocs(
+    query(collection(db, "users"), where("username", "==", lower), limit(1))
+  );
+  if (snap.empty) {
+    errorEl.textContent = "Username not found."; return;
   }
 
   await signInWithEmailAndPassword(auth, email, password);
-  showToast(`Welcome back, ${lowerUsername}!`, "success");
+  showToast(`Welcome back, ${lower}!`, "success");
   setTimeout(() => { window.location.href = "/"; }, 900);
 }
 
@@ -229,13 +197,13 @@ function setLoading(on) {
 
 function friendlyError(code) {
   const map = {
-    "auth/user-not-found":          "Username not found.",
-    "auth/wrong-password":          "Incorrect password.",
-    "auth/invalid-credential":      "Incorrect username or password.",
-    "auth/too-many-requests":       "Too many attempts. Try again later.",
-    "auth/network-request-failed":  "Network error. Check your connection.",
-    "auth/email-already-in-use":    "Username already taken.",
-    "auth/weak-password":           "Password too weak (min 4 chars).",
+    "auth/user-not-found":         "Username not found.",
+    "auth/wrong-password":         "Incorrect password.",
+    "auth/invalid-credential":     "Incorrect username or password.",
+    "auth/too-many-requests":      "Too many attempts. Try again later.",
+    "auth/network-request-failed": "Network error. Check your connection.",
+    "auth/email-already-in-use":   "Username already taken.",
+    "auth/weak-password":          "Password too weak (min 4 chars).",
   };
   return map[code] || code || "Something went wrong. Please try again.";
 }

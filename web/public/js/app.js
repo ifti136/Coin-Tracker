@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────────────────────
+//  app.js  —  Coin Tracker Web App
+//  Reads/writes Firestore in mobile app format:
+//    user_data/{uid}  ← single doc, profiles nested inside
+//  Field names: snake_case matching FirestoreRepository.kt
+// ─────────────────────────────────────────────────────────────
+
 import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signOut,
@@ -8,17 +15,7 @@ import {
   collection, getDocs, updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyAJbO69ldcJf5CRI-1sJqim9Cau_dqV8Co",
-  authDomain: "cointrack-16ce2.firebaseapp.com",
-  projectId: "cointrack-16ce2",
-  storageBucket: "cointrack-16ce2.firebasestorage.app",
-  messagingSenderId: "1623415888",
-  appId: "1:1623415888:web:2e5966211e367808b64555",
-  measurementId: "G-VHRJ3KPH9Q"
-};
-// ─────────────────────────────────────────────────────────────
+import { firebaseConfig } from "/firebase-config.js";
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
@@ -30,10 +27,6 @@ const DEFAULT_EXPENSE_CATEGORIES = ["Box Draw","Manager Purchase","Pack Purchase
 const DEFAULT_GOAL               = 13500;
 const TRANSACTIONS_PER_PAGE      = 10;
 
-// FIX: All keys must be snake_case to match mobile Firestore schema.
-// Mobile's FirestoreRepository.settingsToMap() writes:
-//   "goal", "dark_mode", "quick_actions", "income_categories", "expense_categories"
-// and QuickAction maps use "is_positive" (not "isPositive").
 const DEFAULT_QUICK_ACTIONS = [
   { text: "Event Reward",      value: 50,  is_positive: true  },
   { text: "Ads",               value: 10,  is_positive: true  },
@@ -47,7 +40,7 @@ const DEFAULT_QUICK_ACTIONS = [
 function defaultSettingsMap(darkMode = false) {
   return {
     goal:               DEFAULT_GOAL,
-    dark_mode:          darkMode,          // snake_case
+    dark_mode:          darkMode,
     quick_actions:      DEFAULT_QUICK_ACTIONS,
     income_categories:  [],
     expense_categories: [],
@@ -74,7 +67,7 @@ class CoinTrackerApp {
     this.username        = null;
     this.role            = null;
     this.currentProfile  = "Default";
-    this.userDataDoc     = null;
+    this.userDataDoc     = null;  // full user_data/{uid} document
     this.allProfiles     = [];
     this.charts          = {};
     this.analyticsPeriod     = "lifetime";
@@ -107,34 +100,15 @@ class CoinTrackerApp {
     }
   }
 
-  // ── Load full user_data/{uid} document ────────────────────────
-  // Mobile stores everything as nested maps in ONE document:
-  //   { last_active_profile: "Default", profiles: { Default: { transactions, settings, last_updated } } }
-  //
-  // FIX: The old web login.js incorrectly wrote profiles as a Firestore
-  // *subcollection* (user_data/{uid}/profiles/{name}) instead of nested maps.
-  // This method handles BOTH formats and migrates legacy subcollection users
-  // to the correct nested-map format on first load.
+  // ── Load full user_data/{uid} single document ─────────────────
+  // Mobile stores everything here: { last_active_profile, profiles: { Name: { transactions, settings, last_updated } } }
   async loadUserData() {
     const snap = await getDoc(doc(db, "user_data", this.uid));
-
     if (snap.exists()) {
-      const data = snap.data();
-
-      // Check if this doc already has the correct nested-map format
-      if (data.profiles && typeof data.profiles === "object") {
-        // ✅ Correct format (mobile-registered or already-migrated web user)
-        this.userDataDoc    = data;
-        this.currentProfile = data.last_active_profile || "Default";
-      } else {
-        // ⚠️  Legacy format: web-registered user whose profiles were written as
-        // a subcollection. Migrate by reading the subcollection and rewriting
-        // everything into the correct nested-map structure.
-        console.warn("Legacy subcollection profile format detected — migrating...");
-        await this._migrateLegacySubcollectionUser(data);
-      }
+      this.userDataDoc    = snap.data();
+      this.currentProfile = this.userDataDoc.last_active_profile || "Default";
     } else {
-      // Brand-new user with no user_data document at all
+      // Brand new user — create structure
       const now = new Date().toISOString();
       this.userDataDoc = {
         last_active_profile: "Default",
@@ -148,87 +122,9 @@ class CoinTrackerApp {
       };
       await setDoc(doc(db, "user_data", this.uid), this.userDataDoc);
     }
-
     this.allProfiles = Object.keys(this.userDataDoc.profiles || {});
     if (!this.allProfiles.includes("Default")) this.allProfiles.unshift("Default");
     this.allProfiles.sort();
-  }
-
-  // ── Migrate legacy subcollection → nested-map format ─────────
-  // Reads each doc from user_data/{uid}/profiles/{name} and rewrites
-  // everything as a single nested-map document, then deletes the old docs.
-  async _migrateLegacySubcollectionUser(existingDocData) {
-    const now = new Date().toISOString();
-    const profiles = {};
-
-    try {
-      const profilesSnap = await getDocs(collection(db, "user_data", this.uid, "profiles"));
-      for (const profileDoc of profilesSnap.docs) {
-        const pd  = profileDoc.data();
-        const txns = pd.transactions || [];
-
-        // Normalise quick actions: old web code wrote camelCase keys
-        // (isPositive, quickActions, darkMode) — convert to snake_case
-        let settings = pd.settings || {};
-        settings = this._normaliseSettings(settings);
-
-        profiles[profileDoc.id] = {
-          transactions: txns.map((t) => ({
-            id:               t.id               || crypto.randomUUID(),
-            date:             t.date             || now,
-            amount:           t.amount           || 0,
-            source:           t.source           || "",
-            previous_balance: t.previous_balance ?? t.previousBalance ?? 0,
-          })),
-          settings,
-          last_updated: pd.last_updated || pd.lastUpdated || now,
-        };
-      }
-    } catch (err) {
-      console.error("Migration: failed to read subcollection profiles:", err);
-    }
-
-    // Ensure Default profile always exists
-    if (!profiles["Default"]) {
-      profiles["Default"] = {
-        transactions: [],
-        settings:     defaultSettingsMap(localStorage.getItem("theme") === "dark"),
-        last_updated: now,
-      };
-    }
-
-    this.userDataDoc = {
-      last_active_profile: existingDocData.last_active_profile || "Default",
-      profiles,
-    };
-
-    // Overwrite the Firestore doc with the correct nested-map structure
-    await setDoc(doc(db, "user_data", this.uid), this.userDataDoc);
-    console.info("Migration complete: subcollection profiles rewritten as nested maps.");
-
-    this.currentProfile = this.userDataDoc.last_active_profile;
-  }
-
-  // ── Normalise settings keys from camelCase → snake_case ───────
-  // Handles settings objects written by the old buggy web login.js
-  _normaliseSettings(s) {
-    // If already in snake_case format (has dark_mode key), return as-is
-    if ("dark_mode" in s) return s;
-
-    const quickActions = (s.quickActions || s.quick_actions || DEFAULT_QUICK_ACTIONS).map((qa) => ({
-      text:        qa.text,
-      value:       qa.value,
-      // FIX: old web code used "isPositive" (camelCase)
-      is_positive: qa.is_positive ?? qa.isPositive ?? true,
-    }));
-
-    return {
-      goal:               s.goal               ?? DEFAULT_GOAL,
-      dark_mode:          s.darkMode            ?? s.dark_mode ?? false,
-      quick_actions:      quickActions,
-      income_categories:  s.incomeCategories    ?? s.income_categories  ?? [],
-      expense_categories: s.expenseCategories   ?? s.expense_categories ?? [],
-    };
   }
 
   // ── Save full user_data doc back to Firestore ─────────────────
@@ -252,15 +148,14 @@ class CoinTrackerApp {
   }
 
   get settings() {
-    // Always normalise on read to handle any residual camelCase data in Firestore
-    return this._normaliseSettings(this.profileData.settings || defaultSettingsMap());
+    return this.profileData.settings || defaultSettingsMap();
   }
 
   get goal() {
     return this.settings.goal || DEFAULT_GOAL;
   }
 
-  // FIX: reads is_positive (snake_case) to match mobile schema
+  // Mobile uses is_positive, not isPositive
   get quickActions() {
     return this.settings.quick_actions || DEFAULT_QUICK_ACTIONS;
   }
@@ -361,6 +256,7 @@ class CoinTrackerApp {
     }
     const spends = txns.filter((t) => t.amount < 0).map((t) => new Date(t.date).getTime());
     const lastSpend = spends.length ? Math.max(...spends) : null;
+    // -1 means never spent — won't trigger >= 7 check
     const daysSinceSpend = lastSpend ? Math.floor((Date.now() - lastSpend) / 86400000) : -1;
     const state = { balance: this.balance, goal: this.goal, loginStreak: maxStreak, daysSinceSpend };
     return ACHIEVEMENT_DEFS.filter((a) => a.check(state));
@@ -387,7 +283,7 @@ class CoinTrackerApp {
   }
 
   // ─────────────────────────────────────────────────────────────
-  //  Settings helpers — write snake_case fields matching mobile
+  //  Settings helpers — read/write snake_case fields
   // ─────────────────────────────────────────────────────────────
   _setSettings(partial) {
     if (!this.userDataDoc.profiles[this.currentProfile]) return;
@@ -503,7 +399,7 @@ class CoinTrackerApp {
   }
 
   applyTheme() {
-    // FIX: reads dark_mode (snake_case) matching mobile schema
+    // Mobile uses dark_mode (snake_case)
     const dark  = this.settings.dark_mode ?? (localStorage.getItem("theme") === "dark");
     const theme = dark ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", theme);
@@ -551,7 +447,7 @@ class CoinTrackerApp {
     }
     actions.forEach((action) => {
       const btn = document.createElement("button");
-      // FIX: reads is_positive (snake_case) matching mobile schema
+      // Mobile uses is_positive (snake_case)
       btn.className = `quick-btn ${action.is_positive ? "positive" : "negative"}`;
       btn.innerHTML = `<div class="quick-text">${action.text}</div>
                        <div class="quick-amount">${action.is_positive ? "+" : "-"}${action.value}</div>`;
@@ -682,7 +578,7 @@ class CoinTrackerApp {
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted-color);padding:30px">No transactions found.</td></tr>`;
     } else {
       pageTxns.forEach((t) => {
-        // FIX: reads previous_balance (snake_case) matching mobile schema
+        // Mobile stores previous_balance (snake_case)
         const cls      = t.amount >= 0 ? "amount-positive" : "amount-negative";
         const balAfter = (t.previous_balance || 0) + t.amount;
         const tr       = document.createElement("tr");
@@ -751,7 +647,6 @@ class CoinTrackerApp {
     actions.forEach((action, i) => {
       const item = document.createElement("div");
       item.className = "quick-action-list-item";
-      // FIX: reads is_positive (snake_case)
       item.innerHTML = `
         <div class="quick-action-details">
           <span class="quick-action-text">${action.text}</span>
@@ -942,7 +837,6 @@ class CoinTrackerApp {
   }
 
   async toggleTheme() {
-    // FIX: writes dark_mode (snake_case)
     const newDark = !this.settings.dark_mode;
     this._setSettings({ dark_mode: newDark });
     await this.saveUserData();
@@ -950,9 +844,8 @@ class CoinTrackerApp {
   }
 
   async addQuickAction() {
-    const text        = document.getElementById("quickActionText").value.trim();
-    const amount      = parseInt(document.getElementById("quickActionAmount").value);
-    // FIX: stores is_positive (snake_case) to match mobile schema
+    const text       = document.getElementById("quickActionText").value.trim();
+    const amount     = parseInt(document.getElementById("quickActionAmount").value);
     const is_positive = document.getElementById("quickActionType").value === "positive";
     if (!text || !amount || amount <= 0) { this.showToast("Enter valid action text and amount.", "error"); return; }
     const actions = [...this.quickActions, { text, value: amount, is_positive }];
@@ -1122,13 +1015,8 @@ class CoinTrackerApp {
       const user       = auth.currentUser;
       const credential = EmailAuthProvider.credential(user.email, password);
       await reauthenticateWithCredential(user, credential);
-      // Delete Firestore data
       await deleteDoc(doc(db, "user_data", this.uid));
       await deleteDoc(doc(db, "users",     this.uid));
-      // FIX: also delete the web username index if it exists (no-op if missing)
-      if (this.username) {
-        await deleteDoc(doc(db, "usernames", this.username)).catch(() => {});
-      }
       await deleteUser(user);
       window.location.href = "/login.html";
     } catch (err) {

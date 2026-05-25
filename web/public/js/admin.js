@@ -22,17 +22,7 @@ import {
   orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyAJbO69ldcJf5CRI-1sJqim9Cau_dqV8Co",
-  authDomain: "cointrack-16ce2.firebaseapp.com",
-  projectId: "cointrack-16ce2",
-  storageBucket: "cointrack-16ce2.firebasestorage.app",
-  messagingSenderId: "1623415888",
-  appId: "1:1623415888:web:2e5966211e367808b64555",
-  measurementId: "G-VHRJ3KPH9Q"
-};
-// ─────────────────────────────────────────────────────────────
+import { firebaseConfig } from "/firebase-config.js";
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
@@ -52,6 +42,7 @@ let sortDirection = "desc";
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "/login.html"; return; }
 
+  // Verify admin role from Firestore
   const userSnap = await getDoc(doc(db, "users", user.uid));
   if (!userSnap.exists() || userSnap.data().role !== "admin") {
     window.location.href = "/";
@@ -80,6 +71,7 @@ function setupEventListeners() {
   document.getElementById("themeToggle")
     .addEventListener("click", toggleTheme);
 
+  // Sortable column headers
   document.querySelectorAll("th[data-sort]").forEach((th) => {
     th.addEventListener("click", () => {
       const col = th.dataset.sort;
@@ -109,51 +101,25 @@ function toggleTheme() {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Helper: extract all transactions from a user_data doc
-//  Handles BOTH formats:
-//    - Nested-map (mobile + fixed web): { profiles: { Default: { transactions: [...] } } }
-//    - Legacy flat (old broken web): { transactions: [...] }  (no profiles key)
-// ─────────────────────────────────────────────────────────────
-function extractTransactionsFromUserData(data) {
-  if (!data) return [];
-  const profiles = data.profiles;
-  if (profiles && typeof profiles === "object") {
-    // Correct nested-map format
-    return Object.values(profiles).flatMap((p) =>
-      Array.isArray(p?.transactions) ? p.transactions : []
-    );
-  }
-  // Legacy flat format (no profiles map)
-  return Array.isArray(data.transactions) ? data.transactions : [];
-}
-
-function extractLastUpdatedFromUserData(data) {
-  if (!data) return "N/A";
-  const profiles = data.profiles;
-  if (profiles && typeof profiles === "object") {
-    const dates = Object.values(profiles)
-      .map((p) => p?.last_updated)
-      .filter(Boolean);
-    return dates.length ? dates.sort().at(-1) : "N/A";
-  }
-  return data.last_updated || "N/A";
-}
-
-// ─────────────────────────────────────────────────────────────
 //  Stats
 // ─────────────────────────────────────────────────────────────
 async function loadStats() {
   try {
-    // FIX: read user_data docs as nested-map documents (not subcollections)
+    // Read all user_data docs to aggregate stats
     const udSnap = await getDocs(collection(db, "user_data"));
     let totalCoins = 0, totalTransactions = 0;
 
     for (const udDoc of udSnap.docs) {
-      const txns = extractTransactionsFromUserData(udDoc.data());
-      totalTransactions += txns.length;
-      totalCoins += txns
-        .filter((t) => t.amount > 0)
-        .reduce((s, t) => s + (t.amount || 0), 0);
+      const profilesSnap = await getDocs(
+        collection(db, "user_data", udDoc.id, "profiles")
+      );
+      for (const profileDoc of profilesSnap.docs) {
+        const txns = profileDoc.data().transactions || [];
+        totalTransactions += txns.length;
+        totalCoins += txns
+          .filter((t) => t.amount > 0)
+          .reduce((s, t) => s + t.amount, 0);
+      }
     }
 
     const usersSnap = await getDocs(collection(db, "users"));
@@ -173,28 +139,32 @@ async function loadStats() {
 // ─────────────────────────────────────────────────────────────
 async function loadUsers() {
   try {
-    const usersSnap   = await getDocs(collection(db, "users"));
-    // FIX: read ALL user_data docs in one batch instead of per-user subcollection reads
-    const userDataSnap = await getDocs(collection(db, "user_data"));
-    const userDataMap  = Object.fromEntries(userDataSnap.docs.map((d) => [d.id, d.data()]));
-
+    const usersSnap = await getDocs(collection(db, "users"));
     const rows = [];
 
     for (const userDoc of usersSnap.docs) {
       const uid  = userDoc.id;
       const data = userDoc.data();
-      const ud   = userDataMap[uid] || null;
 
-      const txns        = extractTransactionsFromUserData(ud);
-      const balance     = txns.reduce((s, t) => s + (t.amount || 0), 0);
-      const txnCount    = txns.length;
-      const lastUpdated = extractLastUpdatedFromUserData(ud);
+      // Read Default profile for balance + txn count
+      let balance = 0, txnCount = 0, lastUpdated = "N/A";
+      try {
+        const profileSnap = await getDocs(collection(db, "user_data", uid, "profiles"));
+        for (const p of profileSnap.docs) {
+          const txns = p.data().transactions || [];
+          txnCount  += txns.length;
+          balance   += txns.reduce((s, t) => s + t.amount, 0);
+          if (p.data().last_updated && (lastUpdated === "N/A" || p.data().last_updated > lastUpdated)) {
+            lastUpdated = p.data().last_updated;
+          }
+        }
+      } catch { /* user may have no data yet */ }
 
       rows.push({
         uid,
-        username:     data.username || uid,
-        role:         data.role || "user",
-        created_at:   data.created_at || "N/A",
+        username:    data.username || uid,
+        role:        data.role || "user",
+        created_at:  data.created_at || "N/A",
         last_updated: lastUpdated,
         balance,
         txn_count: txnCount,
@@ -214,12 +184,13 @@ async function loadUsers() {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  New users bar chart (last 7 days)
+//  New users bar chart (last 7 days — matches mobile spec)
 // ─────────────────────────────────────────────────────────────
 function renderNewUsersChart(users) {
   const container = document.getElementById("newUsersChart");
   if (!container) return;
 
+  // Build counts for last 7 days
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -381,20 +352,24 @@ function updateSortIndicators() {
 // ─────────────────────────────────────────────────────────────
 async function deleteUserById(uid, username) {
   try {
-    // FIX: Delete the single user_data document (nested-map format).
-    // Old code tried to delete subcollection docs — wrong for mobile-schema users.
+    // Delete all profile subcollection docs
+    const profilesSnap = await getDocs(collection(db, "user_data", uid, "profiles"));
+    for (const p of profilesSnap.docs) await deleteDoc(p.ref);
+
+    // Delete user_data doc
     await deleteDoc(doc(db, "user_data", uid));
 
     // Delete users doc
     await deleteDoc(doc(db, "users", uid));
 
-    // Delete web username index if it exists (mobile users won't have this — that's fine)
-    await deleteDoc(doc(db, "usernames", username)).catch(() => {});
+    // Delete username index
+    await deleteDoc(doc(db, "usernames", username));
 
+    // Remove from local state and re-render
     allUsers = allUsers.filter((u) => u.uid !== uid);
     filterAndRender();
     showToast(`User '${username}' deleted.`, "success");
-    loadStats();
+    loadStats(); // refresh totals
   } catch (err) {
     console.error("deleteUserById error:", err);
     showToast("Failed to delete user.", "error");
