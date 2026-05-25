@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Coin Tracker</title>
-    
-    <link rel="icon" href="{{ url_for('static', filename='images/coin.ico') }}">
 
+    <link rel="icon" href="/images/coin.ico">
+
+    <!-- Prevent theme flash -->
     <script>
         (function() {
             try {
-                // This script runs first to prevent a "flash" of the wrong theme
                 const theme = localStorage.getItem('theme') || 'light';
                 document.documentElement.setAttribute('data-theme', theme);
             } catch (e) {
@@ -18,13 +18,12 @@
             }
         })();
     </script>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="stylesheet" href="/css/login.css">
 </head>
 <body>
-    
-    <!-- MODIFICATION: Added theme toggle button -->
+
     <button id="themeToggleBtn" class="theme-toggle-btn">🌙</button>
 
     <div class="auth-card">
@@ -33,22 +32,31 @@
             <span>Coin Tracker</span>
         </div>
         <h2 id="auth-title">Login</h2>
+
         <div class="form-group">
             <label for="username">Username</label>
-            <input type="text" id="username" autocomplete="username">
+            <input type="text" id="username" autocomplete="username" placeholder="Enter username">
+        </div>
+        <div class="form-group" id="confirmPasswordGroup" style="display:none;">
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="Confirm password">
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" autocomplete="current-password">
+            <input type="password" id="password" autocomplete="current-password" placeholder="Enter password">
         </div>
+
         <p id="auth-error" class="auth-error"></p>
+
         <div class="auth-buttons">
             <button id="auth-submit-btn" class="btn primary">Login</button>
             <button id="auth-toggle-btn" class="btn-link">Need an account? Register</button>
         </div>
     </div>
+
     <div id="toast" class="toast"></div>
 
-    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+    <!-- Firebase SDK -->
+    <script type="module" src="/js/login.js"></script>
 </body>
 </html>

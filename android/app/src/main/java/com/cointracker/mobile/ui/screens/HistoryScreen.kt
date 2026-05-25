@@ -1,11 +1,13 @@
 package com.cointracker.mobile.ui.screens
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -60,11 +62,13 @@ fun HistoryScreen(
             val txLocalDate: LocalDate? = runCatching {
                 Instant.parse(tx.date).atZone(ZoneOffset.UTC).toLocalDate()
             }.getOrElse {
-                runCatching { java.time.OffsetDateTime.parse(tx.date).atZoneSameInstant(ZoneOffset.UTC).toLocalDate() }
-                    .getOrElse { runCatching { LocalDate.parse(tx.date.take(10)) }.getOrNull() }
+                runCatching {
+                    java.time.OffsetDateTime.parse(tx.date).atZoneSameInstant(ZoneOffset.UTC).toLocalDate()
+                }.getOrElse { runCatching { LocalDate.parse(tx.date.take(10)) }.getOrNull() }
             }
             val matchesDate = if (dateRangeStartDay != null && dateRangeEndDay != null && txLocalDate != null)
-                !txLocalDate.isBefore(dateRangeStartDay!!) && !txLocalDate.isAfter(dateRangeEndDay!!) else true
+                !txLocalDate.isBefore(dateRangeStartDay!!) && !txLocalDate.isAfter(dateRangeEndDay!!)
+            else true
             matchesSource && matchesSearch && matchesDate
         }.sortedByDescending { it.date }
     }
@@ -77,6 +81,7 @@ fun HistoryScreen(
     val currentItems = filteredList.drop(safeCurrentPage * itemsPerPage).take(itemsPerPage)
     val sources      = listOf("All") + allTransactions.map { it.source }.distinct().sorted()
 
+    // ── Date picker dialog ────────────────────────────────────────────────────
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -95,12 +100,13 @@ fun HistoryScreen(
         ) { DateRangePicker(state = datePickerState) }
     }
 
+    // ── Edit dialog ───────────────────────────────────────────────────────────
     if (editingTxId != null) {
         AlertDialog(
             onDismissRequest = { editingTxId = null },
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Edit Transaction") },
-            text = {
+            containerColor   = MaterialTheme.colorScheme.surfaceVariant,
+            title            = { Text("Edit Transaction") },
+            text             = {
                 Column {
                     OutlinedTextField(value = editSource, onValueChange = { editSource = it },
                         label = { Text("Source") }, modifier = Modifier.fillMaxWidth())
@@ -134,28 +140,37 @@ fun HistoryScreen(
                 color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.height(12.dp))
         }
+
+        // Summary row
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Income",  fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text("Income", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Text("+$totalIncome", color = WebSuccess, fontWeight = FontWeight.Bold)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Expense", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text("Expense", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Text("$totalExpense", color = WebDanger, fontWeight = FontWeight.Bold)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Net", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text("Net", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Text("$net", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(12.dp))
         }
+
+        // Filter card
         item {
             GlassCard {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    OutlinedTextField(value = searchQuery, onValueChange = { searchQuery = it; currentPage = 0 },
-                        label = { Text("Search") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(
+                        value = searchQuery, onValueChange = { searchQuery = it; currentPage = 0 },
+                        label = { Text("Search") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                    )
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         var expanded by remember { mutableStateOf(false) }
@@ -187,6 +202,19 @@ fun HistoryScreen(
             Spacer(Modifier.height(12.dp))
         }
 
+        // ── Pills pagination — TOP ────────────────────────────────────────────
+        if (totalPages > 1) {
+            item {
+                PillsPagination(
+                    totalPages    = totalPages,
+                    currentPage   = safeCurrentPage,
+                    onPageSelect  = { currentPage = it }
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        // Empty state
         if (filteredList.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
@@ -208,31 +236,26 @@ fun HistoryScreen(
                 positionalThreshold = { it * 0.4f }
             )
 
-            // Only active when actually dragging EndToStart
             val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
 
             SwipeToDismissBox(
                 state = dismissState,
                 enableDismissFromStartToEnd = false,
                 backgroundContent = {
-                    // Background only renders red content when actively swiping
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(vertical = 4.dp)
                             .clip(MaterialTheme.shapes.medium)
-                            .background(
-                                if (isSwiping) WebDanger else Color.Transparent
-                            ),
+                            .background(if (isSwiping) WebDanger else Color.Transparent),
                         contentAlignment = Alignment.CenterEnd
                     ) {
-                        // Only draw icon when visually swiping — prevents ghost rendering
                         if (isSwiping) {
                             Row(
                                 modifier = Modifier.padding(end = 20.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete",
+                                Icon(Icons.Default.Delete, "Delete",
                                     tint = Color.White, modifier = Modifier.size(24.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
@@ -248,21 +271,14 @@ fun HistoryScreen(
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left: source + date
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                tx.source,
+                            Text(tx.source,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                tx.date.take(10),
+                                fontWeight = FontWeight.Bold)
+                            Text(tx.date.take(10),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
-
-                        // Right: amount + edit button (clearly separate, no overlap)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -273,7 +289,6 @@ fun HistoryScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
-                            // Edit button clearly visible, no delete button here
                             FilledTonalIconButton(
                                 onClick = {
                                     editingTxId = tx.id
@@ -283,11 +298,7 @@ fun HistoryScreen(
                                 },
                                 modifier = Modifier.size(36.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = "Edit",
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Icon(Icons.Default.Edit, "Edit", modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -296,20 +307,146 @@ fun HistoryScreen(
             Spacer(Modifier.height(4.dp))
         }
 
+        // ── Pills pagination — BOTTOM ─────────────────────────────────────────
         if (totalPages > 1) {
             item {
-                Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { if (safeCurrentPage > 0) currentPage-- },
-                        enabled = safeCurrentPage > 0) { Icon(Icons.Default.ArrowBack, "Prev") }
-                    Text("Page ${safeCurrentPage + 1} of $totalPages")
-                    IconButton(onClick = { if (safeCurrentPage < totalPages - 1) currentPage++ },
-                        enabled = safeCurrentPage < totalPages - 1) { Icon(Icons.Default.ArrowForward, "Next") }
+                Spacer(Modifier.height(4.dp))
+                PillsPagination(
+                    totalPages   = totalPages,
+                    currentPage  = safeCurrentPage,
+                    onPageSelect = { currentPage = it }
+                )
+            }
+        }
+
+        item { Spacer(Modifier.height(80.dp)) }
+    }
+}
+
+// ── Pills pagination composable ───────────────────────────────────────────────
+
+@Composable
+fun PillsPagination(
+    totalPages   : Int,
+    currentPage  : Int,
+    onPageSelect : (Int) -> Unit
+) {
+    val primary  = MaterialTheme.colorScheme.primary
+    val surface  = MaterialTheme.colorScheme.surface
+    val onSurf   = MaterialTheme.colorScheme.onSurface
+    val pillShape = RoundedCornerShape(50)
+
+    LazyRow(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
+        // Prev arrow
+        item {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 3.dp)
+                    .size(36.dp)
+                    .clip(pillShape)
+                    .background(if (currentPage > 0) primary.copy(alpha = 0.15f) else Color.Transparent)
+                    .clickable(enabled = currentPage > 0) { onPageSelect(currentPage - 1) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Previous",
+                    tint   = if (currentPage > 0) primary else onSurf.copy(alpha = 0.25f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Page pills — show window of 5 around current
+        val windowStart = (currentPage - 2).coerceAtLeast(0)
+        val windowEnd   = (windowStart + 4).coerceAtMost(totalPages - 1)
+
+        if (windowStart > 0) {
+            item {
+                PagePill(page = 0, isSelected = currentPage == 0,
+                    primary = primary, surface = surface, onSurf = onSurf,
+                    pillShape = pillShape, onPageSelect = onPageSelect)
+            }
+            if (windowStart > 1) {
+                item {
+                    Text("…", color = onSurf.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }
         }
-        item { Spacer(Modifier.height(80.dp)) }
+
+        itemsIndexed((windowStart..windowEnd).toList()) { _, page ->
+            PagePill(page = page, isSelected = currentPage == page,
+                primary = primary, surface = surface, onSurf = onSurf,
+                pillShape = pillShape, onPageSelect = onPageSelect)
+        }
+
+        if (windowEnd < totalPages - 1) {
+            if (windowEnd < totalPages - 2) {
+                item {
+                    Text("…", color = onSurf.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 4.dp))
+                }
+            }
+            item {
+                PagePill(page = totalPages - 1, isSelected = currentPage == totalPages - 1,
+                    primary = primary, surface = surface, onSurf = onSurf,
+                    pillShape = pillShape, onPageSelect = onPageSelect)
+            }
+        }
+
+        // Next arrow
+        item {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 3.dp)
+                    .size(36.dp)
+                    .clip(pillShape)
+                    .background(if (currentPage < totalPages - 1) primary.copy(alpha = 0.15f) else Color.Transparent)
+                    .clickable(enabled = currentPage < totalPages - 1) { onPageSelect(currentPage + 1) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.ArrowForward,
+                    contentDescription = "Next",
+                    tint   = if (currentPage < totalPages - 1) primary else onSurf.copy(alpha = 0.25f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PagePill(
+    page         : Int,
+    isSelected   : Boolean,
+    primary      : Color,
+    surface      : Color,
+    onSurf       : Color,
+    pillShape    : RoundedCornerShape,
+    onPageSelect : (Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .height(36.dp)
+            .widthIn(min = 36.dp)
+            .clip(pillShape)
+            .background(if (isSelected) primary else primary.copy(alpha = 0.12f))
+            .clickable { onPageSelect(page) }
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text       = "${page + 1}",
+            color      = if (isSelected) Color.White else onSurf.copy(alpha = 0.7f),
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            fontSize   = 14.sp
+        )
     }
 }

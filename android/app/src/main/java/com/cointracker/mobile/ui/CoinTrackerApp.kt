@@ -8,6 +8,8 @@ import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -27,36 +30,102 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.cointracker.mobile.R
-import com.cointracker.mobile.data.defaultSettings
 import com.cointracker.mobile.ui.components.GlassCard
 import com.cointracker.mobile.ui.screens.*
 import com.cointracker.mobile.ui.theme.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AnimatedGradientBackground(isDark: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "background")
-    val c1Start = if (isDark) GradientDark1 else GradientLight1
-    val c1End   = if (isDark) GradientDark2 else GradientLight2
-    val c2Start = if (isDark) GradientDark3 else GradientLight3
-    val c2End   = if (isDark) GradientDark4 else GradientLight4
-    val c1 by infiniteTransition.animateColor(initialValue = c1Start, targetValue = c1End,
-        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Reverse), label = "c1")
-    val c2 by infiniteTransition.animateColor(initialValue = c2Start, targetValue = c2End,
-        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse), label = "c2")
+    val t = rememberInfiniteTransition(label = "bg")
+    val c1 by t.animateColor(if (isDark) GradientDark1 else GradientLight1, if (isDark) GradientDark2 else GradientLight2,
+        infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Reverse), label = "c1")
+    val c2 by t.animateColor(if (isDark) GradientDark3 else GradientLight3, if (isDark) GradientDark4 else GradientLight4,
+        infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse), label = "c2")
     Box(modifier = modifier.background(Brush.linearGradient(listOf(c1, c2)))) { content() }
 }
 
 @Composable
+fun PulseDots() {
+    val t = rememberInfiniteTransition(label = "pulse")
+    val scales = listOf(0, 200, 400).map { d -> t.animateFloat(0.6f, 1.2f, infiniteRepeatable(tween(600, delayMillis = d, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "s$d") }
+    val alphas = listOf(0, 200, 400).map { d -> t.animateFloat(0.4f, 1.0f, infiniteRepeatable(tween(600, delayMillis = d, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "a$d") }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        scales.zip(alphas).forEach { (s, a) ->
+            Box(Modifier.size((10 * s.value).dp).background(MaterialTheme.colorScheme.primary.copy(alpha = a.value), CircleShape))
+        }
+    }
+}
+
+@Composable
 fun LoadingOverlay() {
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-            tonalElevation = 8.dp, modifier = Modifier.size(96.dp)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 4.dp, modifier = Modifier.size(48.dp))
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
+            tonalElevation = 8.dp, modifier = Modifier.size(100.dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) { PulseDots() }
+        }
+    }
+}
+
+@Composable
+fun SyncBanner(syncState: SyncState, onDismiss: () -> Unit) {
+    val (text, icon, color) = when (syncState) {
+        SyncState.Offline            -> Triple("📴 Offline — showing cached data", Icons.Default.WifiOff, Color(0xFFF59E0B))
+        SyncState.RestoredFromCache  -> Triple("🛡 DB was empty — restored from local safety cache", Icons.Default.Restore, Color(0xFF10B981))
+        SyncState.PushedCacheToDb    -> Triple("⬆ Offline changes synced to database", Icons.Default.CloudUpload, Color(0xFF3B82F6))
+        else -> return
+    }
+    Surface(color = color.copy(alpha = 0.15f), shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp),Arrangement.spacedBy(10.dp), Alignment.CenterVertically,) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            Text(text, style = MaterialTheme.typography.bodySmall, color = color, modifier = Modifier.weight(1f))
+            IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Default.Close, "Dismiss", tint = color, modifier = Modifier.size(16.dp))
             }
         }
     }
+}
+
+@Composable
+fun ConflictDialog(syncState: SyncState.Conflict, onUseCache: () -> Unit, onUseDatabase: () -> Unit) {
+    val fmt = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+    AlertDialog(
+        onDismissRequest = {},
+        containerColor   = MaterialTheme.colorScheme.surfaceVariant,
+        icon             = { Text("⚠️", fontSize = 28.sp) },
+        title            = { Text("Data Conflict Detected", fontWeight = FontWeight.Bold) },
+        text             = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Your local safety cache and the database have different data. Choose which to keep.",
+                    style = MaterialTheme.typography.bodyMedium)
+                Surface(color = Color(0xFF10B981).copy(alpha = 0.12f), shape = RoundedCornerShape(10.dp)) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("📱 Local Cache  (saved ${fmt.format(Date(syncState.cached.savedAt))})",
+                            fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                        Text("Balance: ${syncState.cached.balance} coins  •  ${syncState.cached.transactionCount} txns",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    }
+                }
+                Surface(color = Color(0xFF3B82F6).copy(alpha = 0.12f), shape = RoundedCornerShape(10.dp)) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("☁️ Database (online)", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                        Text("Balance: ${syncState.db.balance} coins  •  ${syncState.db.transactions.size} txns",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onUseCache, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))) {
+                Text("Use Local Cache")
+            }
+        },
+        dismissButton = { OutlinedButton(onClick = onUseDatabase) { Text("Use Database") } }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,9 +137,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
     val context           = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope             = rememberCoroutineScope()
-
-    // Count unread: achievements count as notification badges
-    val achievementCount = uiState.profileEnvelope?.achievements?.size ?: 0
+    val syncState         = uiState.syncState
 
     LaunchedEffect(uiState.error) {
         val msg = uiState.error ?: return@LaunchedEffect
@@ -78,275 +145,130 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
         viewModel.clearError()
     }
 
+    if (syncState is SyncState.Conflict) {
+        ConflictDialog(syncState, onUseCache = { viewModel.resolveConflictUseCache() }, onUseDatabase = { viewModel.resolveConflictUseDatabase() })
+    }
+
     CoinTrackerTheme(darkTheme = isDark) {
-        AnimatedGradientBackground(isDark = isDark, modifier = Modifier.fillMaxSize()) {
+        AnimatedGradientBackground(isDark, Modifier.fillMaxSize()) {
             if (uiState.session == null) {
-                LoginScreen(loading = uiState.loading, onLogin = { u, p -> viewModel.login(u, p) },
-                    onRegister = { u, p -> viewModel.register(u, p) }, onToggleTheme = { viewModel.toggleTheme() },
-                    isDark = isDark, loggedIn = uiState.session != null, onSuccess = {}, error = uiState.error)
+                LoginScreen(uiState.loading, { u, p -> viewModel.login(u, p) }, { u, p -> viewModel.register(u, p) },
+                    { viewModel.toggleTheme() }, isDark, uiState.session != null, {}, uiState.error)
                 if (uiState.loading) LoadingOverlay()
-                Box(modifier = Modifier.fillMaxSize()) {
-                    SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
-                }
+                Box(Modifier.fillMaxSize()) { SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter)) }
             } else {
-                val permLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestPermission()
-                ) {}
-                LaunchedEffect(Unit) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }
-                Box(modifier = Modifier.fillMaxSize()) {
+                val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+                LaunchedEffect(Unit) { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
+
+                Box(Modifier.fillMaxSize()) {
                     Scaffold(
                         containerColor = Color.Transparent,
                         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                        snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
-                            Column(modifier = Modifier.statusBarsPadding()) {
-                                GlassCard(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // Logo
+                            Column(Modifier.statusBarsPadding()) {
+                                GlassCard(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                                        Arrangement.SpaceBetween, Alignment.CenterVertically) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.coin),
-                                                contentDescription = "Logo",
-                                                tint = Color.Unspecified,
-                                                modifier = Modifier.size(28.dp)
-                                            )
+                                            Icon(painterResource(R.drawable.coin), "Logo", tint = Color.Unspecified, modifier = Modifier.size(28.dp))
                                             Spacer(Modifier.width(12.dp))
-                                            Text(
-                                                "Coin Tracker",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
+                                            Text("Coin Tracker", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                         }
-
-                                        // Actions
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-
-                                            // ── Bell icon with achievement badge ──────────────────
+                                            val cbse by navController.currentBackStackEntryAsState()
+                                            val cr = cbse?.destination?.route
                                             Box {
-                                                val currentBackStack by navController.currentBackStackEntryAsState()
-                                                val onNotif = currentBackStack?.destination?.route == "notifications"
-                                                IconButton(onClick = {
-                                                    if (!onNotif) navController.navigate("notifications")
-                                                }) {
-                                                    Icon(
-                                                        Icons.Default.Notifications,
-                                                        contentDescription = "Notifications",
-                                                        tint = if (onNotif)
-                                                            MaterialTheme.colorScheme.primary
-                                                        else
-                                                            MaterialTheme.colorScheme.onSurface
-                                                    )
+                                                IconButton(onClick = { if (cr != "notifications") navController.navigate("notifications") }) {
+                                                    Icon(Icons.Default.Notifications, "Notifications", tint = if (cr == "notifications") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                                                 }
-                                                // Badge dot when achievements exist
-                                                if (achievementCount > 0) {
-                                                    Badge(
-                                                        modifier = Modifier
-                                                            .align(Alignment.TopEnd)
-                                                            .offset(x = (-4).dp, y = 4.dp),
-                                                        containerColor = Color(0xFFF59E0B)
-                                                    ) {
-                                                        Text(
-                                                            text = if (achievementCount > 9) "9+" else achievementCount.toString(),
-                                                            style = MaterialTheme.typography.labelSmall
-                                                        )
+                                                if (uiState.unreadNotifCount > 0) {
+                                                    Badge(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp), containerColor = Color(0xFFF59E0B)) {
+                                                        Text(if (uiState.unreadNotifCount > 9) "9+" else uiState.unreadNotifCount.toString(), style = MaterialTheme.typography.labelSmall)
                                                     }
                                                 }
                                             }
-
-                                            // Theme toggle
-                                            IconButton(onClick = { viewModel.toggleTheme() }) {
-                                                Text(
-                                                    text = if (isDark) "☀️" else "🌙",
-                                                    style = MaterialTheme.typography.titleMedium
-                                                )
-                                            }
-
-                                            // Profile menu
+                                            IconButton({ viewModel.toggleTheme() }) { Text(if (isDark) "☀️" else "🌙", style = MaterialTheme.typography.titleMedium) }
                                             Box {
-                                                var showProfileMenu by remember { mutableStateOf(false) }
-                                                IconButton(onClick = { showProfileMenu = true }) {
-                                                    Icon(
-                                                        Icons.Default.Person,
-                                                        contentDescription = "Profile",
-                                                        tint = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                }
-                                                MaterialTheme(shapes = MaterialTheme.shapes.copy(
-                                                    extraSmall = MaterialTheme.shapes.medium)) {
-                                                    DropdownMenu(
-                                                        expanded = showProfileMenu,
-                                                        onDismissRequest = { showProfileMenu = false },
-                                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
-                                                    ) {
-                                                        Text("Profiles",
-                                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                        val activeProfile = uiState.session?.currentProfile
-                                                        uiState.profiles.forEach { profile ->
-                                                            val isActive = profile == activeProfile
-                                                            DropdownMenuItem(
-                                                                text = {
-                                                                    Row(verticalAlignment = Alignment.CenterVertically,
-                                                                        modifier = Modifier.fillMaxWidth()) {
-                                                                        Text(
-                                                                            text = profile,
-                                                                            color = if (isActive) MaterialTheme.colorScheme.primary
-                                                                            else MaterialTheme.colorScheme.onSurface,
-                                                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
-                                                                        )
-                                                                        if (isActive) {
-                                                                            Spacer(Modifier.weight(1f))
-                                                                            Icon(Icons.Default.Check, "Active",
-                                                                                tint = MaterialTheme.colorScheme.primary,
-                                                                                modifier = Modifier.size(18.dp))
-                                                                        }
-                                                                    }
-                                                                },
-                                                                onClick = {
-                                                                    if (!isActive) viewModel.switchProfile(profile)
-                                                                    showProfileMenu = false
+                                                var showMenu by remember { mutableStateOf(false) }
+                                                IconButton({ showMenu = true }) { Icon(Icons.Default.Person, "Profile", tint = MaterialTheme.colorScheme.onSurface) }
+                                                MaterialTheme(shapes = MaterialTheme.shapes.copy(extraSmall = MaterialTheme.shapes.medium)) {
+                                                    DropdownMenu(showMenu, { showMenu = false }, Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                                        Text("Profiles", Modifier.padding(12.dp, 8.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        val ap = uiState.session?.currentProfile
+                                                        uiState.profiles.forEach { p ->
+                                                            val ia = p == ap
+                                                            DropdownMenuItem(text = {
+                                                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                                                    Text(p, color = if (ia) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, fontWeight = if (ia) FontWeight.Bold else FontWeight.Normal)
+                                                                    if (ia) { Spacer(Modifier.weight(1f)); Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
                                                                 }
-                                                            )
+                                                            }, onClick = { if (!ia) viewModel.switchProfile(p); showMenu = false })
                                                         }
                                                         Divider()
-                                                        DropdownMenuItem(
-                                                            text = { Text("+ Add Profile") },
-                                                            onClick = { navController.navigate("settings"); showProfileMenu = false }
-                                                        )
-                                                        if (uiState.session?.role == "admin") {
-                                                            DropdownMenuItem(
-                                                                text = { Text("👑 Admin Panel", color = MaterialTheme.colorScheme.primary) },
-                                                                onClick = { navController.navigate("admin"); showProfileMenu = false }
-                                                            )
-                                                        }
-                                                        DropdownMenuItem(
-                                                            text = { Text("Log Out", color = MaterialTheme.colorScheme.error) },
-                                                            onClick = { viewModel.logout(); showProfileMenu = false }
-                                                        )
+                                                        DropdownMenuItem({ Text("+ Add Profile") }, { navController.navigate("settings"); showMenu = false })
+                                                        if (uiState.session?.role == "admin") DropdownMenuItem({ Text("👑 Admin Panel", color = MaterialTheme.colorScheme.primary) }, { navController.navigate("admin"); showMenu = false })
+                                                        DropdownMenuItem({ Text("Log Out", color = MaterialTheme.colorScheme.error) }, { viewModel.logout(); showMenu = false })
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                 }
+                                if (syncState is SyncState.Offline || syncState is SyncState.RestoredFromCache || syncState is SyncState.PushedCacheToDb) {
+                                    SyncBanner(syncState) { viewModel.dismissSyncBanner() }
+                                }
                             }
                         },
                         bottomBar = {
-                            NavigationBar(
-                                containerColor = if (isDark) Color(0xFF1A1D23).copy(alpha = 0.9f) else Color.White,
-                                contentColor = MaterialTheme.colorScheme.primary,
-                                tonalElevation = 8.dp
-                            ) {
-                                val currentBackStack by navController.currentBackStackEntryAsState()
-                                val currentRoute = currentBackStack?.destination?.route ?: "dashboard"
-
-                                // Main 4 tabs — notifications accessible via bell only
-                                listOf(
-                                    "dashboard"  to Icons.Default.Home,
-                                    "analytics"  to Icons.Default.DateRange,
-                                    "history"    to Icons.Default.List,
-                                    "settings"   to Icons.Default.Settings
-                                ).forEach { (route, icon) ->
-                                    NavigationBarItem(
-                                        icon = { Icon(icon, contentDescription = route) },
-                                        label = { Text(route.replaceFirstChar { it.uppercase() }) },
-                                        selected = currentRoute == route,
-                                        onClick = {
-                                            if (currentRoute != route) {
-                                                navController.navigate(route) {
-                                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                    launchSingleTop = true; restoreState = true
-                                                }
-                                            }
-                                        },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        )
-                                    )
+                            NavigationBar(containerColor = if (isDark) Color(0xFF1A1D23).copy(alpha = 0.9f) else Color.White, contentColor = MaterialTheme.colorScheme.primary, tonalElevation = 8.dp) {
+                                val cbse by navController.currentBackStackEntryAsState()
+                                val cr = cbse?.destination?.route ?: "dashboard"
+                                listOf("dashboard" to Icons.Default.Home, "analytics" to Icons.Default.DateRange, "history" to Icons.Default.List, "settings" to Icons.Default.Settings).forEach { (route, icon) ->
+                                    NavigationBarItem(icon = { Icon(icon, route) }, label = { Text(route.replaceFirstChar { it.uppercase() }) }, selected = cr == route,
+                                        onClick = { navController.navigate(route) { popUpTo(navController.graph.findStartDestination().id) { saveState = true; inclusive = false }; launchSingleTop = true; restoreState = true } },
+                                        colors = NavigationBarItemDefaults.colors(selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary, indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)))
                                 }
                             }
                         }
-                    ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding)) {
-                            NavHost(navController = navController, startDestination = "dashboard") {
+                    ) { ip ->
+                        Box(Modifier.padding(ip)) {
+                            NavHost(navController, "dashboard") {
                                 composable("dashboard") {
-                                    DashboardScreen(
-                                        envelope       = uiState.profileEnvelope,
-                                        session        = uiState.session,
-                                        loading        = uiState.loading,
-                                        onAddIncome    = { amt, src, date -> viewModel.addTransaction(amt, src, date) },
-                                        onAddExpense   = { amt, src, date -> viewModel.addTransaction(-amt, src, date) },
-                                        onNavigate     = { route -> navController.navigate(route) },
-                                        onShowSnackbar = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
-                                    )
+                                    DashboardScreen(uiState.profileEnvelope, uiState.session, uiState.loading,
+                                        { a, s, d -> viewModel.addTransaction(a, s, d) }, { a, s, d -> viewModel.addTransaction(-a, s, d) },
+                                        { r -> navController.navigate(r) }, { m -> scope.launch { snackbarHostState.showSnackbar(m) } })
                                 }
-                                composable("analytics") {
-                                    AnalyticsScreen(envelope = uiState.profileEnvelope)
-                                }
+                                composable("analytics") { AnalyticsScreen(uiState.profileEnvelope) }
                                 composable("history") {
-                                    HistoryScreen(
-                                        envelope = uiState.profileEnvelope,
+                                    HistoryScreen(uiState.profileEnvelope,
                                         onDelete = { txId ->
                                             val tx = uiState.profileEnvelope?.transactions?.find { it.id == txId }
                                             if (tx != null) {
                                                 viewModel.deleteTransaction(txId)
                                                 scope.launch {
-                                                    val result = snackbarHostState.showSnackbar(
-                                                        "Transaction deleted", "UNDO",
-                                                        duration = SnackbarDuration.Short)
-                                                    if (result == SnackbarResult.ActionPerformed)
-                                                        viewModel.addTransaction(
-                                                            if (tx.amount < 0) -tx.amount else tx.amount,
-                                                            tx.source, tx.date)
+                                                    val r = snackbarHostState.showSnackbar("Transaction deleted", "UNDO", duration = SnackbarDuration.Short)
+                                                    if (r == SnackbarResult.ActionPerformed) viewModel.addTransaction(if (tx.amount < 0) -tx.amount else tx.amount, tx.source, tx.date)
                                                 }
                                             }
                                         },
-                                        onEdit = { id, amt, src, date -> viewModel.updateTransaction(id, amt, src, date) }
-                                    )
+                                        onEdit = { id, a, s, d -> viewModel.updateTransaction(id, a, s, d) })
                                 }
                                 composable("settings") {
-                                    SettingsScreen(
-                                        envelope            = uiState.profileEnvelope,
-                                        profiles            = uiState.profiles,
-                                        onUpdateSettings    = { viewModel.updateSettings(it) },
-                                        onAddQuickAction    = { viewModel.addQuickAction(it) },
-                                        onUpdateQuickAction = { idx, action -> viewModel.updateQuickAction(idx, action) },
-                                        onDeleteQuickAction = { viewModel.deleteQuickAction(it) },
-                                        onCreateProfile     = { viewModel.createProfile(it) },
-                                        onDeleteProfile     = { viewModel.deleteProfile(it) },
-                                        onDeleteAllData     = { viewModel.deleteAllData() },
-                                        onImportJson        = { viewModel.importFromJson(it) },
-                                        onDeleteAccount     = { password -> viewModel.deleteAccount(password) },
-                                        context             = context
-                                    )
+                                    SettingsScreen(uiState.profileEnvelope, uiState.profiles,
+                                        { viewModel.updateSettings(it) }, { viewModel.addQuickAction(it) },
+                                        { i, a -> viewModel.updateQuickAction(i, a) }, { viewModel.deleteQuickAction(it) },
+                                        { viewModel.createProfile(it) }, { viewModel.deleteProfile(it) },
+                                        { viewModel.deleteAllData() }, { viewModel.importFromJson(it) },
+                                        { p -> viewModel.deleteAccount(p) }, context)
                                 }
                                 composable("notifications") {
-                                    NotificationsScreen(envelope = uiState.profileEnvelope)
+                                    NotificationsScreen(uiState.profileEnvelope, { viewModel.markNotificationsSeen() }, { navController.popBackStack() })
                                 }
                                 composable("admin") {
                                     LaunchedEffect(Unit) { viewModel.loadAdmin() }
-                                    AdminScreen(
-                                        session      = uiState.session,
-                                        stats        = uiState.adminStats,
-                                        users        = uiState.adminUsers,
-                                        loading      = uiState.loading,
-                                        onRefresh    = { viewModel.loadAdmin() },
-                                        onDeleteUser = { viewModel.deleteUser(it) },
-                                        onBack       = { navController.popBackStack() }
-                                    )
+                                    AdminScreen(uiState.session, uiState.adminStats, uiState.adminUsers, uiState.loading,
+                                        { viewModel.loadAdmin() }, { viewModel.deleteUser(it) }, { navController.popBackStack() })
                                 }
                             }
                         }

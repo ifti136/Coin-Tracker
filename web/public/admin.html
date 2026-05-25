@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - Coin Tracker</title>
+
+  <link rel="icon" href="/images/coin.ico">
+
+  <script>
+    (function() {
+      try {
+        const t = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="admin-container">
+
+    <header class="admin-header">
+      <div class="admin-logo">
+        <div class="coin-icon">C</div>
+        <h1>Admin Panel</h1>
+      </div>
+      <div class="admin-header-actions">
+        <span id="adminUsername" class="admin-username"></span>
+        <a href="/" class="btn secondary">← Back to App</a>
+        <button id="themeToggle" class="btn secondary">🌙</button>
+      </div>
+    </header>
+
+    <!-- ── Stats row ───────────────────────────── -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Users</div>
+        <div id="totalUsers" class="stat-value primary">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Coins Tracked</div>
+        <div id="totalCoins" class="stat-value positive">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Transactions</div>
+        <div id="totalTransactions" class="stat-value">—</div>
+      </div>
+    </div>
+
+    <!-- ── New users chart ─────────────────────── -->
+    <div class="card">
+      <h3>New Users — Last 7 Days</h3>
+      <div id="newUsersChart" class="bar-chart-container"></div>
+    </div>
+
+    <!-- ── Broadcast ───────────────────────────── -->
+    <div class="card">
+      <h3>📢 Broadcast Message</h3>
+      <p style="color:var(--muted-color);font-size:13px;margin-bottom:14px">
+        This message shows as a toast to all users when they load the app. Leave blank to clear it.
+      </p>
+      <div class="broadcast-form">
+        <input type="text" id="broadcastMessage" placeholder="Enter message... (leave blank to clear)">
+        <button id="setBroadcastBtn" class="btn primary">Set Broadcast</button>
+      </div>
+      <div id="currentBroadcast" class="current-broadcast"></div>
+    </div>
+
+    <!-- ── User management ─────────────────────── -->
+    <div class="card">
+      <h3>👥 User Management</h3>
+      <input type="text" id="userSearch" class="user-search-input" placeholder="Search by username...">
+
+      <div id="paginationControlsTop" class="pagination-controls"></div>
+
+      <div class="table-wrapper">
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th data-sort="username">Username ↕</th>
+              <th data-sort="balance">Balance ↕</th>
+              <th data-sort="txn_count">Txn Count ↕</th>
+              <th data-sort="created_at">Joined ↕</th>
+              <th data-sort="last_updated">Last Active ↕</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+            <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted-color)">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="paginationControlsBottom" class="pagination-controls"></div>
+    </div>
+
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

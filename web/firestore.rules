@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ── usernames ─────────────────────────────────────────────
+    // World-readable so login can look up uid before auth.
+    // World-writable on create so registration can write before
+    // the auth token propagates to Firestore rules context.
+    match /usernames/{username} {
+      allow read:   if true;
+      allow create: if true;
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ── users ─────────────────────────────────────────────────
+    // Profile info: username, role, created_at
+    match /users/{uid} {
+      allow read:   if true;
+      allow create: if true;        // registration writes this before auth propagates
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── user_data ─────────────────────────────────────────────
+    // All coin tracking data. Owner only — admin can read for stats.
+    match /user_data/{uid} {
+      allow read:   if isOwner(uid) || isAdmin();
+      allow create: if true;        // registration writes root doc before auth propagates
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid) || isAdmin();
+
+      match /profiles/{profileName} {
+        allow read:   if isOwner(uid) || isAdmin();
+        allow create: if true;      // registration writes Default profile before auth propagates
+        allow update: if isOwner(uid);
+        allow delete: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // ── app_config ────────────────────────────────────────────
+    // Broadcast message etc. All users read, admin writes.
+    match /app_config/{docId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Deny everything else ──────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

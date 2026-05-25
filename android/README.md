@@ -24,6 +24,8 @@ android/
         │   ├── data/
         │   │   ├── Models.kt               # All data classes + defaults
         │   │   ├── FirestoreRepository.kt  # All Firestore + Firebase Auth operations
+        │   │   ├── LocalCacheRepository.kt # Safety cache — read/write/delete JSON snapshots
+        │   │   ├── SyncManager.kt          # Cache vs DB comparison logic, typed SyncResult
         │   │   └── WerkzeugPasswordHasher.kt  # Legacy migration helper
         │   ├── domain/
         │   │   └── AchievementCalculator.kt
@@ -145,6 +147,46 @@ Requires `google-services.json` in `android/app/` before building.
 ---
 
 ## Changelog
+
+### v3.2.0 — 2026
+**Safety Cache System**
+- Local safety cache introduced — every profile snapshot is written to `filesDir/safety_cache/{userId}/{profile}.json` after every successful data load or save
+- Cache stores full transaction list, settings, balance, transaction count, and a `savedAt` timestamp
+- On every app launch, both the cache and Firestore are loaded; `SyncManager` compares them and decides what to do automatically:
+  - **Synced** — data matches, normal operation
+  - **DB wiped/empty** — cache has significant data but DB returned 0 transactions; cache is auto-pushed to Firestore in the background, no user action needed
+  - **Offline / DB failed** — Firestore unreachable; app loads from cache and shows an offline banner; full read/write still works locally
+  - **Offline edits** — cache has more transactions than DB (user edited offline); cache pushed to DB silently on reconnect
+  - **Conflict** — both sources have significant but disagreeing data (balance diff ≥ 500 coins AND txn count diff ≥ 5); dialog shown with a side-by-side comparison of balance and transaction count for each source; user chooses which to keep
+- `SyncBanner` composable shown below top bar for offline, restored, and sync-pushed states; dismissible
+- `ConflictDialog` forces a choice — cannot be dismissed without selecting a version
+- No new gradle dependencies — cache uses `org.json` (built into Android) and `filesDir` (no permissions needed)
+- Cache deleted automatically when profile is deleted or all data is wiped
+- `LocalCacheRepository` and `SyncManager` added under `data/` package
+
+**New Files**
+- `data/LocalCacheRepository.kt` — cache read/write/delete, offline envelope builder
+- `data/SyncManager.kt` — pure comparison logic, returns typed `SyncResult` sealed class
+
+### v3.1.2 — 2026
+**Notification Badge Fix**
+- Bell icon badge now clears correctly after viewing the notifications screen — badge count is computed against a persisted set of seen achievement names (`seen_achievements_{profile}` in SharedPreferences)
+- "Read All" button added to Notifications screen top bar — marks all current achievements as seen and clears the badge immediately
+- Badge also clears automatically on screen entry via `LaunchedEffect`
+- Back arrow added to Notifications screen top bar to navigate back to the previous screen
+- Bottom navigation tab buttons now work correctly when tapped from the Notifications screen — `popUpTo` with `inclusive = false` ensures the notifications route is cleared from the back stack
+
+**Pills Pagination**
+- Transaction history pagination replaced with pill-style page buttons
+- `LazyRow` of rounded pill buttons centred below and above the list
+- Shows a sliding window of 5 pages around the current page with `…` ellipsis for large page counts
+- Previous and next arrow buttons on either end, dimmed when at the boundary
+- Appears at both top and bottom of the transaction list when total pages > 1
+
+**Pulse Dot Loading Animation**
+- Circular progress indicator replaced with three animated pulse dots
+- Dots scale from 0.6× to 1.2× and fade from 40% to 100% opacity with staggered 200ms delays between each dot
+- Uses `rememberInfiniteTransition` with `RepeatMode.Reverse` — no third-party animation library needed
 
 ### Version 3.1.1 - 2026
 
