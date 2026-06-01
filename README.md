@@ -24,12 +24,16 @@ coin-tracker/
 │   ├── build.py                # PyInstaller build script
 │   └── coin_icon.py            # Icon generator
 │
-├── web/                        # Flask web app
-│   ├── app.py                  # Flask routes, Firebase auth, Firestore CRUD
-│   ├── requirements.txt        # Python dependencies
-│   ├── render.yaml             # Render.com deployment config
-│   ├── static/                 # CSS, JS (app.js, admin.js, login.js)
-│   └── templates/              # Jinja2 HTML (index.html, login.html, admin.html)
+├── web/                        # Firebase Hosting web app (vanilla JS + Firestore SDK)
+│   ├── public/
+│   │   ├── index.html          # Main app shell
+│   │   ├── login.html          # Auth page
+│   │   ├── admin.html          # Admin panel
+│   │   ├── css/                # style.css, login.css, admin.css
+│   │   └── js/                 # app.js, login.js, admin.js
+│   ├── firebase.json           # Firebase Hosting + Firestore config
+│   ├── firestore.rules         # Security rules
+│   └── firestore.indexes.json
 │
 ├── .gitignore
 ├── LICENSE                     # MIT — Copyright (c) 2025 Ifti
@@ -62,15 +66,13 @@ coin-tracker/
 
 ## 🗄️ Firestore Data Model
 
-All platforms read and write the same collections:
+All platforms read and write the same collections. Profiles are stored as a subcollection under `user_data/{userId}`.
 
 ```
 users/{userId}
   username         : string
-  username_lower   : string
-  password_hash    : string   (Werkzeug pbkdf2:sha256, 260 000 iterations)
-  created_at       : string   (ISO 8601 UTC, e.g. "2025-03-15T10:30:00Z")
   role             : string   ("user" | "admin")
+  created_at       : string   (ISO 8601 UTC, e.g. "2025-03-15T10:30:00Z")
 
 user_data/{userId}
   last_active_profile : string
@@ -96,34 +98,60 @@ app_config/broadcast
   set_at   : string
 ```
 
+> **Note:** Passwords are never stored in Firestore. Authentication is handled entirely by Firebase Auth using a synthetic email format (`username@cointracker.app`) to preserve a username/password UX. Legacy Werkzeug-hashed accounts are migrated silently on first login by the Android app.
+
 ---
 
 ## 🔥 Firebase Setup (shared across all platforms)
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) and create a project.
 2. Enable **Firestore Database** in **Native mode**.
-3. Enable **Firebase Authentication** — no sign-in providers needed in the console (the Flask backend issues custom tokens).
+3. Enable **Firebase Authentication → Sign-in methods → Email/Password**.
 
 ### Firestore Security Rules
+
+Deploy these rules from `web/firestore.rules` or paste directly in the Firebase console:
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null &&
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return isSignedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    match /user_data/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    match /users/{uid} {
+      allow read:   if true;
+      allow create: if true;
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
     }
-    match /app_config/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    match /user_data/{uid} {
+      allow read:   if isOwner(uid) || isAdmin();
+      allow create: if true;
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid) || isAdmin();
+
+      match /profiles/{profileName} {
+        allow read:   if isOwner(uid) || isAdmin();
+        allow create: if true;
+        allow update: if isOwner(uid);
+        allow delete: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    match /app_config/{docId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
@@ -147,10 +175,11 @@ Each platform has its own detailed README:
 
 ## 🔐 Security Notes
 
-- Passwords are hashed with **Werkzeug PBKDF2-SHA256** (260 000 iterations) server-side. Plaintext passwords are never stored.
-- The Flask backend issues Firebase **custom tokens** for mobile auth. These expire after ~1 hour; the Android app detects expiry on resume and prompts re-login.
-- `google-services.json`, `firebase-key.json`, and `.env` files are all excluded from git via `.gitignore`. Never commit them.
-- Admin routes are protected by both Firestore security rules and server-side role checks.
+- Authentication is handled entirely by **Firebase Auth** (Email/Password provider). Passwords are never stored in Firestore.
+- A synthetic email format (`username@cointracker.app`) preserves username/password UX without exposing real emails.
+- Legacy accounts that used Werkzeug PBKDF2-SHA256 password hashing are migrated silently on first login by the Android app (`WerkzeugPasswordHasher.kt` handles verification only).
+- `firebase-key.json` (desktop service account), `google-services.json` (Android), `firebase-config.js` (web), and `.env` files are all excluded from git via `.gitignore`. Never commit them.
+- Admin routes are protected by both Firestore security rules and client-side role checks.
 
 ---
 
