@@ -1,0 +1,155 @@
+{
+  "color": {
+    "light": {
+      "primary": { "value": "#3B82F6", "name": "Primary Blue" },
+      "primaryContainer": { "value": "#DBEAFE", "name": "Primary Container" },
+      "secondary": { "value": "#10B981", "name": "Success Green" },
+      "secondaryContainer": { "value": "#D1FAE5", "name": "Success Container" },
+      "tertiary": { "value": "#F59E0B", "name": "Amber" },
+      "tertiaryContainer": { "value": "#FEF3C7", "name": "Amber Container" },
+      "error": { "value": "#EF4444", "name": "Error Red" },
+      "errorContainer": { "value": "#FEE2E2", "name": "Error Container" },
+      "background": { "value": "#F8FAFC", "name": "Background" },
+      "surface": { "value": "#FFFFFF", "name": "Surface" },
+      "surfaceVariant": { "value": "#F1F5F9", "name": "Surface Variant" },
+      "outline": { "value": "#E2E8F0", "name": "Outline" },
+      "outlineVariant": { "value": "#CBD5E1", "name": "Outline Variant" },
+      "onPrimary": { "value": "#FFFFFF", "name": "On Primary" },
+      "onPrimaryContainer": { "value": "#1E3A5F", "name": "On Primary Container" },
+      "onSecondary": { "value": "#FFFFFF", "name": "On Secondary" },
+      "onSecondaryContainer": { "value": "#064E3B", "name": "On Secondary Container" },
+      "onTertiary": { "value": "#FFFFFF", "name": "On Tertiary" },
+      "onTertiaryContainer": { "value": "#78350F", "name": "On Tertiary Container" },
+      "onError": { "value": "#FFFFFF", "name": "On Error" },
+      "onErrorContainer": { "value": "#7F1D1D", "name": "On Error Container" },
+      "onBackground": { "value": "#0F172A", "name": "On Background" },
+      "onSurface": { "value": "#0F172A", "name": "On Surface" },
+      "onSurfaceVariant": { "value": "#475569", "name": "On Surface Variant" },
+      "inverseSurface": { "value": "#1E293B", "name": "Inverse Surface" },
+      "inverseOnSurface": { "value": "#F1F5F9", "name": "Inverse On Surface" },
+      "inversePrimary": { "value": "#93C5FD", "name": "Inverse Primary" },
+      "shadow": { "value": "#000000", "name": "Shadow" },
+      "scrim": { "value": "#000000", "name": "Scrim" }
+    },
+    "dark": {
+      "primary": { "value": "#60A5FA", "name": "Primary Blue" },
+      "primaryContainer": { "value": "#1E3A5F", "name": "Primary Container" },
+      "secondary": { "value": "#34D399", "name": "Success Green" },
+      "secondaryContainer": { "value": "#064E3B", "name": "Success Container" },
+      "tertiary": { "value": "#FBBF24", "name": "Amber" },
+      "tertiaryContainer": { "value": "#78350F", "name": "Amber Container" },
+      "error": { "value": "#F87171", "name": "Error Red" },
+      "errorContainer": { "value": "#7F1D1D", "name": "Error Container" },
+      "background": { "value": "#0F172A", "name": "Background" },
+      "surface": { "value": "#1E293B", "name": "Surface" },
+      "surfaceVariant": { "value": "#334155", "name": "Surface Variant" },
+      "outline": { "value": "#64748B", "name": "Outline" },
+      "outlineVariant": { "value": "#475569", "name": "Outline Variant" },
+      "onPrimary": { "value": "#0F172A", "name": "On Primary" },
+      "onPrimaryContainer": { "value": "#DBEAFE", "name": "On Primary Container" },
+      "onSecondary": { "value": "#0F172A", "name": "On Secondary" },
+      "onSecondaryContainer": { "value": "#D1FAE5", "name": "On Secondary Container" },
+      "onTertiary": { "value": "#0F172A", "name": "On Tertiary" },
+      "onTertiaryContainer": { "value": "#FEF3C7", "name": "On Tertiary Container" },
+      "onError": { "value": "#0F172A", "name": "On Error" },
+      "onErrorContainer": { "value": "#FEE2E2", "name": "On Error Container" },
+      "onBackground": { "value": "#F1F5F9", "name": "On Background" },
+      "onSurface": { "value": "#F1F5F9", "name": "On Surface" },
+      "onSurfaceVariant": { "value": "#CBD5E1", "name": "On Surface Variant" },
+      "inverseSurface": { "value": "#F1F5F9", "name": "Inverse Surface" },
+      "inverseOnSurface": { "value": "#0F172A", "name": "Inverse On Surface" },
+      "inversePrimary": { "value": "#3B82F6", "name": "Inverse Primary" },
+      "shadow": { "value": "#000000", "name": "Shadow" },
+      "scrim": { "value": "#000000", "name": "Scrim" }
+    }
+  },
+  "spacing": {
+    "base": { "value": 4, "unit": "dp", "name": "Base unit (4dp)" },
+    "xs": { "value": 4, "unit": "dp", "name": "Extra small" },
+    "sm": { "value": 8, "unit": "dp", "name": "Small" },
+    "md": { "value": 16, "unit": "dp", "name": "Medium" },
+    "lg": { "value": 24, "unit": "dp", "name": "Large" },
+    "xl": { "value": 32, "unit": "dp", "name": "Extra large" },
+    "xxl": { "value": 48, "unit": "dp", "name": "Double extra large" }
+  },
+  "radius": {
+    "none": { "value": 0, "unit": "dp", "name": "No radius" },
+    "xs": { "value": 4, "unit": "dp", "name": "Extra small" },
+    "sm": { "value": 8, "unit": "dp", "name": "Small" },
+    "md": { "value": 12, "unit": "dp", "name": "Medium" },
+    "lg": { "value": 16, "unit": "dp", "name": "Large" },
+    "xl": { "value": 20, "unit": "dp", "name": "Extra large" },
+    "full": { "value": 9999, "unit": "dp", "name": "Full (pill)" }
+  },
+  "shadow": {
+    "none": { "value": "none", "name": "No shadow" },
+    "xs": { "value": "0 1px 2px 0 rgba(0,0,0,0.05)", "name": "Extra small" },
+    "sm": { "value": "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)", "name": "Small" },
+    "md": { "value": "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)", "name": "Medium" },
+    "lg": { "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", "name": "Large" },
+    "xl": { "value": "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)", "name": "Extra large" },
+    "inner": { "value": "inset 0 2px 4px 0 rgba(0,0,0,0.05)", "name": "Inner shadow" }
+  },
+  "typography": {
+    "fontFamilies": {
+      "display": { "value": "Sora", "fallback": "Inter, system-ui, sans-serif", "name": "Display font" },
+      "body": { "value": "Inter", "fallback": "system-ui, sans-serif", "name": "Body font" },
+      "mono": { "value": "JetBrains Mono", "fallback": "monospace", "name": "Monospace font" }
+    },
+    "fontWeights": {
+      "light": { "value": 300, "name": "Light" },
+      "regular": { "value": 400, "name": "Regular" },
+      "medium": { "value": 500, "name": "Medium" },
+      "semibold": { "value": 600, "name": "Semi-bold" },
+      "bold": { "value": 700, "name": "Bold" },
+      "extrabold": { "value": 800, "name": "Extra bold" }
+    },
+    "typeScale": {
+      "displayLarge": { "fontFamily": "display", "fontWeight": "bold", "fontSize": 57, "lineHeight": 64, "letterSpacing": -0.25, "unit": "sp" },
+      "displayMedium": { "fontFamily": "display", "fontWeight": "bold", "fontSize": 45, "lineHeight": 52, "letterSpacing": 0, "unit": "sp" },
+      "displaySmall": { "fontFamily": "display", "fontWeight": "bold", "fontSize": 36, "lineHeight": 44, "letterSpacing": 0, "unit": "sp" },
+      "headlineLarge": { "fontFamily": "display", "fontWeight": "semibold", "fontSize": 32, "lineHeight": 40, "letterSpacing": 0, "unit": "sp" },
+      "headlineMedium": { "fontFamily": "display", "fontWeight": "semibold", "fontSize": 28, "lineHeight": 36, "letterSpacing": 0, "unit": "sp" },
+      "headlineSmall": { "fontFamily": "display", "fontWeight": "semibold", "fontSize": 24, "lineHeight": 32, "letterSpacing": 0, "unit": "sp" },
+      "titleLarge": { "fontFamily": "body", "fontWeight": "semibold", "fontSize": 22, "lineHeight": 28, "letterSpacing": 0, "unit": "sp" },
+      "titleMedium": { "fontFamily": "body", "fontWeight": "medium", "fontSize": 16, "lineHeight": 24, "letterSpacing": 0.15, "unit": "sp" },
+      "titleSmall": { "fontFamily": "body", "fontWeight": "medium", "fontSize": 14, "lineHeight": 20, "letterSpacing": 0.1, "unit": "sp" },
+      "bodyLarge": { "fontFamily": "body", "fontWeight": "regular", "fontSize": 16, "lineHeight": 24, "letterSpacing": 0.5, "unit": "sp" },
+      "bodyMedium": { "fontFamily": "body", "fontWeight": "regular", "fontSize": 14, "lineHeight": 20, "letterSpacing": 0.25, "unit": "sp" },
+      "bodySmall": { "fontFamily": "body", "fontWeight": "regular", "fontSize": 12, "lineHeight": 16, "letterSpacing": 0.4, "unit": "sp" },
+      "labelLarge": { "fontFamily": "body", "fontWeight": "medium", "fontSize": 14, "lineHeight": 20, "letterSpacing": 0.1, "unit": "sp" },
+      "labelMedium": { "fontFamily": "body", "fontWeight": "medium", "fontSize": 12, "lineHeight": 16, "letterSpacing": 0.5, "unit": "sp" },
+      "labelSmall": { "fontFamily": "body", "fontWeight": "medium", "fontSize": 11, "lineHeight": 16, "letterSpacing": 0.5, "unit": "sp" }
+    }
+  },
+  "animation": {
+    "duration": {
+      "instant": { "value": 0, "unit": "ms", "name": "Instant" },
+      "fast": { "value": 150, "unit": "ms", "name": "Fast" },
+      "medium": { "value": 300, "unit": "ms", "name": "Medium" },
+      "slow": { "value": 500, "unit": "ms", "name": "Slow" }
+    },
+    "easing": {
+      "linear": { "value": "linear", "name": "Linear" },
+      "easeIn": { "value": "cubic-bezier(0.4, 0, 1, 1)", "name": "Ease in" },
+      "easeOut": { "value": "cubic-bezier(0, 0, 0.2, 1)", "name": "Ease out" },
+      "easeInOut": { "value": "cubic-bezier(0.4, 0, 0.2, 1)", "name": "Ease in-out" },
+      "emphasized": { "value": "cubic-bezier(0.2, 0, 0, 1)", "name": "Emphasized" }
+    }
+  },
+  "breakpoints": {
+    "mobile": { "value": 0, "unit": "px", "name": "Mobile" },
+    "tablet": { "value": 600, "unit": "px", "name": "Tablet" },
+    "desktop": { "value": 900, "unit": "px", "name": "Desktop" },
+    "largeDesktop": { "value": 1200, "unit": "px", "name": "Large desktop" }
+  },
+  "zIndex": {
+    "base": { "value": 0, "name": "Base" },
+    "dropdown": { "value": 1000, "name": "Dropdown" },
+    "sticky": { "value": 1100, "name": "Sticky" },
+    "modal": { "value": 1300, "name": "Modal" },
+    "popover": { "value": 1400, "name": "Popover" },
+    "tooltip": { "value": 1500, "name": "Tooltip" },
+    "toast": { "value": 1700, "name": "Toast" }
+  }
+}

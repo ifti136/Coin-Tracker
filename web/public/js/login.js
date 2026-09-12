@@ -11,6 +11,7 @@ import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, l
                                              from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { firebaseConfig } from "/firebase-config.js";
+import { getIcon } from "/js/icons.js";
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -68,12 +69,12 @@ let isRegisterMode = false;
 
 // ── Theme ─────────────────────────────────────────────────────
 let currentTheme = document.documentElement.getAttribute("data-theme") || "light";
-themeToggleBtn.textContent = currentTheme === "light" ? "🌙" : "☀️";
+themeToggleBtn.innerHTML = currentTheme === "light" ? getIcon('moon') : getIcon('sun');
 themeToggleBtn.addEventListener("click", () => {
   currentTheme = currentTheme === "light" ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", currentTheme);
   localStorage.setItem("theme", currentTheme);
-  themeToggleBtn.textContent = currentTheme === "light" ? "🌙" : "☀️";
+  themeToggleBtn.innerHTML = currentTheme === "light" ? getIcon('moon') : getIcon('sun');
 });
 
 // ── Toggle login/register ─────────────────────────────────────

@@ -8,7 +8,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,44 +34,44 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-// ── Alert model ───────────────────────────────────────────────────────────────
+// Alert model
 
 private data class Alert(
-    val icon      : ImageVector,
-    val iconTint  : Color,
-    val title     : String,
-    val body      : String,
-    val timestamp : String
+    val icon: ImageVector,
+    val iconTint: Color,
+    val title: String,
+    val body: String,
+    val timestamp: String
 )
 
 private fun buildAlerts(envelope: ProfileEnvelope): List<Alert> {
     val alerts = mutableListOf<Alert>()
-    val today  = LocalDate.now(ZoneOffset.UTC)
-    val fmt    = DateTimeFormatter.ofPattern("MMM d")
-    val pct    = envelope.progress
+    val today = LocalDate.now(ZoneOffset.UTC)
+    val fmt = DateTimeFormatter.ofPattern("MMM d")
+    val pct = envelope.progress
 
-    if (pct >= 100) alerts += Alert(Icons.Default.Star, Color(0xFFF59E0B),
-        "🎉 Goal Reached!", "You hit ${envelope.goal.formatCoins()} coins!", "Now")
-    else if (pct >= 75) alerts += Alert(Icons.Default.ArrowUpward, WebSuccess,
+    if (pct >= 100) alerts += Alert(Icons.Default.EmojiEvents, MaterialTheme.colorScheme.tertiary,
+        "Goal Reached!", "You hit ${envelope.goal.formatCoins()} coins!", "Now")
+    else if (pct >= 75) alerts += Alert(Icons.Default.ArrowUpward, MaterialTheme.colorScheme.secondary,
         "75% milestone", "Crossed 75% of your ${envelope.goal.formatCoins()} goal.", "")
-    else if (pct >= 50) alerts += Alert(Icons.Default.ArrowUpward, Color(0xFF3B82F6),
+    else if (pct >= 50) alerts += Alert(Icons.Default.ArrowUpward, MaterialTheme.colorScheme.primary,
         "Halfway there!", "50% of goal reached. Keep going!", "")
 
     val todayTotal = envelope.transactions.filter { tx ->
         runCatching { Instant.parse(tx.date).atZone(ZoneOffset.UTC).toLocalDate() == today }
             .getOrElse { false } && tx.amount > 0
     }.sumOf { it.amount }
-    if (todayTotal >= 300) alerts += Alert(Icons.Default.Star, Color(0xFFF59E0B),
+    if (todayTotal >= 300) alerts += Alert(Icons.Default.EmojiEvents, MaterialTheme.colorScheme.tertiary,
         "Great day! +${todayTotal.formatCoins()} coins", "Today's earnings looking strong.", today.format(fmt))
 
     if (envelope.analytics.bestWeekEarnings > 0)
-        alerts += Alert(Icons.Default.ArrowUpward, Color(0xFFF59E0B),
+        alerts += Alert(Icons.Default.ArrowUpward, MaterialTheme.colorScheme.tertiary,
             "Best week: ${envelope.analytics.bestWeekLabel}",
             "+${envelope.analytics.bestWeekEarnings.formatCoins()} coins that week.", "")
 
     val est = envelope.estimatedDays
     if (est != null && est in 1..7)
-        alerts += Alert(Icons.Default.Notifications, WebSuccess,
+        alerts += Alert(Icons.Default.Notifications, MaterialTheme.colorScheme.secondary,
             "Goal within reach!", "~$est day${if (est == 1) "" else "s"} away at current rate.", "")
 
     return alerts
@@ -74,69 +80,100 @@ private fun buildAlerts(envelope: ProfileEnvelope): List<Alert> {
 private fun Int.formatCoins(): String =
     toString().reversed().chunked(3).joinToString(",").reversed()
 
-// ── Screen ────────────────────────────────────────────────────────────────────
+// Map achievement emoji icons to Material icons
+private fun achievementIcon(emoji: String): ImageVector = when (emoji) {
+    "💰" -> Icons.Default.Savings
+    "📈" -> Icons.Default.TrendingUp
+    "🏦" -> Icons.Default.AccountBalance
+    "👑" -> Icons.Default.EmojiEvents
+    "🔥" -> Icons.Default.LocalFireDepartment
+    "🛡" -> Icons.Default.Shield
+    else -> Icons.Default.EmojiEvents
+}
+
+private fun achievementContentDescription(emoji: String): String = when (emoji) {
+    "💰" -> "Getting started achievement"
+    "📈" -> "Serious saver achievement"
+    "🏦" -> "Coin hoarder achievement"
+    "👑" -> "Goal reached achievement"
+    "🔥" -> "Login streak achievement"
+    "🛡" -> "Disciplined achievement"
+    else -> "Achievement unlocked"
+}
+
+// Screen
 
 @Composable
 fun NotificationsScreen(
-    envelope  : ProfileEnvelope?,
-    onReadAll : () -> Unit,
-    onBack    : () -> Unit
+    envelope: ProfileEnvelope?,
+    isActionLoading: (String) -> Boolean,
+    onReadAll: () -> Unit,
+    onBack: () -> Unit
 ) {
-    val textColor    = MaterialTheme.colorScheme.onSurface
+    val textColor = MaterialTheme.colorScheme.onSurface
     val achievements = envelope?.achievements ?: emptyList()
-    val alerts       = if (envelope != null) buildAlerts(envelope) else emptyList()
-    val hasContent   = achievements.isNotEmpty() || alerts.isNotEmpty()
+    val alerts = if (envelope != null) buildAlerts(envelope) else emptyList()
+    val hasContent = achievements.isNotEmpty() || alerts.isNotEmpty()
 
     // Mark all as seen when screen is opened
     LaunchedEffect(Unit) { onReadAll() }
 
     LazyColumn(
-        modifier                = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement     = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { Spacer(Modifier.height(8.dp)) }
 
-        // ── Top bar row: back + title + Read All ──────────────────────────────
+        // Top bar row: back + title + Read All
         item {
             Row(
-                modifier          = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector        = Icons.Default.ArrowBack,
+                        imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
-                        tint               = textColor
+                        tint = textColor
                     )
                 }
                 Text(
                     "Notifications",
-                    style     = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color      = textColor,
-                    modifier   = Modifier.weight(1f)
+                    color = textColor,
+                    modifier = Modifier.weight(1f)
                 )
                 if (hasContent) {
-                    TextButton(onClick = onReadAll) {
-                        Text(
-                            "Read All",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                    val isReading = isActionLoading("markNotificationsSeen")
+                    TextButton(onClick = onReadAll, enabled = !isReading) {
+                        if (isReading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                "Read All",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // ── Empty state ───────────────────────────────────────────────────────
+        // Empty state
         if (!hasContent) {
             item {
                 Box(
-                    modifier          = Modifier.fillMaxWidth().padding(vertical = 64.dp),
-                    contentAlignment  = Alignment.Center
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 64.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🔔", fontSize = 48.sp)
+                        Icon(Icons.Default.NotificationsOff, contentDescription = "No notifications", modifier = Modifier.size(48.dp), tint = textColor.copy(alpha = 0.5f))
                         Spacer(Modifier.height(12.dp))
                         Text("All clear!", style = MaterialTheme.typography.titleMedium, color = textColor)
                         Text(
@@ -149,24 +186,24 @@ fun NotificationsScreen(
             }
         }
 
-        // ── Activity alerts ───────────────────────────────────────────────────
+        // Activity alerts
         if (alerts.isNotEmpty()) {
             item {
                 Text(
                     "Activity Alerts",
-                    style      = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             items(alerts) { alert ->
                 GlassCard {
                     Row(
-                        modifier          = Modifier.fillMaxWidth().padding(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(alert.icon, null, tint = alert.iconTint, modifier = Modifier.size(28.dp))
+                        Icon(alert.icon, contentDescription = alert.title, tint = alert.iconTint, modifier = Modifier.size(28.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(alert.title, fontWeight = FontWeight.SemiBold,
                                 style = MaterialTheme.typography.bodyMedium, color = textColor)
@@ -181,12 +218,12 @@ fun NotificationsScreen(
             }
         }
 
-        // ── Achievements ──────────────────────────────────────────────────────
+        // Achievements
         if (achievements.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(4.dp))
                 Row(
-                    modifier          = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -195,7 +232,7 @@ fun NotificationsScreen(
                             "Achievements Unlocked",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF59E0B)
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                         Text(
                             "${achievements.size} achievement${if (achievements.size == 1) "" else "s"} earned",
@@ -213,7 +250,7 @@ fun NotificationsScreen(
                     "Achievements",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF59E0B)
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
             item {
@@ -222,7 +259,7 @@ fun NotificationsScreen(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("🏆", fontSize = 32.sp)
+                        Icon(Icons.Default.EmojiEvents, contentDescription = "No achievements unlocked", modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.tertiary)
                         Spacer(Modifier.height(8.dp))
                         Text("No achievements yet", style = MaterialTheme.typography.bodyMedium,
                             color = textColor.copy(alpha = 0.5f))
@@ -238,7 +275,7 @@ fun NotificationsScreen(
     }
 }
 
-// ── Achievement card ──────────────────────────────────────────────────────────
+// Achievement card
 
 @Composable
 private fun AchievementCard(ach: Achievement, textColor: Color) {
@@ -249,12 +286,18 @@ private fun AchievementCard(ach: Achievement, textColor: Color) {
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(
-                shape    = MaterialTheme.shapes.medium,
-                color    = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(ach.icon, fontSize = 24.sp)
+                    // Use a Material icon based on achievement type
+                    Icon(
+                        imageVector = achievementIcon(ach.icon),
+                        contentDescription = achievementContentDescription(ach.icon),
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -263,8 +306,8 @@ private fun AchievementCard(ach: Achievement, textColor: Color) {
                 Text(ach.desc, style = MaterialTheme.typography.bodySmall,
                     color = textColor.copy(alpha = 0.6f))
             }
-            Icon(Icons.Default.CheckCircle, "Unlocked",
-                tint = WebSuccess, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.CheckCircle, contentDescription = "Achievement unlocked",
+                tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
         }
     }
 }

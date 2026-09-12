@@ -1,58 +1,86 @@
 :root {
   --primary-color: #3b82f6;
-  --success-color: #10b981;
-  --danger-color: #ef4444;
+  --primary-container: #dbeafe;
+  --on-primary: #ffffff;
+  --on-primary-container: #1e3a5f;
+  --secondary-color: #10b981;
+  --secondary-container: #d1fae5;
+  --on-secondary: #ffffff;
+  --on-secondary-container: #064e3b;
+  --tertiary-color: #f59e0b;
+  --tertiary-container: #fef3c7;
+  --on-tertiary: #ffffff;
+  --on-tertiary-container: #78350f;
+  --error-color: #ef4444;
+  --error-container: #fee2e2;
+  --on-error: #ffffff;
+  --on-error-container: #7f1d1d;
   --bg-color: #f8fafc;
-  --text-color: #1e293b;
-  --muted-color: #64748b;
-  --border-color: rgba(226, 232, 240, 0.7);
-  --card-bg: rgba(255, 255, 255, 0.4);
-  --body-gradient: linear-gradient(125deg, #c3aed6, #f0abfc, #a1c4fd, #fdf8c8);
+  --on-bg-color: #1e293b;
+  --surface-color: #ffffff;
+  --on-surface: #1e293b;
+  --surface-variant: #f1f5f9;
+  --on-surface-variant: #475569;
+  --outline: #cbd5e1;
+  --outline-variant: #e2e8f0;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
 }
 
 [data-theme="dark"] {
   --primary-color: #60a5fa;
-  --success-color: #34d399;
-  --danger-color: #f87171;
-  --bg-color: #1a1d23;
-  --text-color: #e2e8f0;
-  --muted-color: #94a3b8;
-  --border-color: rgba(58, 65, 82, 0.7);
-  --card-bg: rgba(37, 42, 51, 0.4);
-  --body-gradient: linear-gradient(125deg, #1e1b3a, #4a0f4b, #0b3a5d, #4e4a2e);
+  --primary-container: #1e3a5f;
+  --on-primary: #1e293b;
+  --on-primary-container: #dbeafe;
+  --secondary-color: #34d399;
+  --secondary-container: #064e3b;
+  --on-secondary: #1e293b;
+  --on-secondary-container: #d1fae5;
+  --tertiary-color: #fbbf24;
+  --tertiary-container: #78350f;
+  --on-tertiary: #1e293b;
+  --on-tertiary-container: #fef3c7;
+  --error-color: #f87171;
+  --error-container: #7f1d1d;
+  --on-error: #1e293b;
+--on-error-container: #fee2e2;
+  --bg-color: #0f172a;
+  --on-bg-color: #f1f5f9;
+  --surface-color: #1e293b;
+  --on-surface: #f1f5f9;
+  --surface-variant: #334155;
+  --on-surface-variant: #94a3b8;
+  --outline: #475569;
+  --outline-variant: #334155;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+  --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: var(--body-gradient);
-  background-size: 400% 400%;
-  animation: gradientBG 15s ease infinite;
-  color: var(--text-color);
+  background: var(--bg-color);
+  color: var(--on-bg-color);
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
 }
 
-@keyframes gradientBG {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* ── Glass Card ── */
+/* ── Auth Card ── */
 .auth-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--surface-color);
   padding: 36px 30px;
   border-radius: 20px;
   width: 90%;
   max-width: 400px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  border: 1px solid var(--outline);
+  box-shadow: var(--shadow-lg);
 }
 
 /* ── Logo ── */
@@ -103,16 +131,17 @@ body {
   width: 100%;
   padding: 11px 14px;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-color);
-  color: var(--text-color);
+  border: 1px solid var(--outline);
+  background: var(--surface-variant);
+  color: var(--on-surface);
   font-size: 14px;
   font-family: inherit;
   transition: border-color 0.2s;
-  outline: none;
 }
 .form-group input:focus {
   border-color: var(--primary-color);
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 /* ── Validation hint (shown during register) ── */
@@ -205,21 +234,19 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background: var(--card-bg);
-  color: var(--text-color);
+  border: 1px solid var(--outline);
+  background: var(--surface-color);
+  color: var(--on-surface);
   font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   transition: all 0.2s ease;
   z-index: 10;
 }
 .theme-toggle-btn:hover {
-  background: var(--bg-color);
+  background: var(--surface-variant);
   transform: scale(1.1);
 }
 
@@ -244,8 +271,8 @@ body {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-.toast.success { background: var(--success-color); }
-.toast.error   { background: var(--danger-color); }
+.toast.success { background: var(--secondary-color); }
+.toast.error   { background: var(--error-color); }
 
 /* ── Mobile tweaks ── */
 @media (max-width: 480px) {
@@ -254,4 +281,30 @@ body {
     border-radius: 16px;
   }
   .auth-card h2 { font-size: 20px; }
+}
+
+/* ── Accessibility: Focus visible ───────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* ── Accessibility: Reduced motion ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  body {
+    animation: none !important;
+  }
+  .theme-toggle-btn:hover {
+    transform: none !important;
+  }
+  .btn:active {
+    transform: none !important;
+  }
 }

@@ -6,6 +6,8 @@
   <title>Coin Tracker</title>
 
   <link rel="icon" href="/images/coin.ico">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#3b82f6">
 
   <!-- Prevent theme flash -->
   <script>
@@ -24,6 +26,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <div class="app-container">
 
     <!-- ═══════════════════════════════════════════════
@@ -45,16 +48,16 @@
       </div>
 
       <!-- Desktop nav -->
-      <nav class="nav">
-        <button class="nav-btn active" data-page="dashboard"><span>📊</span> Dashboard</button>
-        <button class="nav-btn" data-page="analytics"><span>📈</span> Analytics</button>
-        <button class="nav-btn" data-page="history"><span>📋</span> History</button>
-        <button class="nav-btn" data-page="notifications"><span>🔔</span> Notifications <span id="achievementBadge" class="badge" style="display:none"></span></button>
-        <button class="nav-btn" data-page="settings"><span>⚙️</span> Settings</button>
+      <nav class="nav" role="navigation" aria-label="Main navigation">
+        <button class="nav-btn active" data-page="dashboard"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span> Dashboard</button>
+        <button class="nav-btn" data-page="analytics"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Analytics</button>
+        <button class="nav-btn" data-page="history"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span> History</button>
+        <button class="nav-btn" data-page="notifications"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notifications <span id="achievementBadge" class="badge" style="display:none" aria-live="polite" aria-atomic="true"></span></button>
+        <button class="nav-btn" data-page="settings"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
       </nav>
 
       <div id="adminPanelBtnContainer" class="admin-panel-section" style="display:none">
-        <a href="/admin.html" class="nav-btn admin-btn"><span>👑</span> Admin Panel</a>
+        <a href="/admin.html" class="nav-btn admin-btn"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span> Admin Panel</a>
       </div>
 
       <div class="profile-section">
@@ -71,18 +74,18 @@
       </div>
 
       <div class="theme-toggle">
-        <button id="themeToggle">🌙 Dark Mode</button>
+        <button id="themeToggle" aria-label="Toggle dark mode"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span> <span id="themeToggleText">Dark Mode</span></button>
       </div>
 
       <div class="logout-section">
-        <button id="logoutBtn" class="nav-btn logout-btn"><span>📤</span> Logout</button>
+        <button id="logoutBtn" class="nav-btn logout-btn"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Logout</button>
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════
          MAIN CONTENT
-    ════════════════════════════════════════════════ -->
-    <div class="main-content">
+     ════════════════════════════════════════════════ -->
+    <main class="main-content" id="main-content" role="main">
 
       <!-- ── DASHBOARD ──────────────────────────── -->
       <div id="dashboard" class="page active">
@@ -134,7 +137,7 @@
         <!-- Achievements -->
         <div class="card">
           <div class="card-header">
-            <h3>🏆 Achievements</h3>
+            <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><path d="M8.21 13.89 7 23l6-6"/><path d="M15.79 13.88 17 23l-6-6"/></svg></span> Achievements</h3>
           </div>
           <div id="achievements-grid" class="achievements-grid">
             <p id="no-achievements-msg">No achievements unlocked yet. Keep going!</p>
@@ -170,7 +173,7 @@
         </div>
 
         <div class="dashboard-footer">
-          <button id="supportBtn" class="btn-text">Buy me a cha ☕ • By Ifti</button>
+          <button id="supportBtn" class="btn-text">Buy me a coffee <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2"/><path d="M3 8h18"/><path d="M9 8v12"/><path d="M15 8v12"/></svg></span> • By Ifti</button>
         </div>
       </div>
 
@@ -222,19 +225,22 @@
             <div id="timelinePane" class="tab-pane active">
               <div class="chart-container">
                 <h3>Balance Over Time</h3>
-                <div class="chart-wrapper"><canvas id="timelineChart"></canvas></div>
+                <div class="chart-wrapper"><canvas id="timelineChart" aria-label="Line chart showing balance over time" role="img"></canvas></div>
+                <div id="timelineChartSummary" class="visually-hidden" aria-live="polite"></div>
               </div>
             </div>
             <div id="earningsPane" class="tab-pane">
               <div class="chart-container">
                 <h3>Earnings by Source</h3>
-                <div class="chart-wrapper"><canvas id="earningsChart"></canvas></div>
+                <div class="chart-wrapper"><canvas id="earningsChart" aria-label="Doughnut chart showing earnings breakdown by source" role="img"></canvas></div>
+                <div id="earningsChartSummary" class="visually-hidden" aria-live="polite"></div>
               </div>
             </div>
             <div id="spendingPane" class="tab-pane">
               <div class="chart-container">
                 <h3>Spending by Category</h3>
-                <div class="chart-wrapper"><canvas id="spendingChart"></canvas></div>
+                <div class="chart-wrapper"><canvas id="spendingChart" aria-label="Doughnut chart showing spending breakdown by category" role="img"></canvas></div>
+                <div id="spendingChartSummary" class="visually-hidden" aria-live="polite"></div>
               </div>
             </div>
           </div>
@@ -248,7 +254,7 @@
             <div id="sevenDayTotal" class="stat-label" style="margin-top:4px"></div>
           </div>
           <div class="stat-card best-week-card" id="bestWeekCard" style="display:none">
-            <div class="stat-label">Best Earning Week 🏆</div>
+            <div class="stat-label">Best Earning Week <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><path d="M8.21 13.89 7 23l6-6"/><path d="M15.79 13.88 17 23l-6-6"/></svg></span></div>
             <div id="bestWeekAmount" class="stat-value" style="color:#f59e0b"></div>
             <div id="bestWeekRange" class="stat-label" style="margin-top:4px"></div>
           </div>
@@ -280,8 +286,9 @@
           </div>
         </div>
 
+        <!-- Desktop: Table view -->
         <div id="paginationControlsTop" class="pagination-controls"></div>
-        <div class="card table-wrapper">
+        <div class="card table-wrapper desktop-only">
           <table id="historyTable" class="history-table">
             <thead>
               <tr>
@@ -296,12 +303,15 @@
             <tbody id="historyTableBody"></tbody>
           </table>
         </div>
-        <div id="paginationControlsBottom" class="pagination-controls"></div>
+        <div id="paginationControlsBottom" class="pagination-controls desktop-only"></div>
+
+        <!-- Mobile: Card list view -->
+        <div id="historyCardList" class="card mobile-only" style="display:none"></div>
       </div>
 
       <!-- ── NOTIFICATIONS ───────────────────────── -->
       <div id="notifications" class="page">
-        <h1 class="page-title">🔔 Notifications</h1>
+        <h1 class="page-title"><span aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notifications</h1>
 
         <div class="card">
           <h3>Activity Alerts</h3>
@@ -326,7 +336,7 @@
         <h1 class="page-title">Settings</h1>
 
         <div class="card">
-          <h3>🎯 Goal Setting</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></span> Goal Setting</h3>
           <p>Set your coin collection target</p>
           <div id="currentGoalText" class="current-goal"></div>
           <div class="form-group goal-input-row">
@@ -337,7 +347,7 @@
         </div>
 
         <div class="card">
-          <h3>⚡ Manage Quick Actions</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> Manage Quick Actions</h3>
           <p>Add or remove buttons from your dashboard.</p>
           <div class="quick-action-form">
             <div class="form-group">
@@ -363,7 +373,7 @@
         </div>
 
         <div class="card">
-          <h3>📂 Income Categories</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Income Categories</h3>
           <p>Shown in the Add Coins dropdown.</p>
           <div class="category-manager" id="incomeCategoryManager">
             <div class="category-add-row">
@@ -376,7 +386,7 @@
         </div>
 
         <div class="card">
-          <h3>🛒 Expense Categories</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Expense Categories</h3>
           <p>Shown in the Spend Coins dropdown.</p>
           <div class="category-manager" id="expenseCategoryManager">
             <div class="category-add-row">
@@ -389,16 +399,16 @@
         </div>
 
         <div class="card">
-          <h3>💾 Data Management</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6"/><path d="M3 16a9 9 0 0 1 18 0"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span> Data Management</h3>
           <p>Export or import your transaction data.</p>
           <div class="data-buttons">
-            <button id="exportDataBtn" class="btn secondary">📤 Export Data</button>
-            <button id="importDataBtn" class="btn secondary">📥 Import Data</button>
+            <button id="exportDataBtn" class="btn secondary"><span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Export Data</button>
+            <button id="importDataBtn" class="btn secondary"><span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> Import Data</button>
           </div>
         </div>
 
         <div class="card danger-zone">
-          <h3>⚠️ Profile Management</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Profile Management</h3>
           <div class="form-group" style="margin-top:12px">
             <label for="deleteProfileLabel">Delete Current Profile</label>
             <p class="muted-text" style="font-size:12px;margin-bottom:10px">Cannot delete the Default profile.</p>
@@ -407,7 +417,7 @@
         </div>
 
         <div class="card danger-zone">
-          <h3>🗑 Danger Zone</h3>
+          <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span> Danger Zone</h3>
           <p>These actions are permanent and cannot be undone.</p>
           <div class="data-buttons" style="margin-top:16px">
             <button id="deleteAllDataBtn" class="btn danger">Delete All My Data</button>
@@ -416,30 +426,30 @@
         </div>
       </div>
 
-    </div><!-- /main-content -->
+    </main><!-- /main-content -->
   </div><!-- /app-container -->
 
   <!-- ── MOBILE BOTTOM NAV ─────────────────────── -->
-  <nav class="mobile-bottom-nav">
+  <nav class="mobile-bottom-nav" role="navigation" aria-label="Mobile bottom navigation">
     <button class="mobile-nav-btn active" data-page="dashboard">
-      <span class="mobile-nav-icon">📊</span>
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
       <span class="mobile-nav-label">Dashboard</span>
     </button>
     <button class="mobile-nav-btn" data-page="analytics">
-      <span class="mobile-nav-icon">📈</span>
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
       <span class="mobile-nav-label">Analytics</span>
     </button>
     <button class="mobile-nav-btn" data-page="history">
-      <span class="mobile-nav-icon">📋</span>
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
       <span class="mobile-nav-label">History</span>
     </button>
     <button class="mobile-nav-btn" data-page="notifications">
-      <span class="mobile-nav-icon">🔔</span>
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
       <span class="mobile-nav-label">Alerts</span>
-      <span id="mobileAchievementBadge" class="badge mobile-badge" style="display:none"></span>
+      <span id="mobileAchievementBadge" class="badge mobile-badge" style="display:none" aria-live="polite" aria-atomic="true"></span>
     </button>
     <button class="mobile-nav-btn" data-page="settings">
-      <span class="mobile-nav-icon">⚙️</span>
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
       <span class="mobile-nav-label">Settings</span>
     </button>
   </nav>
@@ -447,16 +457,16 @@
   <!-- ── MODALS ─────────────────────────────────── -->
 
   <!-- Support modal -->
-  <div id="supportModal" class="modal">
+  <div id="supportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle">
     <div class="modal-content support-modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Buy me a Coffee ☕</h3>
-        <span class="close" data-modal="supportModal">&times;</span>
+        <h3 class="modal-title" id="supportModalTitle">Buy me a coffee <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2"/><path d="M3 8h18"/><path d="M9 8v12"/><path d="M15 8v12"/></svg></span></h3>
+        <button class="close-btn" data-modal="supportModal" aria-label="Close support modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
         <p class="support-text">If you find this app useful for your eFootball tracking, consider supporting the dev!</p>
         <div class="donation-grid">
-          <div class="donation-card bkash" data-number="01678713786">
+          <div class="donation-card bkash" data-number="01678713786" tabindex="0" role="button" aria-label="Copy bKash number">
             <div class="card-brand">
               <span class="brand-name">bKash</span>
               <img src="/images/bkash.png" alt="bKash" class="brand-logo">
@@ -464,7 +474,7 @@
             <div class="card-number">01678713786</div>
             <div class="card-type">Personal • Send Money</div>
           </div>
-          <div class="donation-card nagad" data-number="01678713786">
+          <div class="donation-card nagad" data-number="01678713786" tabindex="0" role="button" aria-label="Copy Nagad number">
             <div class="card-brand">
               <span class="brand-name">Nagad</span>
               <img src="/images/nagad.png" alt="Nagad" class="brand-logo">
@@ -472,7 +482,7 @@
             <div class="card-number">01678713786</div>
             <div class="card-type">Personal • Send Money</div>
           </div>
-          <div class="donation-card rocket" data-number="01678713786">
+          <div class="donation-card rocket" data-number="01678713786" tabindex="0" role="button" aria-label="Copy Rocket number">
             <div class="card-brand">
               <span class="brand-name">Rocket</span>
               <img src="/images/rocket.png" alt="Rocket" class="brand-logo">
@@ -487,11 +497,11 @@
   </div>
 
   <!-- Transaction edit modal -->
-  <div id="transactionModal" class="modal">
+  <div id="transactionModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Edit Transaction</h3>
-        <span class="close" data-modal="transactionModal">&times;</span>
+        <h3 class="modal-title" id="transactionModalTitle">Edit Transaction</h3>
+        <button class="close-btn" data-modal="transactionModal" aria-label="Close transaction modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="transactionId">
@@ -515,11 +525,11 @@
   </div>
 
   <!-- New profile modal -->
-  <div id="profileModal" class="modal">
+  <div id="profileModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Create New Profile</h3>
-        <span class="close" data-modal="profileModal">&times;</span>
+        <h3 class="modal-title" id="profileModalTitle">Create New Profile</h3>
+        <button class="close-btn" data-modal="profileModal" aria-label="Close profile modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -534,14 +544,14 @@
   </div>
 
   <!-- Delete account modal -->
-  <div id="deleteAccountModal" class="modal">
+  <div id="deleteAccountModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteAccountModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Delete Account</h3>
-        <span class="close" data-modal="deleteAccountModal">&times;</span>
+        <h3 class="modal-title" id="deleteAccountModalTitle">Delete Account</h3>
+        <button class="close-btn" data-modal="deleteAccountModal" aria-label="Close delete account modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
-        <p style="margin-bottom:16px;color:var(--danger-color);font-weight:600">⚠️ This will permanently delete your account and all data.</p>
+        <p style="margin-bottom:16px;color:var(--danger-color);font-weight:600"><span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> This will permanently delete your account and all data.</p>
         <div class="form-group">
           <label for="deleteAccountPassword">Confirm your password</label>
           <input type="password" id="deleteAccountPassword" placeholder="Enter your password">
@@ -553,8 +563,50 @@
     </div>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <script type="module" src="/js/app.js"></script>
+  <!-- Generic confirm modal -->
+  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirmModalTitle">Confirm</h3>
+        <button class="close-btn" data-modal="confirmModal" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmModalMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirmModalCancel" class="btn secondary">Cancel</button>
+        <button id="confirmModalConfirm" class="btn danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // Service Worker Registration
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('[SW] Registered:', registration.scope);
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available, prompt user to refresh
+                if (confirm('A new version of Coin Tracker is available. Refresh to update?')) {
+                  window.location.reload();
+                }
+              }
+            });
+          });
+        })
+        .catch((error) => {
+          console.log('[SW] Registration failed:', error);
+        });
+    });
+  }
+</script>
+<script type="module" src="/js/app.js"></script>
 </body>
 </html>

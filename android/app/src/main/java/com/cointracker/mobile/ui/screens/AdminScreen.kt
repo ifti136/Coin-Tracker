@@ -3,9 +3,11 @@ package com.cointracker.mobile.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,9 +25,14 @@ import com.cointracker.mobile.ui.theme.WebSuccess
 
 @Composable
 fun AdminScreen(session: UserSession?, stats: AdminStats?, users: List<AdminUserRow>,
-    loading: Boolean, onRefresh: () -> Unit, onDeleteUser: (String) -> Unit, onBack: () -> Unit) {
+    isActionLoading: (String) -> Boolean, onRefresh: () -> Unit, onDeleteUser: (String) -> Unit, onBack: () -> Unit) {
     if (session?.role != "admin") { LaunchedEffect(Unit) { onBack() }; return }
     var userToDelete by remember { mutableStateOf<AdminUserRow?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredUsers = remember(users, searchQuery) {
+        if (searchQuery.isBlank()) users
+        else users.filter { it.username.lowercase().contains(searchQuery.lowercase()) }
+    }
     if (userToDelete != null) {
         AlertDialog(onDismissRequest = { userToDelete = null }, containerColor = MaterialTheme.colorScheme.surfaceVariant,
             title = { Text("Delete User?") },
@@ -39,8 +46,34 @@ fun AdminScreen(session: UserSession?, stats: AdminStats?, users: List<AdminUser
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Admin Panel", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Row { TextButton(onClick = onBack) { Text("Back") }; Spacer(Modifier.width(4.dp))
-                    FilledTonalButton(onClick = onRefresh, enabled = !loading) { Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Refresh") } }
+                    val isRefreshing = isActionLoading("loadAdmin")
+                    FilledTonalButton(onClick = onRefresh, enabled = !isRefreshing) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh admin data", modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        Text("Refresh")
+                    } }
             }
+            Spacer(Modifier.height(16.dp))
+        }
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search users") },
+                placeholder = { Text("Search by username...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default
+            )
             Spacer(Modifier.height(16.dp))
         }
         item {
@@ -60,7 +93,7 @@ fun AdminScreen(session: UserSession?, stats: AdminStats?, users: List<AdminUser
                         val maxVal = (stats.newUsersData.maxOrNull() ?: 1).coerceAtLeast(1)
                         stats.labels.zip(stats.newUsersData).forEach { (label, count) ->
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, fontSize = 11.sp, modifier = Modifier.width(40.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                Text(label, fontSize = 11.sp, modifier = Modifier.width(40.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.width(8.dp))
                                 LinearProgressIndicator(progress = { count / maxVal.toFloat() }, modifier = Modifier.weight(1f).height(10.dp))
                                 Spacer(Modifier.width(8.dp))
@@ -72,11 +105,11 @@ fun AdminScreen(session: UserSession?, stats: AdminStats?, users: List<AdminUser
                 Spacer(Modifier.height(16.dp))
             }
         }
-        item { Text("Users (${users.size})", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(8.dp)) }
-        if (users.isEmpty() && !loading) {
-            item { Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) { Text("No users found. Tap Refresh.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) } }
+        item { Text("Users (${filteredUsers.size})", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(8.dp)) }
+        if (filteredUsers.isEmpty() && !isActionLoading("loadAdmin")) {
+            item { Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) { Text(if (searchQuery.isNotBlank()) "No users match '$searchQuery'" else "No users found. Tap Refresh.", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
         }
-        items(users) { user ->
+        items(filteredUsers) { user ->
             GlassCard {
                 Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -86,15 +119,28 @@ fun AdminScreen(session: UserSession?, stats: AdminStats?, users: List<AdminUser
                             Text("Balance: ${user.balance}", fontSize = 12.sp, color = if (user.balance >= 0) WebSuccess else WebDanger, fontWeight = FontWeight.SemiBold)
                             Text("Txns: ${user.txnCount}", fontSize = 12.sp)
                         }
-                        Text("Joined: ${user.createdAt.take(10)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                        if (user.lastUpdated != "N/A") Text("Last active: ${user.lastUpdated.take(10)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        Text("Joined: ${user.createdAt.take(10)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (user.lastUpdated != "N/A") Text("Last active: ${user.lastUpdated.take(10)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (user.userId != session.userId) {
-                        FilledTonalIconButton(onClick = { userToDelete = user }, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = WebDanger.copy(alpha = 0.1f), contentColor = WebDanger)) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete user")
+                        val isDeleting = isActionLoading("deleteUser")
+                        FilledTonalIconButton(
+                            onClick = { userToDelete = user },
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = WebDanger.copy(alpha = 0.1f), contentColor = WebDanger),
+                            enabled = !isDeleting
+                        ) {
+                            if (isDeleting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = WebDanger,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete user ${user.username}")
+                            }
                         }
                     } else {
-                        Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
+                        Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
                             Text("You", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                     }
@@ -111,7 +157,7 @@ private fun AdminStatCard(modifier: Modifier, label: String, value: String) {
     GlassCard(modifier = modifier) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

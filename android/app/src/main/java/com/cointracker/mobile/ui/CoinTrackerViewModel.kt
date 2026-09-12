@@ -45,6 +45,18 @@ class CoinTrackerViewModel @Inject constructor(
     private val _isDarkMode = MutableStateFlow(false)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode
 
+    // Per-action loading states for button-level spinners
+    private val _loadingActions = MutableStateFlow(mutableMapOf<String, Boolean>())
+    val loadingActions: StateFlow<Map<String, Boolean>> = _loadingActions
+
+    fun isActionLoading(action: String): Boolean = _loadingActions.value[action] == true
+
+    private fun setActionLoading(action: String, loading: Boolean) {
+        _loadingActions.update { map ->
+            map.toMutableMap().apply { put(action, loading) }
+        }
+    }
+
     private val prefs = application.getSharedPreferences("cointracker_prefs", Context.MODE_PRIVATE)
 
     init {
@@ -115,17 +127,22 @@ class CoinTrackerViewModel @Inject constructor(
     fun register(username: String, password: String) {
         validateCredentials(username, password)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("register", true)
+            _uiState.update { it.copy(error = null) }
             val result = repo.register(username, password)
             if (result.isSuccess) login(username, password)
-            else _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            else {
+                _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
+                setActionLoading("register", false)
+            }
         }
     }
 
     fun login(username: String, password: String) {
         validateCredentials(username, password)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("login", true)
+            _uiState.update { it.copy(error = null) }
             val result = repo.login(username, password)
             if (result.isSuccess) {
                 val session = result.getOrThrow()
@@ -133,27 +150,35 @@ class CoinTrackerViewModel @Inject constructor(
                 _uiState.update { it.copy(session = session) }
                 refreshData(); loadProfiles()
                 DailyReminderWorker.schedule(getApplication())
-            } else _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            } else {
+                _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
+                setActionLoading("login", false)
+            }
         }
     }
 
     fun deleteAccount(password: String) {
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("deleteAccount", true)
+            _uiState.update { it.copy(error = null) }
             val result = repo.deleteAccount(session, password)
             if (result.isSuccess) {
                 DailyReminderWorker.cancel(getApplication())
                 prefs.edit().remove("user_session").apply()
                 _uiState.value = AppUiState()
-            } else _uiState.update { it.copy(loading = false, error = result.exceptionOrNull()?.message) }
+            } else {
+                _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
+                setActionLoading("deleteAccount", false)
+            }
         }
     }
 
     fun refreshData() {
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("refreshData", true)
+            _uiState.update { it.copy(error = null) }
 
             val cached   = localCache.load(session.userId, session.currentProfile)
             val dbResult = repo.loadProfile(session.userId, session.currentProfile)
@@ -208,22 +233,27 @@ class CoinTrackerViewModel @Inject constructor(
                     applyEnvelope(sync.db, session, SyncState.Conflict(sync.cached, sync.db))
 
                 SyncResult.BothEmpty ->
-                    _uiState.update { it.copy(loading = false, syncState = SyncState.Idle) }
+                    _uiState.update { it.copy(syncState = SyncState.Idle) }
             }
+            setActionLoading("refreshData", false)
         }
     }
 
     fun resolveConflictUseCache() {
         val session  = _uiState.value.session ?: return
         val conflict = _uiState.value.syncState as? SyncState.Conflict ?: return
-        _uiState.update { it.copy(syncState = SyncState.Idle, loading = true) }
+        _uiState.update { it.copy(syncState = SyncState.Idle) }
+        setActionLoading("resolveConflictUseCache", true)
         viewModelScope.launch {
             val r = repo.importData(session, conflict.cached.transactions, conflict.cached.settings)
             if (r.isSuccess) {
                 val env = r.getOrThrow()
                 updateCacheBg(session, env)
                 applyEnvelope(env, session, SyncState.Idle)
-            } else _uiState.update { it.copy(loading = false, error = r.exceptionOrNull()?.message) }
+            } else {
+                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                setActionLoading("resolveConflictUseCache", false)
+            }
         }
     }
 
@@ -237,14 +267,18 @@ class CoinTrackerViewModel @Inject constructor(
     fun switchProfile(profile: String) {
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("switchProfile", true)
+            _uiState.update { it.copy(error = null) }
             val r = repo.switchProfile(session, profile)
             if (r.isSuccess) {
                 val updated = r.getOrThrow()
                 saveSession(updated)
                 _uiState.update { it.copy(session = updated) }
                 refreshData(); loadProfiles()
-            } else _uiState.update { it.copy(loading = false, error = r.exceptionOrNull()?.message) }
+            } else {
+                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                setActionLoading("switchProfile", false)
+            }
         }
     }
 
@@ -256,71 +290,90 @@ class CoinTrackerViewModel @Inject constructor(
         }
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("createProfile", true)
+            _uiState.update { it.copy(error = null) }
             val r = repo.createProfile(session, trimmed)
-            if (r.isSuccess) { _uiState.update { it.copy(profiles = r.getOrThrow(), loading = false) }; switchProfile(trimmed) }
-            else _uiState.update { it.copy(loading = false, error = r.exceptionOrNull()?.message) }
+            if (r.isSuccess) { _uiState.update { it.copy(profiles = r.getOrThrow()) }; switchProfile(trimmed) }
+            else {
+                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                setActionLoading("createProfile", false)
+            }
         }
     }
 
     fun deleteProfile(profile: String) {
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("deleteProfile", true)
+            _uiState.update { it.copy(error = null) }
             val r = repo.deleteProfile(session, profile)
             if (r.isSuccess) {
                 localCache.delete(session.userId, profile)
-                _uiState.update { it.copy(profiles = r.getOrThrow(), loading = false) }
+                _uiState.update { it.copy(profiles = r.getOrThrow()) }
                 switchProfile("Default")
-            } else _uiState.update { it.copy(loading = false, error = r.exceptionOrNull()?.message) }
+            } else {
+                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                setActionLoading("deleteProfile", false)
+            }
         }
     }
 
     fun deleteAllData() {
         val session = _uiState.value.session ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("deleteAllData", true)
+            _uiState.update { it.copy(error = null) }
             val r = repo.deleteAllData(session)
             if (r.isSuccess) { localCache.delete(session.userId, session.currentProfile); switchProfile("Default") }
-            else _uiState.update { it.copy(loading = false, error = r.exceptionOrNull()?.message) }
+            else {
+                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                setActionLoading("deleteAllData", false)
+            }
         }
     }
 
     fun addTransaction(amount: Int, source: String, dateIso: String?) {
         validateTransactionAmount(amount)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.addTransaction(session, amount, source, dateIso), session) }
+        setActionLoading("addTransaction", true)
+        viewModelScope.launch { postSave(repo.addTransaction(session, amount, source, dateIso), session, "addTransaction") }
     }
 
     fun updateTransaction(id: String, amount: Int, source: String, dateIso: String) {
         validateTransactionAmount(amount)?.let { _uiState.update { s -> s.copy(error = it) }; return }
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.updateTransaction(session, id, amount, source, dateIso), session) }
+        setActionLoading("updateTransaction", true)
+        viewModelScope.launch { postSave(repo.updateTransaction(session, id, amount, source, dateIso), session, "updateTransaction") }
     }
 
     fun deleteTransaction(transactionId: String) {
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.deleteTransaction(session, transactionId), session) }
+        setActionLoading("deleteTransaction", true)
+        viewModelScope.launch { postSave(repo.deleteTransaction(session, transactionId), session, "deleteTransaction") }
     }
 
     fun updateSettings(settings: Settings) {
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.updateSettings(session, settings), session) }
+        setActionLoading("updateSettings", true)
+        viewModelScope.launch { postSave(repo.updateSettings(session, settings), session, "updateSettings") }
     }
 
     fun addQuickAction(action: QuickAction) {
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.addQuickAction(session, action), session) }
+        setActionLoading("addQuickAction", true)
+        viewModelScope.launch { postSave(repo.addQuickAction(session, action), session, "addQuickAction") }
     }
 
     fun updateQuickAction(index: Int, action: QuickAction) {
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.updateQuickAction(session, index, action), session) }
+        setActionLoading("updateQuickAction", true)
+        viewModelScope.launch { postSave(repo.updateQuickAction(session, index, action), session, "updateQuickAction") }
     }
 
     fun deleteQuickAction(index: Int) {
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.deleteQuickAction(session, index), session) }
+        setActionLoading("deleteQuickAction", true)
+        viewModelScope.launch { postSave(repo.deleteQuickAction(session, index), session, "deleteQuickAction") }
     }
 
     fun importFromJson(jsonString: String) {
@@ -339,44 +392,51 @@ class CoinTrackerViewModel @Inject constructor(
                 )
             }
         }.onFailure { _uiState.update { s -> s.copy(error = "Invalid backup file: ${it.message}") }; return }
-         .onSuccess { txns -> viewModelScope.launch { _uiState.update { it.copy(loading = true, error = null) }; postSave(repo.importData(session, txns, settings), session) } }
+         .onSuccess { txns -> setActionLoading("importFromJson", true); viewModelScope.launch { postSave(repo.importData(session, txns, settings), session, "importFromJson") } }
     }
 
     fun loadAdmin() {
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("loadAdmin", true)
+            _uiState.update { it.copy(error = null) }
             val stats = repo.loadAdminStats(); val users = repo.loadAdminUsers()
-            _uiState.update { s -> s.copy(adminStats = stats.getOrNull(), adminUsers = users.getOrDefault(emptyList()), loading = false,
+            _uiState.update { s -> s.copy(adminStats = stats.getOrNull(), adminUsers = users.getOrDefault(emptyList()),
                 error = stats.exceptionOrNull()?.message ?: users.exceptionOrNull()?.message) }
+            setActionLoading("loadAdmin", false)
         }
     }
 
     fun deleteUser(userId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            setActionLoading("deleteUser", true)
+            _uiState.update { it.copy(error = null) }
             val r = repo.deleteUser(userId)
-            if (r.isSuccess) loadAdmin() else _uiState.update { it.copy(loading = false, error = r.exceptionOrNull()?.message) }
+            if (r.isSuccess) loadAdmin() else {
+                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                setActionLoading("deleteUser", false)
+            }
         }
     }
 
     private fun loadProfiles() {
         val session = _uiState.value.session ?: return
-        viewModelScope.launch { val p = repo.listProfiles(session); if (p.isSuccess) _uiState.update { it.copy(profiles = p.getOrThrow(), loading = false) } }
+        viewModelScope.launch { val p = repo.listProfiles(session); if (p.isSuccess) _uiState.update { it.copy(profiles = p.getOrThrow()) } }
     }
 
-    private fun postSave(result: Result<ProfileEnvelope>, session: UserSession) {
+    private fun postSave(result: Result<ProfileEnvelope>, session: UserSession, action: String) {
         _uiState.update { s ->
             if (result.isSuccess) {
                 val env = result.getOrThrow()
                 onDataUpdated(env); updateCacheBg(session, env)
-                s.copy(profileEnvelope = env, loading = false, unreadNotifCount = computeUnreadCount(env, session))
-            } else s.copy(loading = false, error = result.exceptionOrNull()?.message)
+                s.copy(profileEnvelope = env, unreadNotifCount = computeUnreadCount(env, session))
+            } else s.copy(error = result.exceptionOrNull()?.message)
         }
+        setActionLoading(action, false)
     }
 
     private fun applyEnvelope(env: ProfileEnvelope, session: UserSession, syncState: SyncState) {
         onDataUpdated(env)
-        _uiState.update { it.copy(profileEnvelope = env, loading = false, syncState = syncState, unreadNotifCount = computeUnreadCount(env, session)) }
+        _uiState.update { it.copy(profileEnvelope = env, syncState = syncState, unreadNotifCount = computeUnreadCount(env, session)) }
     }
 
     private fun updateCacheBg(session: UserSession, env: ProfileEnvelope) {
@@ -415,7 +475,6 @@ class CoinTrackerViewModel @Inject constructor(
 
 data class AppUiState(
     val session          : UserSession?       = null,
-    val loading          : Boolean            = false,
     val error            : String?            = null,
     val profileEnvelope  : ProfileEnvelope?   = null,
     val profiles         : List<String>       = emptyList(),

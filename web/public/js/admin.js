@@ -23,6 +23,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { firebaseConfig } from "/firebase-config.js";
+import { getIcon } from "/js/icons.js";
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
@@ -89,7 +90,7 @@ function setupEventListeners() {
 function applyTheme() {
   const theme = localStorage.getItem("theme") || "light";
   document.documentElement.setAttribute("data-theme", theme);
-  document.getElementById("themeToggle").textContent = theme === "dark" ? "☀️" : "🌙";
+  document.getElementById("themeToggle").innerHTML = theme === "dark" ? getIcon('sun') : getIcon('moon');
 }
 
 function toggleTheme() {
@@ -97,7 +98,7 @@ function toggleTheme() {
   const next = current === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem("theme", next);
-  document.getElementById("themeToggle").textContent = next === "dark" ? "☀️" : "🌙";
+  document.getElementById("themeToggle").innerHTML = next === "dark" ? getIcon('sun') : getIcon('moon');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -262,15 +263,15 @@ function renderTablePage() {
       <td>
         ${isMe
           ? `<span style="color:var(--muted-color);font-size:12px">—</span>`
-          : `<button class="btn danger btn-delete-user" data-uid="${u.uid}" data-username="${u.username}">🗑 Delete</button>`
+          : `<button class="btn danger btn-delete-user" data-uid="${u.uid}" data-username="${u.username}">${getIcon('trash2')} Delete</button>`
         }
       </td>`;
 
     if (!isMe) {
-      tr.querySelector(".btn-delete-user").addEventListener("click", (e) => {
+      tr.querySelector(".btn-delete-user").addEventListener("click", async (e) => {
         const uid      = e.currentTarget.dataset.uid;
         const username = e.currentTarget.dataset.username;
-        if (confirm(`Delete user '${username}'?\nThis permanently deletes all their data.`)) {
+        if (await confirm(`Delete user '${username}'?\nThis permanently deletes all their data.`)) {
           deleteUserById(uid, username);
         }
       });
@@ -399,6 +400,87 @@ async function setBroadcast() {
   } catch (err) {
     console.error("setBroadcast error:", err);
     showToast("Failed to update broadcast.", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Confirm modal (replaces native confirm)
+// ─────────────────────────────────────────────────────────────
+let _lastFocused = null;
+let _confirmResolver = null;
+let _trapFocusRef = null;
+let _handleEscapeRef = null;
+
+function confirm(message) {
+  return new Promise((resolve) => {
+    _confirmResolver = resolve;
+    const modal = document.getElementById("confirmModal");
+    if (!modal) { resolve(false); return; }
+    document.getElementById("confirmModalMessage").textContent = message;
+    modal.style.display = "block";
+    _lastFocused = document.activeElement;
+    const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable) focusable.focus();
+    _trapFocusRef = trapFocus.bind(null);
+    _handleEscapeRef = handleEscape.bind(null);
+    modal.addEventListener('keydown', _trapFocusRef);
+    modal.addEventListener('keydown', _handleEscapeRef);
+    document.body.style.overflow = 'hidden';
+
+    const cleanup = () => {
+      modal.style.display = "none";
+      modal.removeEventListener('keydown', _trapFocusRef);
+      modal.removeEventListener('keydown', _handleEscapeRef);
+      document.body.style.overflow = '';
+      if (_lastFocused) _lastFocused.focus();
+      _confirmResolver = null;
+    };
+
+    const onConfirm = () => {
+      cleanup();
+      document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
+      document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
+      resolve(true);
+    };
+    const onCancel = () => {
+      cleanup();
+      document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
+      document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
+      resolve(false);
+    };
+    document.getElementById("confirmModalConfirm").addEventListener("click", onConfirm);
+    document.getElementById("confirmModalCancel").addEventListener("click", onCancel);
+  });
+}
+
+function trapFocus(e) {
+  if (e.key !== 'Tab') return;
+  const modal = document.getElementById("confirmModal");
+  const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function handleEscape(e) {
+  if (e.key === 'Escape') {
+    if (_confirmResolver) {
+      _confirmResolver(false);
+      _confirmResolver = null;
+    }
+    const modal = document.getElementById("confirmModal");
+    modal.style.display = "none";
+    modal.removeEventListener('keydown', _trapFocusRef);
+    modal.removeEventListener('keydown', _handleEscapeRef);
+    document.body.style.overflow = '';
+    if (_lastFocused) _lastFocused.focus();
+    _confirmResolver = null;
   }
 }
 

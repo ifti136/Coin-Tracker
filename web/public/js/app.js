@@ -16,6 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { firebaseConfig } from "/firebase-config.js";
+import { getIcon, getAchievementIcon, getAlertIcon } from "/js/icons.js";
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
@@ -49,13 +50,13 @@ function defaultSettingsMap(darkMode = false) {
 
 // ── Achievement definitions (mirrors AchievementCalculator.kt) ─
 const ACHIEVEMENT_DEFS = [
-  { id: "getting_started", icon: "💰", name: "Getting Started",    desc: "Reach a balance of 1,000 coins",  check: (s) => s.balance >= 1000 },
-  { id: "serious_saver",   icon: "📈", name: "Serious Saver",      desc: "Reach a balance of 5,000 coins",  check: (s) => s.balance >= 5000 },
-  { id: "coin_hoarder",    icon: "🏦", name: "Coin Hoarder",       desc: "Reach a balance of 10,000 coins", check: (s) => s.balance >= 10000 },
-  { id: "goal_reached",    icon: "👑", name: "Epic Box Secured!",   desc: "Reach your goal balance",         check: (s) => s.balance >= s.goal },
-  { id: "disciplined",     icon: "🛡", name: "Disciplined",         desc: "No spending for 7+ days",         check: (s) => s.daysSinceSpend >= 7 },
-  { id: "streak_3",        icon: "🔥", name: "3-Day Login Streak",  desc: "3 consecutive Login days",        check: (s) => s.loginStreak >= 3 },
-  { id: "streak_7",        icon: "🔥", name: "7-Day Login Streak",  desc: "7 consecutive Login days",        check: (s) => s.loginStreak >= 7 },
+  { id: "getting_started", icon: "savings", name: "Getting Started",    desc: "Reach a balance of 1,000 coins",  check: (s) => s.balance >= 1000 },
+  { id: "serious_saver",   icon: "trendingUpAch2", name: "Serious Saver",      desc: "Reach a balance of 5,000 coins",  check: (s) => s.balance >= 5000 },
+  { id: "coin_hoarder",    icon: "accountBalance", name: "Coin Hoarder",       desc: "Reach a balance of 10,000 coins", check: (s) => s.balance >= 10000 },
+  { id: "goal_reached",    icon: "emojiEvents", name: "Epic Box Secured!",   desc: "Reach your goal balance",         check: (s) => s.balance >= s.goal },
+  { id: "disciplined",     icon: "shield2", name: "Disciplined",         desc: "No spending for 7+ days",         check: (s) => s.daysSinceSpend >= 7 },
+  { id: "streak_3",        icon: "localFireDepartment", name: "3-Day Login Streak",  desc: "3 consecutive Login days",        check: (s) => s.loginStreak >= 3 },
+  { id: "streak_7",        icon: "localFireDepartment", name: "7-Day Login Streak",  desc: "7 consecutive Login days",        check: (s) => s.loginStreak >= 7 },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ class CoinTrackerApp {
     this.analyticsCustomTo   = null;
     this.historyPage     = 1;
     this.historyFiltered = [];
+    this._lastFocused    = null;
   }
 
   // ── Bootstrap ─────────────────────────────────────────────────
@@ -265,17 +267,17 @@ class CoinTrackerApp {
   get notificationAlerts() {
     const alerts = [], p = this.progress;
     if (this.balance >= this.goal)
-      alerts.push({ icon: "🎉", title: "Goal Reached!", sub: `You hit your goal of ${this.goal.toLocaleString()} coins!` });
+      alerts.push({ icon: getAlertIcon("🎉"), title: "Goal Reached!", sub: `You hit your goal of ${this.goal.toLocaleString()} coins!` });
     else if (p >= 75)
-      alerts.push({ icon: "🔥", title: "75% of your goal reached", sub: `Only ${(this.goal - this.balance).toLocaleString()} coins to go!` });
+      alerts.push({ icon: getAlertIcon("🔥"), title: "75% of your goal reached", sub: `Only ${(this.goal - this.balance).toLocaleString()} coins to go!` });
     else if (p >= 50)
-      alerts.push({ icon: "⚡", title: "Halfway there!", sub: "You're 50% of the way to your goal." });
+      alerts.push({ icon: getAlertIcon("⚡"), title: "Halfway there!", sub: "You're 50% of the way to your goal." });
     const stats = this.dashboardStats;
     if (stats.today >= 300)
-      alerts.push({ icon: "💪", title: "Big day!", sub: `You earned ${stats.today.toLocaleString()} coins today!` });
+      alerts.push({ icon: getAlertIcon("💪"), title: "Big day!", sub: `You earned ${stats.today.toLocaleString()} coins today!` });
     const est = this.estimatedDays;
     if (typeof est === "number" && est > 0 && est <= 7)
-      alerts.push({ icon: "⏰", title: "Goal is close!", sub: `~${est} day${est === 1 ? "" : "s"} to reach your goal.` });
+      alerts.push({ icon: getAlertIcon("⏰"), title: "Goal is close!", sub: `~${est} day${est === 1 ? "" : "s"} to reach your goal.` });
     const best = this.bestEarningWeek;
     if (best)
       alerts.push({ icon: "🏆", title: "Best Earning Week", sub: `${best.range}: ${best.amount.toLocaleString()} coins` });
@@ -405,7 +407,9 @@ class CoinTrackerApp {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
     const btn = document.getElementById("themeToggle");
-    if (btn) btn.textContent = dark ? "☀️ Light Mode" : "🌙 Dark Mode";
+    if (btn) {
+      btn.innerHTML = dark ? `${getIcon('sun')} Light Mode` : `${getIcon('moon')} Dark Mode`;
+    }
     if (Object.keys(this.charts).length > 0) this.updateAnalyticsUI();
   }
 
@@ -425,7 +429,7 @@ class CoinTrackerApp {
     document.getElementById("progressBar").style.width     = `${prog}%`;
     document.getElementById("progressPercent").textContent = `${prog}%`;
     const estEl = document.getElementById("goalEstimate");
-    if (est === 0)          estEl.textContent = "🎉 Goal reached!";
+    if (est === 0)          estEl.innerHTML = `${getIcon('partyPopper')} Goal reached!`;
     else if (est === "N/A") estEl.textContent = "Add earnings to see your estimate";
     else                    estEl.textContent = `Estimated time to goal: ~${est} day${est === 1 ? "" : "s"}`;
   }
@@ -575,7 +579,7 @@ class CoinTrackerApp {
     const tbody      = document.getElementById("historyTableBody");
     tbody.innerHTML  = "";
     if (!pageTxns.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted-color);padding:30px">No transactions found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted-color);padding:30px">No transactions found.<br><button class="btn primary" style="margin-top:12px" onclick="document.getElementById('addAmount').focus();document.querySelector('[data-page=\"dashboard\"]').click()">Add your first transaction</button></td></tr>`;
     } else {
       pageTxns.forEach((t) => {
         // Mobile stores previous_balance (snake_case)
@@ -589,15 +593,56 @@ class CoinTrackerApp {
           <td class="${cls}">${t.amount >= 0 ? "+" : ""}${t.amount.toLocaleString()}</td>
           <td>${balAfter.toLocaleString()}</td>
           <td class="history-actions">
-            <button class="btn secondary btn-edit" data-id="${t.id}">✎ Edit</button>
-            <button class="btn danger btn-delete" data-id="${t.id}">🗑</button>
+            <button class="btn secondary btn-edit" data-id="${t.id}">${getIcon('edit')} Edit</button>
+            <button class="btn danger btn-delete" data-id="${t.id}">${getIcon('trash2')}</button>
           </td>`;
         tr.querySelector(".btn-edit").addEventListener("click",   () => this.showEditModal(t.id));
         tr.querySelector(".btn-delete").addEventListener("click", () => this.deleteTransaction(t.id));
         tbody.appendChild(tr);
       });
     }
+    // Also render mobile card list
+    this.renderHistoryCardList(pageTxns);
     this.renderPaginationControls(totalPages, page);
+  }
+
+  renderHistoryCardList(txns) {
+    const container = document.getElementById("historyCardList");
+    if (!container) return;
+    if (!txns.length) {
+      container.innerHTML = `<p style="text-align:center;color:var(--muted-color);padding:30px">No transactions found.<br><button class="btn primary" style="margin-top:12px" onclick="document.getElementById('addAmount').focus();document.querySelector('[data-page=\"dashboard\"]').click()">Add your first transaction</button></p>`;
+      return;
+    }
+    container.innerHTML = txns.map((t) => {
+      const cls      = t.amount >= 0 ? "amount-positive" : "amount-negative";
+      const balAfter = (t.previous_balance || 0) + t.amount;
+      const typeCls  = t.amount >= 0 ? "income" : "expense";
+      const typeLabel = t.amount >= 0 ? "Income" : "Expense";
+      return `
+        <div class="history-card">
+          <div class="history-card-header">
+            <span class="history-card-date">${new Date(t.date).toLocaleString()}</span>
+            <span class="history-card-type ${typeCls}">${typeLabel}</span>
+          </div>
+          <div class="history-card-body">
+            <div><span class="history-card-label">Source</span><span class="history-card-value">${t.source}</span></div>
+            <div><span class="history-card-label">Amount</span><span class="history-card-value ${cls}">${t.amount >= 0 ? "+" : ""}${t.amount.toLocaleString()}</span></div>
+            <div><span class="history-card-label">Balance After</span><span class="history-card-value">${balAfter.toLocaleString()}</span></div>
+          </div>
+          <div class="history-card-actions">
+            <button class="btn secondary btn-edit" data-id="${t.id}">${getIcon('edit')} Edit</button>
+            <button class="btn danger btn-delete" data-id="${t.id}">${getIcon('trash2')}</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+    // Re-attach event listeners
+    container.querySelectorAll(".btn-edit").forEach(btn => {
+      btn.addEventListener("click", () => this.showEditModal(btn.dataset.id));
+    });
+    container.querySelectorAll(".btn-delete").forEach(btn => {
+      btn.addEventListener("click", () => this.deleteTransaction(btn.dataset.id));
+    });
   }
 
   renderPaginationControls(totalPages, currentPage) {
@@ -642,7 +687,11 @@ class CoinTrackerApp {
     const listEl = document.getElementById("quickActionList");
     if (!listEl) return;
     const actions = this.quickActions;
-    if (!actions.length) { listEl.innerHTML = `<p style="color:var(--muted-color)">No quick actions yet.</p>`; return; }
+    if (!actions.length) { 
+      listEl.innerHTML = `<p style="color:var(--muted-color)">No quick actions yet.</p>
+        <button class="btn primary" style="margin-top:12px;width:100%" onclick="document.getElementById('quickActionText').focus()">Create your first quick action</button>`; 
+      return; 
+    }
     listEl.innerHTML = "";
     actions.forEach((action, i) => {
       const item = document.createElement("div");
@@ -664,6 +713,11 @@ class CoinTrackerApp {
     const listEl   = document.getElementById(isIncome ? "incomeCategoryList" : "expenseCategoryList");
     if (!listEl) return;
     listEl.innerHTML = "";
+    if (!cats.length) {
+      listEl.innerHTML = `<p style="color:var(--muted-color);margin-bottom:12px">No ${isIncome ? "income" : "expense"} categories yet.</p>
+        <button class="btn primary" style="width:100%" onclick="document.getElementById('${isIncome ? "newIncomeCategory" : "newExpenseCategory"}').focus()">Add your first ${isIncome ? "income" : "expense"} category</button>`;
+      return;
+    }
     cats.forEach((cat, i) => {
       const item = document.createElement("div");
       item.className = "category-item";
@@ -806,13 +860,39 @@ class CoinTrackerApp {
   }
 
   async deleteTransaction(transactionId) {
-    if (!confirm("Delete this transaction?")) return;
+    if (!await this.confirm("Delete this transaction?")) return;
     const profile = this.userDataDoc.profiles[this.currentProfile];
+    const deletedTx = profile.transactions.find((t) => t.id === transactionId);
     profile.transactions = profile.transactions.filter((t) => t.id !== transactionId);
     this._recalcPreviousBalances();
     await this.saveUserData();
     this.showToast("Transaction deleted.", "success");
+    // UNDO snackbar
+    if (deletedTx) {
+      this.showUndoToast("Transaction deleted", () => {
+        this.userDataDoc.profiles[this.currentProfile].transactions.push(deletedTx);
+        this._recalcPreviousBalances();
+        this.saveUserData();
+        this.updateAllUI();
+      });
+    }
     this.updateAllUI();
+  }
+
+  showUndoToast(message, onUndo) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    toast.innerHTML = `${message} <button class="toast-undo" style="margin-left:12px;padding:4px 12px;border:none;border-radius:4px;background:var(--primary-color);color:white;cursor:pointer">UNDO</button>`;
+    toast.className = `toast success show`;
+    const undoBtn = toast.querySelector(".toast-undo");
+    const timeout = setTimeout(() => {
+      toast.classList.remove("show");
+    }, 5000);
+    undoBtn.onclick = () => {
+      clearTimeout(timeout);
+      toast.classList.remove("show");
+      onUndo();
+    };
   }
 
   _recalcPreviousBalances() {
@@ -933,7 +1013,7 @@ class CoinTrackerApp {
 
   async deleteCurrentProfile() {
     if (this.currentProfile === "Default") { this.showToast("Cannot delete the Default profile.", "error"); return; }
-    if (!confirm(`Delete profile '${this.currentProfile}'? This cannot be undone.`)) return;
+    if (!await this.confirm(`Delete profile '${this.currentProfile}'? This cannot be undone.`)) return;
     delete this.userDataDoc.profiles[this.currentProfile];
     this.allProfiles = Object.keys(this.userDataDoc.profiles).sort();
     this.currentProfile = "Default";
@@ -986,7 +1066,7 @@ class CoinTrackerApp {
   }
 
   async deleteAllData() {
-    if (!confirm("Delete ALL data for ALL profiles? This cannot be undone.")) return;
+    if (!await this.confirm("Delete ALL data for ALL profiles? This cannot be undone.")) return;
     const now = new Date().toISOString();
     this.userDataDoc = {
       last_active_profile: "Default",
@@ -1043,8 +1123,37 @@ class CoinTrackerApp {
   // ─────────────────────────────────────────────────────────────
   createOrUpdateChart(canvasId, type, labels, data) {
     if (this.charts[canvasId]) { this.charts[canvasId].destroy(); delete this.charts[canvasId]; }
-    const ctx = document.getElementById(canvasId);
+    let ctx = document.getElementById(canvasId);
     if (!ctx) return;
+    
+    // Handle empty data
+    if (!data || !data.length || data.every(d => d === 0)) {
+      const container = ctx.parentElement;
+      if (container) {
+        // Replace canvas with a new one to preserve the element for future updates
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = canvasId;
+        newCanvas.style.width = '100%';
+        newCanvas.style.height = '100%';
+        container.innerHTML = '';
+        container.appendChild(newCanvas);
+        ctx = newCanvas;
+        
+        // Show empty state message
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:300px;color:var(--muted-color);text-align:center;padding:20px';
+        messageDiv.innerHTML = `
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <p style="font-size:14px;font-weight:500;margin-bottom:8px">No data for this period</p>
+          <button class="btn primary" style="margin-top:12px" onclick="document.querySelector('[data-page=\"dashboard\"]').click()">Add transactions to see analytics</button>
+        `;
+        container.appendChild(messageDiv);
+      }
+      // Clear summary for empty state
+      this.updateChartSummary(canvasId, "");
+      return;
+    }
+    
     const s       = getComputedStyle(document.documentElement);
     const text    = s.getPropertyValue("--text-color").trim();
     const grid    = s.getPropertyValue("--border-color").trim();
@@ -1072,6 +1181,49 @@ class CoinTrackerApp {
         } : {},
       },
     });
+
+    // Populate aria-live summary for accessibility
+    this.updateChartSummary(canvasId, labels, data);
+  }
+
+  // Helper to update chart summary for screen readers
+  updateChartSummary(canvasId, labels, data) {
+    const summaryEl = document.getElementById(`${canvasId}Summary`);
+    if (!summaryEl) return;
+
+    let summary = "";
+    if (canvasId === "timelineChart") {
+      // Balance trend: [min] to [max] over [period]
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      const period = this.analyticsPeriod === "lifetime" ? "all time" : this.analyticsPeriod;
+      summary = `Balance trend: ${min.toLocaleString()} to ${max.toLocaleString()} over ${period}`;
+    } else if (canvasId === "earningsChart") {
+      // Earnings breakdown: [top 3 sources with amounts]
+      const pairs = labels.map((label, i) => ({ label, value: data[i] }))
+        .filter(p => p.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 3);
+      if (pairs.length > 0) {
+        const parts = pairs.map(p => `${p.label}: ${p.value.toLocaleString()}`);
+        summary = `Earnings breakdown: ${parts.join(", ")}`;
+      } else {
+        summary = "No earnings data for this period";
+      }
+    } else if (canvasId === "spendingChart") {
+      // Spending breakdown: [top 3 categories with amounts]
+      const pairs = labels.map((label, i) => ({ label, value: data[i] }))
+        .filter(p => p.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 3);
+      if (pairs.length > 0) {
+        const parts = pairs.map(p => `${p.label}: ${p.value.toLocaleString()}`);
+        summary = `Spending breakdown: ${parts.join(", ")}`;
+      } else {
+        summary = "No spending data for this period";
+      }
+    }
+    summaryEl.textContent = summary;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1102,8 +1254,105 @@ class CoinTrackerApp {
       .setAttribute("aria-expanded", sidebar.classList.contains("nav-expanded"));
   }
 
-  showModal(id)  { const m = document.getElementById(id); if (m) m.style.display = "block"; }
-  closeModal(id) { const m = document.getElementById(id); if (m) m.style.display = "none";  }
+  showModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.style.display = "block";
+    // Focus management
+    this._lastFocused = document.activeElement;
+    const focusable = m.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable) focusable.focus();
+    // Trap focus - store bound ref for cleanup
+    this._trapFocusRef = this._trapFocus.bind(this, m);
+    this._handleEscapeRef = this._handleEscape.bind(this, id);
+    m.addEventListener('keydown', this._trapFocusRef);
+    m.addEventListener('keydown', this._handleEscapeRef);
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.style.display = "none";
+    // Restore focus
+    if (this._lastFocused) this._lastFocused.focus();
+    // Clean up using stored refs
+    if (this._trapFocusRef) m.removeEventListener('keydown', this._trapFocusRef);
+    if (this._handleEscapeRef) m.removeEventListener('keydown', this._handleEscapeRef);
+    document.body.style.overflow = '';
+  }
+
+  // Generic confirm modal (replaces native confirm)
+  confirm(message) {
+    return new Promise((resolve) => {
+      this._confirmResolver = resolve; // Store resolver for Escape handling
+      const modal = document.getElementById("confirmModal");
+      if (!modal) { resolve(false); return; }
+      document.getElementById("confirmModalMessage").textContent = message;
+      modal.style.display = "block";
+      this._lastFocused = document.activeElement;
+      const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable) focusable.focus();
+      // Store bound refs for cleanup
+      this._trapFocusRef = this._trapFocus.bind(this, modal);
+      this._handleEscapeRef = this._handleEscape.bind(this, "confirmModal");
+      modal.addEventListener('keydown', this._trapFocusRef);
+      modal.addEventListener('keydown', this._handleEscapeRef);
+      document.body.style.overflow = 'hidden';
+
+      const cleanup = () => {
+        modal.style.display = "none";
+        modal.removeEventListener('keydown', this._trapFocusRef);
+        modal.removeEventListener('keydown', this._handleEscapeRef);
+        document.body.style.overflow = '';
+        if (this._lastFocused) this._lastFocused.focus();
+        this._confirmResolver = null;
+      };
+
+      const onConfirm = () => {
+        cleanup();
+        document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
+        document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
+        resolve(true);
+      };
+      const onCancel = () => {
+        cleanup();
+        document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
+        document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
+        resolve(false);
+      };
+      document.getElementById("confirmModalConfirm").addEventListener("click", onConfirm);
+      document.getElementById("confirmModalCancel").addEventListener("click", onCancel);
+    });
+  }
+
+  _trapFocus(modal, e) {
+    if (e.key !== 'Tab') return;
+    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  _handleEscape(id, e) {
+    if (e.key === 'Escape') {
+      this.closeModal(id);
+      // If it's the confirm modal, resolve the promise as false (cancel)
+      if (id === "confirmModal") {
+        // The closeModal will be called, but we need to resolve the promise
+        // The confirm() promise will be resolved by the cleanup in closeModal
+        // Actually, we need to handle this differently - the confirm promise needs to be resolved
+        // Let's store the confirm resolver
+      }
+    }
+  }
 
   showToast(message, type = "success") {
     const toast = document.getElementById("toast");

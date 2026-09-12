@@ -8,25 +8,67 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColors = darkColorScheme(
-    primary = WebPrimaryDark,
-    secondary = WebSuccessDark,
-    error = WebDangerDark,
-    background = Color.Transparent, // Transparent to show gradient
-    surface = Color(0xFF1A1D23).copy(alpha = 0.6f), // Glassy dark surface
-    onPrimary = Color.Black,
-    onBackground = TextDark,
-    onSurface = TextDark
+    primary = DarkPrimary,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimary = DarkOnPrimary,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    secondary = DarkSecondary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondary = DarkOnSecondary,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+    tertiary = DarkTertiary,
+    tertiaryContainer = DarkTertiaryContainer,
+    onTertiary = DarkOnTertiary,
+    onTertiaryContainer = DarkOnTertiaryContainer,
+    error = DarkError,
+    errorContainer = DarkErrorContainer,
+    onError = DarkOnError,
+    onErrorContainer = DarkOnErrorContainer,
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
+    shadow = DarkShadow,
+    scrim = DarkScrim,
+    inverseSurface = DarkInverseSurface,
+    inverseOnSurface = DarkInverseOnSurface,
+    inversePrimary = DarkInversePrimary
 )
 
 private val LightColors = lightColorScheme(
-    primary = WebPrimary,
-    secondary = WebSuccess,
-    error = WebDanger,
-    background = Color.Transparent, // Transparent to show gradient
-    surface = Color(0xFFFFFFFF).copy(alpha = 0.6f), // Glassy light surface
-    onPrimary = Color.White,
-    onBackground = TextLight,
-    onSurface = TextLight
+    primary = LightPrimary,
+    primaryContainer = LightPrimaryContainer,
+    onPrimary = LightOnPrimary,
+    onPrimaryContainer = LightOnPrimaryContainer,
+    secondary = LightSecondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondary = LightOnSecondary,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    tertiary = LightTertiary,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiary = LightOnTertiary,
+    onTertiaryContainer = LightOnTertiaryContainer,
+    error = LightError,
+    errorContainer = LightErrorContainer,
+    onError = LightOnError,
+    onErrorContainer = LightOnErrorContainer,
+    background = LightBackground,
+    onBackground = LightOnBackground,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+    shadow = LightShadow,
+    scrim = LightScrim,
+    inverseSurface = LightInverseSurface,
+    inverseOnSurface = LightInverseOnSurface,
+    inversePrimary = LightInversePrimary
 )
 
 @Composable
@@ -38,7 +80,8 @@ fun CoinTrackerTheme(
 
     MaterialTheme(
         colorScheme = colors,
-        typography = AppTypography, // Ensure Type.kt exists or remove if using default
+        typography = AppTypography,
+        shapes = AppShapes,
         content = content
     )
 }

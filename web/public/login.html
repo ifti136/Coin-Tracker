@@ -6,6 +6,8 @@
     <title>Login - Coin Tracker</title>
 
     <link rel="icon" href="/images/coin.ico">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#3b82f6">
 
     <!-- Prevent theme flash -->
     <script>
@@ -23,9 +25,11 @@
     <link rel="stylesheet" href="/css/login.css">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <button id="themeToggleBtn" class="theme-toggle-btn">🌙</button>
+    <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle dark mode"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
 
+    <main id="main-content" role="main">
     <div class="auth-card">
         <div class="logo">
             <div class="coin-icon">C</div>
@@ -53,10 +57,25 @@
             <button id="auth-toggle-btn" class="btn-link">Need an account? Register</button>
         </div>
     </div>
+    </main>
 
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Firebase SDK -->
     <script type="module" src="/js/login.js"></script>
+    <script>
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('[SW] Registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('[SW] Registration failed:', error);
+            });
+        });
+      }
+    </script>
 </body>
 </html>

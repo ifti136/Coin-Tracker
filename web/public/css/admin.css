@@ -23,7 +23,7 @@
 .admin-logo h1 {
   font-size: 26px;
   font-weight: 700;
-  color: var(--text-color);
+  color: var(--on-surface);
 }
 
 .admin-header-actions {
@@ -34,7 +34,7 @@
 
 .admin-username {
   font-size: 13px;
-  color: var(--muted-color);
+  color: var(--on-surface-variant);
   font-weight: 500;
 }
 
@@ -48,16 +48,16 @@
   flex: 1;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-color);
-  color: var(--text-color);
+  border: 1px solid var(--outline);
+  background: var(--surface-variant);
+  color: var(--on-surface);
   font-family: inherit;
   font-size: 14px;
 }
 .current-broadcast {
   margin-top: 10px;
   font-size: 12px;
-  color: var(--muted-color);
+  color: var(--on-surface-variant);
   min-height: 18px;
 }
 
@@ -66,9 +66,9 @@
   width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-color);
-  color: var(--text-color);
+  border: 1px solid var(--outline);
+  background: var(--surface-variant);
+  color: var(--on-surface);
   font-family: inherit;
   font-size: 14px;
   margin-bottom: 16px;
@@ -84,32 +84,32 @@
 .user-table td {
   padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--outline);
   font-size: 13px;
 }
 .user-table th {
-  background: var(--table-header);
-  color: var(--muted-color);
+  background: var(--surface-variant);
+  color: var(--on-surface-variant);
   font-size: 11px;
   text-transform: uppercase;
   font-weight: 700;
   cursor: pointer;
   user-select: none;
 }
-.user-table th:hover { color: var(--text-color); }
+.user-table th:hover { color: var(--on-surface); }
 .user-table th.sort-asc::after  { content: " ▲"; }
 .user-table th.sort-desc::after { content: " ▼"; }
-.user-table td { color: var(--text-color); }
-.user-table tr:hover td { background: var(--table-header); }
+.user-table td { color: var(--on-surface); }
+.user-table tr:hover td { background: var(--surface-variant); }
 
-.user-table .amount-positive { color: var(--success-color); font-weight: 600; }
-.user-table .amount-negative { color: var(--danger-color);  font-weight: 600; }
+.user-table .amount-positive { color: var(--secondary-color); font-weight: 600; }
+.user-table .amount-negative { color: var(--error-color);  font-weight: 600; }
 
 /* "You" badge on admin's own row */
 .you-badge {
   display: inline-block;
   background: var(--primary-color);
-  color: white;
+  color: var(--on-primary);
   font-size: 10px;
   font-weight: 700;
   border-radius: 6px;
@@ -133,14 +133,14 @@
 .bar-day-label {
   width: 36px;
   font-size: 12px;
-  color: var(--muted-color);
+  color: var(--on-surface-variant);
   font-weight: 600;
   text-align: right;
   flex-shrink: 0;
 }
 .bar-track {
   flex: 1;
-  background: var(--border-color);
+  background: var(--outline);
   border-radius: 6px;
   height: 26px;
   overflow: hidden;
@@ -158,11 +158,11 @@
 .bar-count {
   font-size: 12px;
   font-weight: 700;
-  color: white;
+  color: var(--on-primary);
   white-space: nowrap;
 }
 .bar-count.outside {
-  color: var(--text-color);
+  color: var(--on-surface);
   padding-left: 6px;
 }
 
@@ -172,4 +172,41 @@
   .admin-header { flex-direction: column; align-items: flex-start; }
   .broadcast-form { flex-direction: column; }
   .stats-row { grid-template-columns: 1fr !important; }
+}
+
+/* ── Accessibility: Focus visible ───────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* ── Accessibility: Reduced motion ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .bar-fill {
+    transition: none !important;
+  }
+}
+
+/* ── Accessibility: Minimum text sizes ───────────────────────── */
+.you-badge {
+  font-size: 12px !important;
+}
+
+.user-table th {
+  font-size: 12px !important;
+}
+
+.bar-day-label {
+  font-size: 12px !important;
+}
+
+.bar-count {
+  font-size: 12px !important;
 }
