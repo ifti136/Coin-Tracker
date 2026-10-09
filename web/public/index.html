@@ -30,36 +30,75 @@
   <div class="app-container">
 
     <!-- ═══════════════════════════════════════════════
-         SIDEBAR (desktop) / TOP BAR (mobile)
+         TOP BAR (Desktop only)
     ════════════════════════════════════════════════ -->
-    <div class="sidebar">
+    <header class="top-bar" role="banner">
+      <a href="#" class="top-bar-logo" data-page="dashboard" aria-label="Coin Tracker Home">
+        <div class="coin-icon">C</div>
+        <span>Coin Tracker</span>
+      </a>
+      <div class="top-bar-actions">
+        <!-- Notifications -->
+        <button class="top-bar-icon-btn" id="topBarNotificationsBtn" aria-label="Notifications" data-page="notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span id="topBarAchievementBadge" class="top-bar-badge" style="display:none" aria-live="polite" aria-atomic="true"></span>
+        </button>
+        <!-- Theme Toggle -->
+        <button class="top-bar-icon-btn" id="topBarThemeToggle" aria-label="Toggle dark mode">
+          <span id="topBarThemeIcon"></span>
+        </button>
+        <!-- Profile Dropdown -->
+        <div class="profile-dropdown-container" style="position: relative;">
+          <button class="top-bar-icon-btn" id="topBarProfileBtn" aria-label="Profile menu" aria-expanded="false" aria-haspopup="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+          <div class="profile-dropdown-menu" id="profileDropdownMenu" role="menu">
+            <div class="profile-dropdown-header">Profiles</div>
+            <select id="topBarProfileSelect" class="profile-dropdown" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); font-family: inherit; margin-bottom: 8px;" aria-label="Switch profile"></select>
+            <button class="profile-dropdown-item" id="topBarNewProfileBtn" role="menuitem">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Profile
+            </button>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item" id="topBarAdminBtn" role="menuitem" style="display: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              Admin Panel
+            </button>
+            <button class="profile-dropdown-item danger" id="topBarLogoutBtn" role="menuitem">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
 
-      <!-- Mobile top bar row -->
+    <!-- ═══════════════════════════════════════════════
+         SIDEBAR (Desktop rail / Mobile top bar)
+    ════════════════════════════════════════════════ -->
+    <div class="sidebar" role="navigation" aria-label="Main navigation">
+
+      <!-- Mobile top bar row (hamburger + title) -->
       <div class="sidebar-header">
-        <button class="hamburger-btn" id="hamburgerBtn">
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
       </div>
 
-      <!-- Desktop logo -->
-      <div class="logo">
-        <div class="coin-icon">C</div>
-        <span>Coin Tracker</span>
-      </div>
+      <!-- Desktop sidebar toggle (pin/unpin) - separate from sidebar-header -->
+      <button class="sidebar-toggle-btn" id="sidebarToggleBtn" aria-label="Collapse sidebar" aria-expanded="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
 
-      <!-- Desktop nav -->
+      <!-- Desktop nav - only 4 items: Dashboard, Analytics, History, Settings -->
       <nav class="nav" role="navigation" aria-label="Main navigation">
-        <button class="nav-btn active" data-page="dashboard"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span> Dashboard</button>
-        <button class="nav-btn" data-page="analytics"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Analytics</button>
-        <button class="nav-btn" data-page="history"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span> History</button>
-        <button class="nav-btn" data-page="notifications"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notifications <span id="achievementBadge" class="badge" style="display:none" aria-live="polite" aria-atomic="true"></span></button>
-        <button class="nav-btn" data-page="settings"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
+        <button class="nav-btn active" data-page="dashboard"><span aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><span class="nav-label">Dashboard</span></button>
+        <button class="nav-btn" data-page="analytics"><span aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="nav-label">Analytics</span></button>
+        <button class="nav-btn" data-page="history"><span aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span class="nav-label">History</span></button>
+        <button class="nav-btn" data-page="settings"><span aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="nav-label">Settings</span></button>
       </nav>
 
-      <div id="adminPanelBtnContainer" class="admin-panel-section" style="display:none">
-        <a href="/admin.html" class="nav-btn admin-btn"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span> Admin Panel</a>
-      </div>
-
+      <!-- Profile section - mobile only (shown when hamburger expanded) -->
       <div class="profile-section">
         <div class="profile-header">
           <span class="profile-label">PROFILE</span>
@@ -71,14 +110,15 @@
           <select id="profileSelect" class="profile-dropdown"></select>
           <button id="newProfileBtn" class="btn-secondary profile-btn">＋ New</button>
         </div>
-      </div>
-
-      <div class="theme-toggle">
-        <button id="themeToggle" aria-label="Toggle dark mode"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span> <span id="themeToggleText">Dark Mode</span></button>
-      </div>
-
-      <div class="logout-section">
-        <button id="logoutBtn" class="nav-btn logout-btn"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Logout</button>
+        <div class="mobile-control-links">
+          <button id="mobileThemeToggle" class="mobile-theme-toggle" aria-label="Toggle dark mode">
+            <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg></span>
+            <span>Dark Mode</span>
+          </button>
+          <button id="mobileLogoutBtn" class="mobile-logout-btn" aria-label="Logout">
+            Logout
+          </button>
+        </div>
       </div>
     </div>
 
@@ -311,7 +351,10 @@
 
       <!-- ── NOTIFICATIONS ───────────────────────── -->
       <div id="notifications" class="page">
-        <h1 class="page-title"><span aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notifications</h1>
+        <div class="notifications-header">
+          <h1 class="page-title"><span aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notifications</h1>
+          <button class="mark-all-read-btn" id="markAllReadBtn" aria-label="Mark all notifications as read">Mark all as read</button>
+        </div>
 
         <div class="card">
           <h3>Activity Alerts</h3>
@@ -587,14 +630,14 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
+.then((registration) => {
           console.log('[SW] Registered:', registration.scope);
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
-            newWorker.addEventListener('statechange', () => {
+            newWorker.addEventListener('statechange', async () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // New version available, prompt user to refresh
-                if (confirm('A new version of Coin Tracker is available. Refresh to update?')) {
+                if (await app.confirm('A new version of Coin Tracker is available. Refresh to update?')) {
                   window.location.reload();
                 }
               }
@@ -604,6 +647,7 @@
         .catch((error) => {
           console.log('[SW] Registration failed:', error);
         });
+      });
     });
   }
 </script>

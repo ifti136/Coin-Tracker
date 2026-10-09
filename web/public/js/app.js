@@ -77,6 +77,7 @@ class CoinTrackerApp {
     this.historyPage     = 1;
     this.historyFiltered = [];
     this._lastFocused    = null;
+    this._toastTimeout   = null;
   }
 
   // ── Bootstrap ─────────────────────────────────────────────────
@@ -89,6 +90,7 @@ class CoinTrackerApp {
       this.setupEventListeners();
       this.createHiddenFileInput();
       this.updateAllUI();
+      this.applySidebarPinnedState();
       this.checkBroadcast();
     });
   }
@@ -312,8 +314,45 @@ class CoinTrackerApp {
       btn.addEventListener("click", (e) => this.showPage(e.currentTarget.dataset.page));
     });
 
-    document.getElementById("themeToggle").addEventListener("click", () => this.toggleTheme());
+    // Top bar theme toggle
+    document.getElementById("topBarThemeToggle").addEventListener("click", () => this.toggleTheme());
 
+    // Top bar logo click - navigate to dashboard
+    document.querySelector(".top-bar-logo")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.showPage("dashboard");
+    });
+
+    // Top bar notifications button
+    document.getElementById("topBarNotificationsBtn").addEventListener("click", () => this.showPage("notifications"));
+
+    // Mobile theme toggle (shown in mobile sidebar)
+    document.getElementById("mobileThemeToggle").addEventListener("click", () => this.toggleTheme());
+
+    // Mobile logout button (shown in mobile sidebar)
+    document.getElementById("mobileLogoutBtn").addEventListener("click", () => this.logout());
+
+    // Top bar profile dropdown
+    document.getElementById("topBarProfileBtn").addEventListener("click", (e) => this.toggleProfileDropdown(e));
+    document.getElementById("topBarProfileSelect").addEventListener("change", (e) => this.switchProfile(e.target.value));
+    document.getElementById("topBarNewProfileBtn").addEventListener("click", () => this.showModal("profileModal"));
+    document.getElementById("topBarAdminBtn").addEventListener("click", () => { window.location.href = "/admin.html"; });
+    document.getElementById("topBarLogoutBtn").addEventListener("click", () => this.logout());
+
+    // Close profile dropdown when clicking outside
+    document.addEventListener("click", (e) => {
+      const dropdown = document.getElementById("profileDropdownMenu");
+      const profileBtn = document.getElementById("topBarProfileBtn");
+      if (dropdown && dropdown.classList.contains("open") && !dropdown.contains(e.target) && e.target !== profileBtn) {
+        dropdown.classList.remove("open");
+        profileBtn.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    // Sidebar toggle (desktop) - persist expanded/collapsed state
+    document.getElementById("sidebarToggleBtn")?.addEventListener("click", () => this.toggleSidebarPinned());
+
+    // Sidebar profile selector (mobile)
     document.getElementById("profileSelect").addEventListener("change", (e) => this.switchProfile(e.target.value));
     document.getElementById("newProfileBtn").addEventListener("click", () => this.showModal("profileModal"));
 
@@ -363,9 +402,7 @@ class CoinTrackerApp {
     document.getElementById("confirmDeleteAccountBtn").addEventListener("click", () => this.deleteAccount());
 
     document.getElementById("createProfileBtn").addEventListener("click", () => this.createProfile());
-    document.getElementById("logoutBtn").addEventListener("click", () => this.logout());
-
-    document.getElementById("supportBtn").addEventListener("click", () => this.showModal("supportModal"));
+document.getElementById("supportBtn").addEventListener("click", () => this.showModal("supportModal"));
     document.querySelectorAll(".donation-card").forEach((card) => {
       card.addEventListener("click", () => {
         const num = card.dataset.number;
@@ -380,6 +417,9 @@ class CoinTrackerApp {
     });
 
     document.getElementById("saveTransactionBtn").addEventListener("click", () => this.saveEditedTransaction());
+
+    // Notification read functionality
+    document.getElementById("markAllReadBtn")?.addEventListener("click", () => this.markAllNotificationsRead());
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -410,6 +450,11 @@ class CoinTrackerApp {
     if (btn) {
       btn.innerHTML = dark ? `${getIcon('sun')} Light Mode` : `${getIcon('moon')} Dark Mode`;
     }
+    // Update top bar theme toggle icon
+    const topBarThemeBtn = document.getElementById("topBarThemeToggle");
+    if (topBarThemeBtn) {
+      topBarThemeBtn.innerHTML = dark ? getIcon('sun') : getIcon('moon');
+    }
     if (Object.keys(this.charts).length > 0) this.updateAnalyticsUI();
   }
 
@@ -419,7 +464,12 @@ class CoinTrackerApp {
     if (this.role === "admin") {
       const c = document.getElementById("adminPanelBtnContainer");
       if (c) c.style.display = "block";
+      // Show admin button in top bar dropdown
+      const adminBtn = document.getElementById("topBarAdminBtn");
+      if (adminBtn) adminBtn.style.display = "flex";
     }
+    // Update profile dropdown select in top bar
+    this.updateTopBarProfileDropdown();
   }
 
   updateBalanceUI() {
@@ -487,9 +537,99 @@ class CoinTrackerApp {
     ).join("");
   }
 
+  updateTopBarProfileDropdown() {
+    const sel = document.getElementById("topBarProfileSelect");
+    if (!sel) return;
+    sel.innerHTML = this.allProfiles.map((p) =>
+      `<option value="${p}" ${p === this.currentProfile ? "selected" : ""}>${p}</option>`
+    ).join("");
+  }
+
+  toggleProfileDropdown(e) {
+    const dropdown = document.getElementById("profileDropdownMenu");
+    const btn = document.getElementById("topBarProfileBtn");
+    if (!dropdown || !btn) return;
+    const isOpen = dropdown.classList.toggle("open");
+    btn.setAttribute("aria-expanded", isOpen);
+    if (isOpen) {
+      // Focus first focusable element
+      const focusable = dropdown.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable) focusable.focus();
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────
-  //  Analytics
+  //  Notification Read Functionality
   // ─────────────────────────────────────────────────────────────
+
+  getReadNotificationIds() {
+    try {
+      const stored = localStorage.getItem("cointracker_read_notifications");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveReadNotificationIds(ids) {
+    try {
+      localStorage.setItem("cointracker_read_notifications", JSON.stringify(ids));
+    } catch (e) {
+      console.warn("Failed to save read notification IDs:", e);
+    }
+  }
+
+  getNotificationIds() {
+    // Generate stable IDs for current notifications based on their content
+    const alerts = this.notificationAlerts;
+    const achs = this.achievements;
+    const ids = [];
+    alerts.forEach((a, i) => ids.push(`alert-${i}-${a.title.replace(/\s+/g, '-')}`));
+    achs.forEach((a, i) => ids.push(`achievement-${a.id}`));
+    return ids;
+  }
+
+  getUnreadCount() {
+    const readIds = new Set(this.getReadNotificationIds());
+    const allIds = this.getNotificationIds();
+    return allIds.filter(id => !readIds.has(id)).length;
+  }
+
+  updateNotificationBadges() {
+    const count = this.getUnreadCount();
+    const badges = [
+      document.getElementById("achievementBadge"),
+      document.getElementById("mobileAchievementBadge"),
+      document.getElementById("topBarAchievementBadge"),
+    ];
+    badges.forEach(badge => {
+      if (badge) {
+        badge.style.display = count > 0 ? "inline-block" : "none";
+        badge.textContent = count > 9 ? "9+" : String(count);
+      }
+    });
+  }
+
+  markNotificationsAsRead(notificationIds) {
+    const readIds = new Set(this.getReadNotificationIds());
+    notificationIds.forEach(id => readIds.add(id));
+    this.saveReadNotificationIds([...readIds]);
+    this.updateNotificationBadges();
+    this.updateNotificationsUI(); // Re-render to show read state
+  }
+
+  markAllNotificationsRead() {
+    const allIds = this.getNotificationIds();
+    this.markNotificationsAsRead(allIds);
+    this.showToast("All notifications marked as read", "success");
+  }
+
+  // Called when notifications page is shown
+  onNotificationsPageShown() {
+    const allIds = this.getNotificationIds();
+    this.markNotificationsAsRead(allIds);
+  }
+
   getAnalyticsTxns() {
     const now = new Date(); let from, to;
     if (this.analyticsPeriod === "monthly") {
@@ -749,46 +889,54 @@ class CoinTrackerApp {
         grid.appendChild(div);
       });
     }
-    const count = achs.length;
-    ["achievementBadge", "mobileAchievementBadge"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.display = count > 0 ? "inline-block" : "none";
-      el.textContent   = count > 9 ? "9+" : String(count);
-    });
+    // Badge updates are now handled by updateNotificationBadges() based on unread count
   }
 
   updateNotificationsUI() {
+    const readIds = new Set(this.getReadNotificationIds());
+    const alerts = this.notificationAlerts;
+    const achs = this.achievements;
+
     const alertsEl = document.getElementById("alertsList");
     if (alertsEl) {
-      const alerts = this.notificationAlerts;
       alertsEl.innerHTML = alerts.length === 0
         ? `<p class="muted-text">No alerts right now. Keep tracking!</p>`
-        : alerts.map((a) => `
-            <div class="alert-item">
-              <div class="alert-icon">${a.icon}</div>
-              <div class="alert-text">
-                <div class="alert-title">${a.title}</div>
-                <div class="alert-sub">${a.sub}</div>
-              </div>
-            </div>`).join("");
+        : alerts.map((a, i) => {
+            const id = `alert-${i}-${a.title.replace(/\s+/g, '-')}`;
+            const isRead = readIds.has(id);
+            return `
+              <div class="alert-item ${isRead ? 'read' : ''}" data-notif-id="${id}">
+                <div class="alert-icon">${a.icon}</div>
+                <div class="alert-text">
+                  <div class="alert-title">${a.title}</div>
+                  <div class="alert-sub">${a.sub}</div>
+                </div>
+              </div>`;
+          }).join("");
     }
+
     const notifEl = document.getElementById("notif-achievements-list");
     if (notifEl) {
-      const achs = this.achievements;
       notifEl.innerHTML = achs.length === 0
         ? `<div class="empty-achievements"><p>No achievements unlocked yet.</p>
            <p class="muted-text" style="margin-top:6px">Add transactions to start earning badges!</p></div>`
-        : achs.map((a) => `
-            <div class="notif-achievement-item">
-              <div class="notif-achievement-icon">${a.icon}</div>
-              <div class="notif-achievement-info">
-                <div class="notif-achievement-name">${a.name}</div>
-                <div class="notif-achievement-desc">${a.desc}</div>
-              </div>
-              <div class="notif-achievement-check">✓</div>
-            </div>`).join("");
+        : achs.map((a) => {
+            const id = `achievement-${a.id}`;
+            const isRead = readIds.has(id);
+            return `
+              <div class="notif-achievement-item ${isRead ? 'read' : ''}" data-notif-id="${id}">
+                <div class="notif-achievement-icon">${a.icon}</div>
+                <div class="notif-achievement-info">
+                  <div class="notif-achievement-name">${a.name}</div>
+                  <div class="notif-achievement-desc">${a.desc}</div>
+                </div>
+                <div class="notif-achievement-check">✓</div>
+              </div>`;
+          }).join("");
     }
+
+    // Update badges
+    this.updateNotificationBadges();
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1237,7 +1385,10 @@ class CoinTrackerApp {
     document.querySelectorAll(".mobile-nav-btn").forEach((b) =>
       b.classList.toggle("active", b.dataset.page === pageId));
     if (pageId === "analytics")     this.updateAnalyticsUI();
-    if (pageId === "notifications") this.updateNotificationsUI();
+    if (pageId === "notifications") {
+      this.updateNotificationsUI();
+      this.onNotificationsPageShown();
+    }
   }
 
   switchTab(tabEl) {
@@ -1252,6 +1403,57 @@ class CoinTrackerApp {
     sidebar.classList.toggle("nav-expanded");
     document.getElementById("hamburgerBtn")
       .setAttribute("aria-expanded", sidebar.classList.contains("nav-expanded"));
+  }
+
+  // Sidebar pinned state (desktop) - persists user preference
+  getSidebarPinned() {
+    try {
+      return localStorage.getItem("cointracker_sidebar_pinned") === "true";
+    } catch {
+      return true; // Default to pinned (expanded) on desktop
+    }
+  }
+
+  setSidebarPinned(pinned) {
+    try {
+      localStorage.setItem("cointracker_sidebar_pinned", String(pinned));
+    } catch (e) {
+      console.warn("Failed to save sidebar pinned state:", e);
+    }
+  }
+
+  applySidebarPinnedState() {
+    const sidebar = document.querySelector(".sidebar");
+    const toggleBtn = document.getElementById("sidebarToggleBtn");
+    if (!sidebar || !toggleBtn) return;
+
+    const isDesktop = window.matchMedia("(min-width: 1025px)").matches;
+    if (!isDesktop) return; // Only apply on desktop >1024px
+
+    const pinned = this.getSidebarPinned();
+    if (pinned) {
+      sidebar.classList.add("expanded");
+      toggleBtn.setAttribute("aria-label", "Collapse sidebar");
+      toggleBtn.setAttribute("aria-expanded", "true");
+      toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+    } else {
+      sidebar.classList.remove("expanded");
+      toggleBtn.setAttribute("aria-label", "Expand sidebar");
+      toggleBtn.setAttribute("aria-expanded", "false");
+      toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+    }
+  }
+
+  toggleSidebarPinned() {
+    const sidebar = document.querySelector(".sidebar");
+    const toggleBtn = document.getElementById("sidebarToggleBtn");
+    if (!sidebar || !toggleBtn) return;
+
+    const currentlyPinned = sidebar.classList.contains("expanded");
+    const newPinned = !currentlyPinned;
+
+    this.setSidebarPinned(newPinned);
+    this.applySidebarPinnedState();
   }
 
   showModal(id) {
@@ -1343,23 +1545,21 @@ class CoinTrackerApp {
 
   _handleEscape(id, e) {
     if (e.key === 'Escape') {
-      this.closeModal(id);
-      // If it's the confirm modal, resolve the promise as false (cancel)
-      if (id === "confirmModal") {
-        // The closeModal will be called, but we need to resolve the promise
-        // The confirm() promise will be resolved by the cleanup in closeModal
-        // Actually, we need to handle this differently - the confirm promise needs to be resolved
-        // Let's store the confirm resolver
+      if (id === "confirmModal" && this._confirmResolver) {
+        this._confirmResolver(false);
+        this._confirmResolver = null;
       }
+      this.closeModal(id);
     }
   }
 
   showToast(message, type = "success") {
     const toast = document.getElementById("toast");
     if (!toast) return;
+    if (this._toastTimeout) clearTimeout(this._toastTimeout);
     toast.textContent = message;
     toast.className   = `toast ${type} show`;
-    setTimeout(() => toast.classList.remove("show"), 3000);
+    this._toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
   }
 }
 
