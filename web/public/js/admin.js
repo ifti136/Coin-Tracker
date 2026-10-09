@@ -84,6 +84,23 @@ function setupEventListeners() {
       updateSortIndicators();
     });
   });
+
+  // Confirm modal close button
+  document.querySelectorAll("[data-modal]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const modalId = btn.dataset.modal;
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = '';
+        if (_lastFocused) _lastFocused.focus();
+        if (_confirmResolver) {
+          _confirmResolver(false);
+          _confirmResolver = null;
+        }
+      }
+    });
+  });
 }
 
 // ── Theme ─────────────────────────────────────────────────────

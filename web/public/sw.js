@@ -6,7 +6,7 @@ const CACHE_NAME = 'coin-tracker-v1';
 const STATIC_CACHE = 'coin-tracker-static-v1';
 const DYNAMIC_CACHE = 'coin-tracker-dynamic-v1';
 
-// Assets to cache on install
+// Assets to cache on install (same-origin only)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -23,6 +23,10 @@ const STATIC_ASSETS = [
   '/images/bkash.png',
   '/images/nagad.png',
   '/images/rocket.png',
+];
+
+// Cross-origin assets to cache separately (with individual error handling)
+const CROSS_ORIGIN_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
   'https://cdn.jsdelivr.net/npm/chart.js'
 ];
@@ -34,6 +38,20 @@ self.addEventListener('install', (event) => {
       .then((cache) => {
         console.log('[SW] Caching static assets');
         return cache.addAll(STATIC_ASSETS.map(url => new Request(url, { credentials: 'same-origin' })));
+      })
+      .then(() => {
+        // Cache cross-origin assets separately (don't fail install if they fail)
+        return Promise.allSettled(
+          CROSS_ORIGIN_ASSETS.map(url => 
+            caches.open(STATIC_CACHE).then(cache => 
+              fetch(new Request(url, { mode: 'cors', credentials: 'omit' }))
+                .then(response => {
+                  if (response.ok) return cache.put(url, response);
+                })
+                .catch(() => { /* ignore cross-origin failures */ })
+            )
+          )
+        );
       })
       .then(() => self.skipWaiting())
   );

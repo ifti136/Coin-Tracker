@@ -263,3 +263,5 @@ temp/
 .history/
 *.pid
 *.pid.lock
+# Serena Serena Serena
+/.serena/

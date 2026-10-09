@@ -4,7 +4,7 @@
   "description": "Cross-platform in-game coin tracker for eFootball — track earnings, spending, goals, and analytics",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
+  "background_color": "#1e293b",
   "theme_color": "#3b82f6",
   "orientation": "any",
   "icons": [
