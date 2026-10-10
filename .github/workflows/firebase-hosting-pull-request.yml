@@ -13,8 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Write firebase-config.js from secret
+        run: printf '%s' "${{ secrets.FIREBASE_CONFIG_JS }}" > web/public/firebase-config.js
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COINTRACK_16CE2 }}
           projectId: cointrack-16ce2
+          entryPoint: web
