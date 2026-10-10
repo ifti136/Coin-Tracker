@@ -55,8 +55,8 @@ const ACHIEVEMENT_DEFS = [
   { id: "coin_hoarder",    icon: "accountBalance", name: "Coin Hoarder",       desc: "Reach a balance of 10,000 coins", check: (s) => s.balance >= 10000 },
   { id: "goal_reached",    icon: "emojiEvents", name: "Epic Box Secured!",   desc: "Reach your goal balance",         check: (s) => s.balance >= s.goal },
   { id: "disciplined",     icon: "shield2", name: "Disciplined",         desc: "No spending for 7+ days",         check: (s) => s.daysSinceSpend >= 7 },
-  { id: "streak_3",        icon: "localFireDepartment", name: "3-Day Login Streak",  desc: "3 consecutive Login days",        check: (s) => s.loginStreak >= 3 },
-  { id: "streak_7",        icon: "localFireDepartment", name: "7-Day Login Streak",  desc: "7 consecutive Login days",        check: (s) => s.loginStreak >= 7 },
+  { id: "streak_3",        icon: "🔥", name: "3-Day Login Streak",  desc: "3 consecutive Login days",        check: (s) => s.loginStreak >= 3 },
+  { id: "streak_7",        icon: "🔥", name: "7-Day Login Streak",  desc: "7 consecutive Login days",        check: (s) => s.loginStreak >= 7 },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -412,7 +412,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       });
     });
 
-    document.querySelectorAll(".close[data-modal]").forEach((btn) => {
+    document.querySelectorAll(".close-btn[data-modal]").forEach((btn) => {
       btn.addEventListener("click", () => this.closeModal(btn.dataset.modal));
     });
 
@@ -883,7 +883,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       achs.forEach((a) => {
         const div = document.createElement("div");
         div.className = "achievement-item";
-        div.innerHTML = `<div class="achievement-icon">${a.icon}</div>
+        div.innerHTML = `<div class="achievement-icon">${getAchievementIcon(a.icon)}</div>
                          <div class="achievement-name">${a.name}</div>
                          <div class="achievement-desc">${a.desc}</div>`;
         grid.appendChild(div);
