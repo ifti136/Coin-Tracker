@@ -78,9 +78,16 @@ body {
   padding: 36px 30px;
   border-radius: 20px;
   width: 90%;
-  max-width: 400px;
+  max-width: 480px;
   border: 1px solid var(--outline);
   box-shadow: var(--shadow-lg);
+}
+
+/* ── Laptop/desktop tweaks ── */
+@media (min-width: 1025px) {
+  .auth-card {
+    max-width: 520px;
+  }
 }
 
 /* ── Logo ── */
