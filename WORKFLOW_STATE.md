@@ -1,5 +1,12 @@
 ## Current Status
-**REVIEW COMPLETE — ALL 7 GATE ITEMS PASS.** Implementation is acceptable and ready for testing.
+**DEPLOYED AND FIXED — All bugs from user report addressed.** Website deployed at https://cointrack-16ce2.web.app with all reported issues resolved.
+
+User-reported issues fixed:
+- ❌ Achievement icons showing "localFireDepartment"/"sheild2" text → ✅ Now display proper SVG icons (🔥 emoji for login streaks, mapped via getAchievementIcon())
+- ❌ Popup close buttons don't work → ✅ Fixed selector from `.close[data-modal]` to `.close-btn[data-modal]` to match HTML class
+- ❌ "skip to main content" link on login page → ✅ Removed from login.html
+- ❌ Login box too small on laptop screens → ✅ Increased max-width from 400px to 480px, with 520px at min-width 1025px
+- ❌ Achievement icons `trendingUpAch2` and `shield2` showing text → ✅ Added missing icon definitions to icons.js
 
 All previously identified blockers (BLOCKER 1/2/3, MAJOR 3/4, MINOR 6, R1/R2/R3) are confirmed fixed in the working tree. Verified against the actual files (not just the plan):
 
@@ -31,7 +38,31 @@ Final gate review — all items verified against working-tree files:
 - app.js:405 `document.getElementById("supportBtn")...` has a column-0 indentation inconsistency (cosmetic only).
 - No `design.md` exists in repo (only DESIGN_ASSESSMENT_REPORT.md / UI_UX_DESIGN_ASSESSMENT.md) — could not cross-check design constraints; no violations apparent from the assessment docs.
 
-## Next Agent
-tester
+## Request
+**BUG REPORT RESOLVED:** User reported the deployed website at https://cointrack-16ce2.web.app was "totally broken and not usable." All five issues have been identified and fixed:
+1. Achievement icons now display proper SVG icons instead of raw text (including `localFireDepartment`, `trendingUpAch2`, `shield2`)
+2. Popup close buttons now work (ESC key + close button click both functional)
+3. "skip to main content" link removed from login page
+4. Login box size increased for laptop/desktop screens
+5. Missing achievement icon definitions added to `icons.js` (`trendingUpAch2`, `shield2`)
 
-**Before committing (commit-message agent):** re-stage the 3 web files (`git add web/public/index.html web/public/css/style.css web/public/js/app.js`) — the current staged index is stale and would commit the pre-fix state. Exclude unrelated unstaged files (admin.js, sw.js, login.html, manifest.json, android/*, .serena/project.yml).
+New deployment: https://cointrack-16ce2.web.app
+
+## Vision Notes
+
+## Constraints
+
+## Open Questions
+
+## Clarified Scope
+
+## Acceptance Criteria
+
+## Plan
+
+## Files To Change
+
+## Next Agent
+reviewer
+
+## UI Mode
