@@ -549,12 +549,15 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const dropdown = document.getElementById("profileDropdownMenu");
     const btn = document.getElementById("topBarProfileBtn");
     if (!dropdown || !btn) return;
+    e?.stopPropagation();
     const isOpen = dropdown.classList.toggle("open");
     btn.setAttribute("aria-expanded", isOpen);
     if (isOpen) {
-      // Focus first focusable element
-      const focusable = dropdown.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (focusable) focusable.focus();
+      // Debounce focus to avoid race with DOM insertion
+      requestAnimationFrame(() => {
+        const focusable = dropdown.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable) focusable.focus();
+      });
     }
   }
 
@@ -1561,6 +1564,14 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     toast.className   = `toast ${type} show`;
     this._toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
   }
+}
+
+function showLoading(overlay = document.getElementById("loadingOverlay")) {
+  if (overlay) { overlay.classList.remove("hidden"); overlay.style.display = "flex"; }
+}
+
+function hideLoading(overlay = document.getElementById("loadingOverlay")) {
+  if (overlay) { overlay.classList.add("hidden"); overlay.style.display = "none"; }
 }
 
 const app = new CoinTrackerApp();
