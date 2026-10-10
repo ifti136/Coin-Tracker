@@ -168,6 +168,9 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# Firebase web config (generated from FIREBASE_CONFIG_JS secret in CI)
+firebase-config.js
+
 # Hosting deploy cache
 .firebaserc
 

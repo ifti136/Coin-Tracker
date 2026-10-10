@@ -15,7 +15,7 @@
     },
     {
       "src": "/images/coin.png",
-      "sizes": "512x512",
+      "sizes": "1075x1075",
       "type": "image/png",
       "purpose": "any maskable"
     }
