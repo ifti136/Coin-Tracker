@@ -16,7 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { firebaseConfig } from "/firebase-config.js";
-import { getIcon, getAchievementIcon, getAlertIcon } from "/js/icons.js";
+import { getIcon, getAlertIcon } from "/js/icons.js";
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
