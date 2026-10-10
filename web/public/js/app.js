@@ -1580,3 +1580,12 @@ function hideLoading(overlay = document.getElementById("loadingOverlay")) {
 
 const app = new CoinTrackerApp();
 app.init();
+
+// Fresh CSS load guard (runs on every page start)
+(function() {
+    var link = document.querySelector('link[href*="style.css"]');
+    if (link) {
+        // Add timestamp to prevent HTTP cache staleing
+        link.href += (link.href.indexOf('?') === -1 ? '?' : '&') + 't=' + new Date().getTime();
+    }
+})();
