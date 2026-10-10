@@ -12,7 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Write firebase-config.js from secret
-        run: printf '%s' "${{ secrets.FIREBASE_CONFIG_JS }}" > web/public/firebase-config.js
+        env:
+          FIREBASE_CONFIG_JS: ${{ secrets.FIREBASE_CONFIG_JS }}
+        run: printf '%s' "$FIREBASE_CONFIG_JS" > web/public/firebase-config.js
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

@@ -266,5 +266,15 @@ temp/
 .history/
 *.pid
 *.pid.lock
+
+# =============================================================================
+#  DEV-ONLY DOCUMENTS  (local working files, not for the production repo)
+# =============================================================================
+
+WORKFLOW_STATE.md
+FIX_PLAN.md
+DESIGN_ASSESSMENT_REPORT.md
+UI_UX_DESIGN_ASSESSMENT.md
+
 # Serena Serena Serena
 /.serena/
