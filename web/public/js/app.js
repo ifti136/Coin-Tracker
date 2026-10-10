@@ -1571,7 +1571,11 @@ function showLoading(overlay = document.getElementById("loadingOverlay")) {
 }
 
 function hideLoading(overlay = document.getElementById("loadingOverlay")) {
-  if (overlay) { overlay.classList.add("hidden"); overlay.style.display = "none"; }
+  if (overlay) {
+    overlay.classList.add("hidden");
+    // Remove from DOM after transition completes (0.3s)
+    setTimeout(() => overlay.remove(), 350);
+  }
 }
 
 const app = new CoinTrackerApp();
