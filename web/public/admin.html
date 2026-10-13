@@ -21,79 +21,120 @@
   </script>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/admin.css">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="/css/base.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="font-sans text-[var(--on-bg-color)] bg-[var(--bg-color)] text-sm m-0 p-0 min-h-screen">
+  <div id="loadingOverlay" role="status" aria-live="polite">
+    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-[var(--surface-color)] border border-[var(--outline)] shadow-2xl max-w-sm mx-4 text-center">
+      <div class="relative flex items-center justify-center mb-4">
+        <div class="w-12 h-12 rounded-full border-4 border-[var(--outline-variant)] border-t-[var(--primary-color)] animate-spin"></div>
+        <div class="absolute w-6 h-6 bg-amber-400 rounded-md flex items-center justify-center text-white font-bold text-xs shadow-sm">C</div>
+      </div>
+      <div class="flex items-center gap-2 text-[var(--on-surface)] font-semibold text-base mb-1">
+        <svg class="w-4 h-4 text-[var(--primary-color)] shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+        </svg>
+        <span id="loadingMessage">Retrieving admin data from database...</span>
+      </div>
+      <p id="loadingSubtext" class="text-xs text-[var(--muted-color)] m-0">Querying Cloud Firestore collections...</p>
+    </div>
+  </div>
+
   <a href="#main-content" class="skip-link">Skip to main content</a>
   <main id="main-content" role="main">
-  <div class="admin-container">
+  <div class="max-w-[1200px] mx-auto px-5 py-7">
 
-    <header class="admin-header">
-      <div class="admin-logo">
-        <div class="coin-icon">C</div>
-        <h1>Admin Panel</h1>
+    <header class="flex justify-between items-center mb-7 flex-wrap gap-3">
+      <div class="flex items-center gap-3.5">
+        <div class="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center text-white font-bold">C</div>
+        <h1 class="text-[26px] font-bold text-[var(--on-surface)]">Admin Panel</h1>
+        <div id="dbSyncStatus" class="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-[var(--surface-variant)] text-[var(--muted-color)] border border-[var(--outline)]" title="Database connection status">
+          <span id="dbSyncDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="dbSyncText">Retrieving data...</span>
+        </div>
       </div>
-      <div class="admin-header-actions">
-        <span id="adminUsername" class="admin-username"></span>
+      <div class="flex items-center gap-3">
+        <span id="adminUsername" class="text-[13px] text-[var(--on-surface-variant)] font-medium"></span>
         <a href="/" class="btn secondary">← Back to App</a>
-        <button id="themeToggle" class="btn secondary" aria-label="Toggle dark mode"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+        <button id="themeToggle" class="btn secondary" aria-label="Toggle dark mode">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
       </div>
     </header>
 
-    <!-- ── Stats row ───────────────────────────── -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Total Users</div>
-        <div id="totalUsers" class="stat-value primary">—</div>
+    <div class="grid grid-cols-3 gap-5 mb-5 max-sm:grid-cols-1">
+      <div class="bg-[var(--card-bg)] border border-[var(--outline)] rounded-xl p-6 shadow-[var(--shadow-md)]">
+        <div class="text-xs text-[var(--muted-color)] font-semibold uppercase mb-1">Total Users</div>
+        <div id="totalUsers" class="text-2xl font-bold text-[var(--primary-color)]">—</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Coins Tracked</div>
-        <div id="totalCoins" class="stat-value positive">—</div>
+      <div class="bg-[var(--card-bg)] border border-[var(--outline)] rounded-xl p-6 shadow-[var(--shadow-md)]">
+        <div class="text-xs text-[var(--muted-color)] font-semibold uppercase mb-1">Total Coins Tracked</div>
+        <div id="totalCoins" class="text-2xl font-bold text-[var(--success-color)]">—</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Transactions</div>
-        <div id="totalTransactions" class="stat-value">—</div>
+      <div class="bg-[var(--card-bg)] border border-[var(--outline)] rounded-xl p-6 shadow-[var(--shadow-md)]">
+        <div class="text-xs text-[var(--muted-color)] font-semibold uppercase mb-1">Total Transactions</div>
+        <div id="totalTransactions" class="text-2xl font-bold text-[var(--on-surface)]">—</div>
       </div>
     </div>
 
-    <!-- ── New users chart ─────────────────────── -->
-    <div class="card">
-      <h3>New Users — Last 7 Days</h3>
+    <div class="bg-[var(--card-bg)] border border-[var(--outline)] p-6 rounded-xl shadow-[var(--shadow-md)] mb-5">
+      <h3 class="text-base font-semibold text-[var(--on-surface)] mb-1">New Users — Last 7 Days</h3>
       <div id="newUsersChart" class="bar-chart-container"></div>
     </div>
 
-    <!-- ── Broadcast ───────────────────────────── -->
-    <div class="card">
-      <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12a2 2 0 0 0 4 0"/><path d="M12 8v8"/></svg></span> Broadcast Message</h3>
-      <p style="color:var(--muted-color);font-size:13px;margin-bottom:14px">
+    <div class="bg-[var(--card-bg)] border border-[var(--outline)] p-6 rounded-xl shadow-[var(--shadow-md)] mb-5">
+      <h3 class="text-base font-semibold text-[var(--on-surface)] mb-1 flex items-center gap-2">
+        <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12a2 2 0 0 0 4 0"/><path d="M12 8v8"/></svg></span>
+        Broadcast Message
+      </h3>
+      <p class="text-[13px] text-[var(--muted-color)] mb-3.5">
         This message shows as a toast to all users when they load the app. Leave blank to clear it.
       </p>
-      <div class="broadcast-form">
-        <input type="text" id="broadcastMessage" placeholder="Enter message... (leave blank to clear)">
+      <div class="flex gap-2.5 mt-2.5 max-sm:flex-col">
+        <input type="text" id="broadcastMessage" placeholder="Enter message... (leave blank to clear)"
+          class="flex-1 px-3.5 py-2.5 rounded-lg border border-[var(--outline)] bg-[var(--surface-variant)] text-[var(--on-surface)] font-[inherit] text-sm
+                 focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
         <button id="setBroadcastBtn" class="btn primary">Set Broadcast</button>
       </div>
-      <div id="currentBroadcast" class="current-broadcast"></div>
+      <div id="currentBroadcast" class="mt-2.5 text-xs text-[var(--on-surface-variant)] min-h-[18px]"></div>
     </div>
 
-    <!-- ── User management ─────────────────────── -->
-    <div class="card">
-      <h3><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> User Management</h3>
-      <input type="text" id="userSearch" class="user-search-input" placeholder="Search by username...">
+    <div class="bg-[var(--card-bg)] border border-[var(--outline)] p-6 rounded-xl shadow-[var(--shadow-md)]">
+      <h3 class="text-base font-semibold text-[var(--on-surface)] mb-3 flex items-center gap-2">
+        <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        User Management
+      </h3>
+      <input type="text" id="userSearch" placeholder="Search by username..."
+        class="w-full px-3.5 py-2.5 rounded-lg border border-[var(--outline)] bg-[var(--surface-variant)] text-[var(--on-surface)] font-[inherit] text-sm mb-4
+               focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
 
       <div id="paginationControlsTop" class="pagination-controls"></div>
 
-      <div class="table-wrapper">
-        <table class="user-table">
+      <div class="overflow-x-auto">
+        <table class="user-table w-full border-collapse min-w-[700px]">
           <thead>
             <tr>
-              <th data-sort="username">Username ↕</th>
-              <th data-sort="balance">Balance ↕</th>
-              <th data-sort="txn_count">Txn Count ↕</th>
-              <th data-sort="created_at">Joined ↕</th>
-              <th data-sort="last_updated">Last Active ↕</th>
-              <th>Actions</th>
+              <th data-sort="username"    class="px-4 py-3 text-left border-b border-[var(--outline)] text-xs text-[var(--on-surface-variant)] uppercase font-bold bg-[var(--surface-variant)] cursor-pointer select-none hover:text-[var(--on-surface)]">Username ↕</th>
+              <th data-sort="balance"     class="px-4 py-3 text-left border-b border-[var(--outline)] text-xs text-[var(--on-surface-variant)] uppercase font-bold bg-[var(--surface-variant)] cursor-pointer select-none hover:text-[var(--on-surface)]">Balance ↕</th>
+              <th data-sort="txn_count"   class="px-4 py-3 text-left border-b border-[var(--outline)] text-xs text-[var(--on-surface-variant)] uppercase font-bold bg-[var(--surface-variant)] cursor-pointer select-none hover:text-[var(--on-surface)]">Txn Count ↕</th>
+              <th data-sort="created_at"  class="px-4 py-3 text-left border-b border-[var(--outline)] text-xs text-[var(--on-surface-variant)] uppercase font-bold bg-[var(--surface-variant)] cursor-pointer select-none hover:text-[var(--on-surface)]">Joined ↕</th>
+              <th data-sort="last_updated" class="px-4 py-3 text-left border-b border-[var(--outline)] text-xs text-[var(--on-surface-variant)] uppercase font-bold bg-[var(--surface-variant)] cursor-pointer select-none hover:text-[var(--on-surface)]">Last Active ↕</th>
+              <th class="px-4 py-3 text-left border-b border-[var(--outline)] text-xs text-[var(--on-surface-variant)] uppercase font-bold bg-[var(--surface-variant)]">Actions</th>
             </tr>
           </thead>
           <tbody id="userTableBody">
@@ -110,25 +151,23 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Generic confirm modal -->
-  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title" id="confirmModalTitle">Confirm</h3>
-        <button class="close-btn" data-modal="confirmModal" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div id="confirmModal" class="modal fixed z-[1000] inset-0 bg-black/85 backdrop-blur-[8px]" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div class="px-6 py-6 border-b border-[var(--border-color)] flex justify-between items-center">
+        <h3 class="m-0 text-lg font-semibold" id="confirmModalTitle">Confirm</h3>
+        <button class="close-btn bg-none border-0 text-[var(--muted-color)] text-2xl leading-none cursor-pointer p-1 inline-flex items-center justify-center rounded-md hover:text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors" data-modal="confirmModal" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
-      <div class="modal-body">
+      <div class="px-6 py-6">
         <p id="confirmModalMessage"></p>
       </div>
-      <div class="modal-footer">
-        <button id="confirmModalCancel" class="btn secondary">Cancel</button>
+      <div class="px-6 py-5 border-t border-[var(--border-color)] text-right flex gap-2 justify-end">
+        <button id="confirmModalCancel"  class="btn secondary">Cancel</button>
         <button id="confirmModalConfirm" class="btn danger">Confirm</button>
       </div>
     </div>
   </div>
 
   <script>
-  // Service Worker Registration
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
@@ -140,7 +179,7 @@
         });
     });
   }
-</script>
-<script type="module" src="/js/admin.js"></script>
+  </script>
+  <script type="module" src="/js/admin.js"></script>
 </body>
 </html>

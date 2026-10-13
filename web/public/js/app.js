@@ -53,10 +53,16 @@ const ACHIEVEMENT_DEFS = [
   { id: "getting_started", icon: "savings", name: "Getting Started",    desc: "Reach a balance of 1,000 coins",  check: (s) => s.balance >= 1000 },
   { id: "serious_saver",   icon: "trendingUpAch2", name: "Serious Saver",      desc: "Reach a balance of 5,000 coins",  check: (s) => s.balance >= 5000 },
   { id: "coin_hoarder",    icon: "accountBalance", name: "Coin Hoarder",       desc: "Reach a balance of 10,000 coins", check: (s) => s.balance >= 10000 },
+  { id: "master_hoarder",  icon: "crown", name: "Master Hoarder",       desc: "Reach a balance of 25,000 coins", check: (s) => s.balance >= 25000 },
   { id: "goal_reached",    icon: "emojiEvents", name: "Epic Box Secured!",   desc: "Reach your goal balance",         check: (s) => s.balance >= s.goal },
+  { id: "first_coin",      icon: "dollarSign", name: "First Payday",        desc: "Record your first earning transaction", check: (s) => s.incomeCount >= 1 },
+  { id: "active_tracker",  icon: "target", name: "Active Tracker",      desc: "Record 25 total transactions",    check: (s) => s.txnCount >= 25 },
+  { id: "century_club",    icon: "zap", name: "Century Club",        desc: "Record 100 total transactions",   check: (s) => s.txnCount >= 100 },
+  { id: "high_roller",     icon: "trophy", name: "High Roller",         desc: "Earn 1,000+ coins in a single transaction", check: (s) => s.maxSingleIncome >= 1000 },
   { id: "disciplined",     icon: "shield2", name: "Disciplined",         desc: "No spending for 7+ days",         check: (s) => s.daysSinceSpend >= 7 },
   { id: "streak_3",        icon: "flame", name: "3-Day Login Streak",  desc: "3 consecutive Login days",        check: (s) => s.loginStreak >= 3 },
   { id: "streak_7",        icon: "flame", name: "7-Day Login Streak",  desc: "7 consecutive Login days",        check: (s) => s.loginStreak >= 7 },
+  { id: "streak_14",       icon: "flame", name: "14-Day Login Streak", desc: "14 consecutive Login days",       check: (s) => s.loginStreak >= 14 },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -82,16 +88,29 @@ class CoinTrackerApp {
 
   // ── Bootstrap ─────────────────────────────────────────────────
   async init() {
+    this.showLoading("Retrieving data from database...", "Connecting to Cloud Firestore...");
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = "/login.html"; return; }
+      if (!user) {
+        this.hideLoading();
+        window.location.href = "/login.html";
+        return;
+      }
       this.uid = user.uid;
-      await this.loadUserMeta();
-      await this.loadUserData();
-      this.setupEventListeners();
-      this.createHiddenFileInput();
-      this.updateAllUI();
-      this.applySidebarPinnedState();
-      this.checkBroadcast();
+      try {
+        await this.loadUserMeta();
+        await this.loadUserData();
+        this.setupEventListeners();
+        this.createHiddenFileInput();
+        this.updateAllUI();
+        this.applySidebarPinnedState();
+        this.checkBroadcast();
+      } catch (err) {
+        console.error("Failed to load user data from database:", err);
+        this.showToast("Failed to retrieve data from database.", "error");
+        this.updateSyncStatus("error", "Database error");
+      } finally {
+        this.hideLoading();
+      }
     });
   }
 
@@ -133,12 +152,20 @@ class CoinTrackerApp {
 
   // ── Save full user_data doc back to Firestore ─────────────────
   async saveUserData() {
+    this.updateSyncStatus("loading", "Saving to database...");
     this.userDataDoc.last_active_profile = this.currentProfile;
     const now = new Date().toISOString();
     if (this.userDataDoc.profiles?.[this.currentProfile]) {
       this.userDataDoc.profiles[this.currentProfile].last_updated = now;
     }
-    await setDoc(doc(db, "user_data", this.uid), this.userDataDoc);
+    try {
+      await setDoc(doc(db, "user_data", this.uid), this.userDataDoc);
+      this.updateSyncStatus("synced");
+    } catch (err) {
+      console.error("saveUserData error:", err);
+      this.updateSyncStatus("error", "Save failed");
+      throw err;
+    }
   }
 
   // ── Current profile data ──────────────────────────────────────
@@ -262,7 +289,23 @@ class CoinTrackerApp {
     const lastSpend = spends.length ? Math.max(...spends) : null;
     // -1 means never spent — won't trigger >= 7 check
     const daysSinceSpend = lastSpend ? Math.floor((Date.now() - lastSpend) / 86400000) : -1;
-    const state = { balance: this.balance, goal: this.goal, loginStreak: maxStreak, daysSinceSpend };
+
+    const incomes = txns.filter((t) => t.amount > 0);
+    const incomeCount = incomes.length;
+    const txnCount = txns.length;
+    const maxSingleIncome = incomes.length ? Math.max(...incomes.map((t) => t.amount)) : 0;
+    const totalEarned = incomes.reduce((sum, t) => sum + t.amount, 0);
+
+    const state = {
+      balance: this.balance,
+      goal: this.goal,
+      loginStreak: maxStreak,
+      daysSinceSpend,
+      incomeCount,
+      txnCount,
+      maxSingleIncome,
+      totalEarned,
+    };
     return ACHIEVEMENT_DEFS.filter((a) => a.check(state));
   }
 
@@ -303,7 +346,7 @@ class CoinTrackerApp {
   setupEventListeners() {
     document.getElementById("hamburgerBtn").addEventListener("click", () => this.toggleMobileNav());
 
-    document.querySelectorAll("nav.nav > .nav-btn").forEach((btn) => {
+    document.querySelectorAll("nav.nav > .nav-btn, nav.navbar > .nav-btn, .navbar > .nav-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         this.showPage(e.currentTarget.dataset.page);
         if (document.querySelector(".sidebar").classList.contains("nav-expanded")) this.toggleMobileNav();
@@ -349,7 +392,18 @@ class CoinTrackerApp {
       }
     });
 
-    // Sidebar toggle (desktop) - persist expanded/collapsed state
+    // Sidebar hover & collapse handling
+    const sidebarEl = document.querySelector(".sidebar");
+    if (sidebarEl) {
+      sidebarEl.addEventListener("mouseleave", () => {
+        sidebarEl.classList.remove("expanded");
+        if (document.activeElement && sidebarEl.contains(document.activeElement)) {
+          document.activeElement.blur();
+        }
+      });
+    }
+
+    // Sidebar toggle (desktop)
     document.getElementById("sidebarToggleBtn")?.addEventListener("click", () => this.toggleSidebarPinned());
 
     // Sidebar profile selector (mobile)
@@ -478,6 +532,19 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     document.getElementById("goalText").textContent         = `Goal: ${this.goal.toLocaleString()} coins`;
     document.getElementById("progressBar").style.width     = `${prog}%`;
     document.getElementById("progressPercent").textContent = `${prog}%`;
+
+    const remainingEl = document.getElementById("remainingPill");
+    if (remainingEl) {
+      if (bal >= this.goal) {
+        remainingEl.textContent = "🎉 Goal Achieved!";
+        remainingEl.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-100 font-semibold backdrop-blur-sm";
+      } else {
+        const remaining = Math.max(0, this.goal - bal);
+        remainingEl.textContent = `⚡ ${remaining.toLocaleString()} to goal`;
+        remainingEl.className = "text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm";
+      }
+    }
+
     const estEl = document.getElementById("goalEstimate");
     if (est === 0)          estEl.innerHTML = `${getIcon('partyPopper')} Goal reached!`;
     else if (est === "N/A") estEl.textContent = "Add earnings to see your estimate";
@@ -495,24 +562,49 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const grid = document.getElementById("quickActionsGrid");
     grid.innerHTML = "";
     const actions = this.quickActions;
-    if (!actions.length) {
-      grid.innerHTML = `<p style="color:var(--muted-color);font-size:13px">No quick actions yet. Add them in Settings.</p>`;
-      return;
+    if (actions.length) {
+      actions.forEach((action) => {
+        const btn = document.createElement("button");
+        // Mobile uses is_positive (snake_case)
+        btn.className = `quick-btn ${action.is_positive ? "positive" : "negative"}`;
+        btn.innerHTML = `<div class="quick-text">${action.text}</div>
+                         <div class="quick-amount">${action.is_positive ? "+" : "-"}${action.value}</div>`;
+        btn.onclick = async () => {
+          btn.classList.add("is-processing");
+          await this.addTransaction(action.is_positive ? action.value : -action.value, action.text);
+          btn.classList.remove("is-processing");
+          this.showToast(`'${action.text}' recorded!`, "success");
+        };
+        grid.appendChild(btn);
+      });
     }
-    actions.forEach((action) => {
-      const btn = document.createElement("button");
-      // Mobile uses is_positive (snake_case)
-      btn.className = `quick-btn ${action.is_positive ? "positive" : "negative"}`;
-      btn.innerHTML = `<div class="quick-text">${action.text}</div>
-                       <div class="quick-amount">${action.is_positive ? "+" : "-"}${action.value}</div>`;
-      btn.onclick = async () => {
-        btn.classList.add("is-processing");
-        await this.addTransaction(action.is_positive ? action.value : -action.value, action.text);
-        btn.classList.remove("is-processing");
-        this.showToast(`'${action.text}' recorded!`, "success");
-      };
-      grid.appendChild(btn);
-    });
+
+    // Append "+ New Action" shortcut tile
+    const addTile = document.createElement("button");
+    addTile.className = "quick-btn add-action-tile";
+    addTile.style.borderStyle = "dashed";
+    addTile.style.borderWidth = "2px";
+    addTile.style.display = "flex";
+    addTile.style.flexDirection = "column";
+    addTile.style.alignItems = "center";
+    addTile.style.justifyContent = "center";
+    addTile.style.textAlign = "center";
+    addTile.style.opacity = "0.75";
+    addTile.setAttribute("type", "button");
+    addTile.setAttribute("aria-label", "Create new quick action");
+    addTile.innerHTML = `<div class="quick-text" style="color:var(--primary-color)">+ New Action</div>
+                         <div class="quick-amount">Configure in settings</div>`;
+    addTile.onclick = () => {
+      this.showPage("settings");
+      setTimeout(() => {
+        const input = document.getElementById("newActionText");
+        if (input) {
+          input.focus();
+          input.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    };
+    grid.appendChild(addTile);
   }
 
   populateCategoryDropdowns() {
@@ -714,6 +806,31 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (el) el.innerHTML = `<span class="amount-positive">Earned: +${earned.toLocaleString()}</span> / <span class="amount-negative">Spent: -${spent.toLocaleString()}</span>`;
   }
 
+  getTypeBadge(isIncome) {
+    if (isIncome) {
+      return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+        Income
+      </span>`;
+    }
+    return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+      Expense
+    </span>`;
+  }
+
+  clearHistoryFilters() {
+    const fromEl = document.getElementById("dateFrom");
+    const toEl = document.getElementById("dateTo");
+    const srcEl = document.getElementById("historySourceFilter");
+    const searchEl = document.getElementById("historySearch");
+    if (fromEl) fromEl.value = "";
+    if (toEl) toEl.value = "";
+    if (srcEl) srcEl.value = "all";
+    if (searchEl) searchEl.value = "";
+    this.buildHistory();
+  }
+
   renderHistoryPage(page) {
     this.historyPage = page;
     const totalPages = Math.ceil(this.historyFiltered.length / TRANSACTIONS_PER_PAGE);
@@ -722,7 +839,37 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const tbody      = document.getElementById("historyTableBody");
     tbody.innerHTML  = "";
     if (!pageTxns.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted-color);padding:30px">No transactions found.<br><button class="btn primary" style="margin-top:12px" onclick="document.getElementById('addAmount').focus();document.querySelector('[data-page=\"dashboard\"]').click()">Add your first transaction</button></td></tr>`;
+      if (this.transactions.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="p-0">
+              <div class="flex flex-col items-center justify-center text-center py-14 px-4">
+                <div class="w-14 h-14 rounded-full bg-[var(--surface-variant)] flex items-center justify-center text-[var(--muted-color)] mb-3">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                </div>
+                <h3 class="text-base font-semibold mb-1">No transactions recorded yet</h3>
+                <p class="text-xs text-[var(--muted-color)] max-w-sm mb-4">Start by recording your earnings or expenses from the dashboard.</p>
+                <button type="button" class="btn primary" onclick="document.querySelector('[data-page=\\'dashboard\\']').click();setTimeout(()=>document.getElementById('addAmount')?.focus(),150)">Add First Transaction</button>
+              </div>
+            </td>
+          </tr>`;
+      } else {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="p-0">
+              <div class="flex flex-col items-center justify-center text-center py-14 px-4">
+                <div class="w-14 h-14 rounded-full bg-[var(--surface-variant)] flex items-center justify-center text-[var(--muted-color)] mb-3">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <h3 class="text-base font-semibold mb-1">No transactions match your filters</h3>
+                <p class="text-xs text-[var(--muted-color)] max-w-sm mb-4">Try adjusting your date range, source filter, or search keywords.</p>
+                <button type="button" id="clearHistoryFiltersBtn" class="btn secondary">Clear Filters</button>
+              </div>
+            </td>
+          </tr>`;
+        const clrBtn = tbody.querySelector("#clearHistoryFiltersBtn");
+        if (clrBtn) clrBtn.addEventListener("click", () => this.clearHistoryFilters());
+      }
     } else {
       pageTxns.forEach((t) => {
         // Mobile stores previous_balance (snake_case)
@@ -731,7 +878,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
         const tr       = document.createElement("tr");
         tr.innerHTML = `
           <td>${new Date(t.date).toLocaleString()}</td>
-          <td>${t.amount >= 0 ? "Income" : "Expense"}</td>
+          <td>${this.getTypeBadge(t.amount >= 0)}</td>
           <td>${t.source}</td>
           <td class="${cls}">${t.amount >= 0 ? "+" : ""}${t.amount.toLocaleString()}</td>
           <td>${balAfter.toLocaleString()}</td>
@@ -753,19 +900,39 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const container = document.getElementById("historyCardList");
     if (!container) return;
     if (!txns.length) {
-      container.innerHTML = `<p style="text-align:center;color:var(--muted-color);padding:30px">No transactions found.<br><button class="btn primary" style="margin-top:12px" onclick="document.getElementById('addAmount').focus();document.querySelector('[data-page=\"dashboard\"]').click()">Add your first transaction</button></p>`;
+      if (this.transactions.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center text-center py-12 px-4 rounded-xl border border-[var(--outline)] bg-[var(--surface-color)]">
+            <div class="w-14 h-14 rounded-full bg-[var(--surface-variant)] flex items-center justify-center text-[var(--muted-color)] mb-3">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+            </div>
+            <h3 class="text-base font-semibold mb-1">No transactions recorded yet</h3>
+            <p class="text-xs text-[var(--muted-color)] max-w-sm mb-4">Start by recording your earnings or expenses from the dashboard.</p>
+            <button type="button" class="btn primary" onclick="document.querySelector('[data-page=\\'dashboard\\']').click();setTimeout(()=>document.getElementById('addAmount')?.focus(),150)">Add First Transaction</button>
+          </div>`;
+      } else {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center text-center py-12 px-4 rounded-xl border border-[var(--outline)] bg-[var(--surface-color)]">
+            <div class="w-14 h-14 rounded-full bg-[var(--surface-variant)] flex items-center justify-center text-[var(--muted-color)] mb-3">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <h3 class="text-base font-semibold mb-1">No transactions match your filters</h3>
+            <p class="text-xs text-[var(--muted-color)] max-w-sm mb-4">Try adjusting your date range, source filter, or search keywords.</p>
+            <button type="button" id="clearHistoryFiltersMobileBtn" class="btn secondary">Clear Filters</button>
+          </div>`;
+        const clrMobileBtn = container.querySelector("#clearHistoryFiltersMobileBtn");
+        if (clrMobileBtn) clrMobileBtn.addEventListener("click", () => this.clearHistoryFilters());
+      }
       return;
     }
     container.innerHTML = txns.map((t) => {
       const cls      = t.amount >= 0 ? "amount-positive" : "amount-negative";
       const balAfter = (t.previous_balance || 0) + t.amount;
-      const typeCls  = t.amount >= 0 ? "income" : "expense";
-      const typeLabel = t.amount >= 0 ? "Income" : "Expense";
       return `
         <div class="history-card">
           <div class="history-card-header">
             <span class="history-card-date">${new Date(t.date).toLocaleString()}</span>
-            <span class="history-card-type ${typeCls}">${typeLabel}</span>
+            ${this.getTypeBadge(t.amount >= 0)}
           </div>
           <div class="history-card-body">
             <div><span class="history-card-label">Source</span><span class="history-card-value">${t.source}</span></div>
@@ -792,6 +959,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const html = this._paginationHTML(totalPages, currentPage);
     ["paginationControlsTop", "paginationControlsBottom"].forEach((id) => {
       const el = document.getElementById(id);
+      if (!el) return;
       el.innerHTML = html;
       el.querySelectorAll("button[data-page]").forEach((btn) => {
         btn.addEventListener("click", () => this.renderHistoryPage(parseInt(btn.dataset.page)));
@@ -1133,12 +1301,19 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   //  Profiles — nested inside single user_data doc (matches mobile)
   // ─────────────────────────────────────────────────────────────
   async switchProfile(name) {
-    this.showToast(`Loading ${name}...`, "success");
-    this.currentProfile = name;
-    this.userDataDoc.last_active_profile = name;
-    await this.saveUserData();
-    this.updateAllUI();
-    this.showToast(`Switched to ${name}.`, "success");
+    this.showLoading(`Retrieving profile '${name}'...`, "Syncing records from database...");
+    try {
+      this.currentProfile = name;
+      this.userDataDoc.last_active_profile = name;
+      await this.saveUserData();
+      this.updateAllUI();
+      this.showToast(`Switched to ${name}.`, "success");
+    } catch (err) {
+      console.error("switchProfile error:", err);
+      this.showToast("Failed to switch profile.", "error");
+    } finally {
+      this.hideLoading();
+    }
   }
 
   async createProfile() {
@@ -1205,6 +1380,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = null;
+    this.showLoading("Importing and updating database...", "Writing transactions to Cloud Firestore...");
     try {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data)) { this.showToast("Invalid file. Must be a JSON array.", "error"); return; }
@@ -1213,27 +1389,36 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       await this.saveUserData();
       this.showToast(`Imported ${data.length} transactions!`, "success");
       this.updateAllUI();
-    } catch { this.showToast("Invalid or corrupt JSON file.", "error"); }
+    } catch {
+      this.showToast("Invalid or corrupt JSON file.", "error");
+    } finally {
+      this.hideLoading();
+    }
   }
 
   async deleteAllData() {
     if (!await this.confirm("Delete ALL data for ALL profiles? This cannot be undone.")) return;
-    const now = new Date().toISOString();
-    this.userDataDoc = {
-      last_active_profile: "Default",
-      profiles: {
-        Default: {
-          transactions: [],
-          settings:     defaultSettingsMap(this.settings.dark_mode),
-          last_updated: now,
+    this.showLoading("Clearing records from database...", "Updating Cloud Firestore...");
+    try {
+      const now = new Date().toISOString();
+      this.userDataDoc = {
+        last_active_profile: "Default",
+        profiles: {
+          Default: {
+            transactions: [],
+            settings:     defaultSettingsMap(this.settings.dark_mode),
+            last_updated: now,
+          },
         },
-      },
-    };
-    this.allProfiles    = ["Default"];
-    this.currentProfile = "Default";
-    await this.saveUserData();
-    this.showToast("All data deleted.", "success");
-    this.updateAllUI();
+      };
+      this.allProfiles    = ["Default"];
+      this.currentProfile = "Default";
+      await this.saveUserData();
+      this.showToast("All data deleted.", "success");
+      this.updateAllUI();
+    } finally {
+      this.hideLoading();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1312,20 +1497,51 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const success = s.getPropertyValue("--success-color").trim();
     const danger  = s.getPropertyValue("--danger-color").trim();
     const palette = [primary, success, "#f59e0b", danger, "#8b5cf6", "#06b6d4", "#ec4899"];
+
+    let lineGradient = "rgba(59,130,246,0.15)";
+    if (type === "line" && ctx.getContext) {
+      try {
+        const c2d = ctx.getContext("2d");
+        const grad = c2d.createLinearGradient(0, 0, 0, 320);
+        grad.addColorStop(0, "rgba(59, 130, 246, 0.35)");
+        grad.addColorStop(1, "rgba(59, 130, 246, 0.0)");
+        lineGradient = grad;
+      } catch (e) {
+        lineGradient = "rgba(59,130,246,0.15)";
+      }
+    }
+
     this.charts[canvasId] = new Chart(ctx, {
       type,
       data: {
         labels,
         datasets: [{
           data,
-          backgroundColor: type === "doughnut" ? palette : type === "line" ? "rgba(59,130,246,0.1)" : danger,
-          borderColor: type === "line" ? primary : "transparent",
-          borderWidth: 2, tension: 0.1, fill: type === "line",
+          backgroundColor: type === "doughnut" ? palette : type === "line" ? lineGradient : danger,
+          borderColor: type === "line" ? (primary || "#3b82f6") : "transparent",
+          borderWidth: type === "line" ? 2.5 : 2,
+          tension: type === "line" ? 0.35 : 0.1,
+          fill: type === "line",
+          pointBackgroundColor: type === "line" ? (primary || "#3b82f6") : undefined,
+          pointBorderColor: "#fff",
+          pointBorderWidth: type === "line" ? 1.5 : 0,
+          pointRadius: type === "line" ? 3 : 0,
+          pointHoverRadius: 6,
         }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: type === "doughnut", position: "bottom", labels: { color: text } } },
+        plugins: {
+          legend: { display: type === "doughnut", position: "bottom", labels: { color: text } },
+          tooltip: {
+            callbacks: {
+              label: (item) => {
+                const val = Number(item.raw || 0).toLocaleString();
+                return type === "line" ? ` Balance: ${val} coins` : ` ${item.label}: ${val} coins`;
+              }
+            }
+          }
+        },
         scales: type !== "doughnut" ? {
           y: { ticks: { color: text }, grid: { color: grid } },
           x: { ticks: { color: text }, grid: { color: grid } },
@@ -1383,7 +1599,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   showPage(pageId) {
     document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
     document.getElementById(pageId)?.classList.add("active");
-    document.querySelectorAll("nav.nav > .nav-btn").forEach((b) =>
+    document.querySelectorAll("nav.nav > .nav-btn, nav.navbar > .nav-btn, .navbar > .nav-btn").forEach((b) =>
       b.classList.toggle("active", b.dataset.page === pageId));
     document.querySelectorAll(".mobile-nav-btn").forEach((b) =>
       b.classList.toggle("active", b.dataset.page === pageId));
@@ -1408,12 +1624,12 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       .setAttribute("aria-expanded", sidebar.classList.contains("nav-expanded"));
   }
 
-  // Sidebar pinned state (desktop) - persists user preference
+  // Sidebar pinned state (desktop)
   getSidebarPinned() {
     try {
       return localStorage.getItem("cointracker_sidebar_pinned") === "true";
     } catch {
-      return true; // Default to pinned (expanded) on desktop
+      return false; // Default to unpinned (hover only) on desktop
     }
   }
 
@@ -1428,29 +1644,30 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   applySidebarPinnedState() {
     const sidebar = document.querySelector(".sidebar");
     const toggleBtn = document.getElementById("sidebarToggleBtn");
-    if (!sidebar || !toggleBtn) return;
-
-    const isDesktop = window.matchMedia("(min-width: 1025px)").matches;
-    if (!isDesktop) return; // Only apply on desktop >1024px
+    if (!sidebar) return;
 
     const pinned = this.getSidebarPinned();
     if (pinned) {
       sidebar.classList.add("expanded");
-      toggleBtn.setAttribute("aria-label", "Collapse sidebar");
-      toggleBtn.setAttribute("aria-expanded", "true");
-      toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+      if (toggleBtn) {
+        toggleBtn.setAttribute("aria-label", "Collapse sidebar");
+        toggleBtn.setAttribute("aria-expanded", "true");
+        toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+      }
     } else {
       sidebar.classList.remove("expanded");
-      toggleBtn.setAttribute("aria-label", "Expand sidebar");
-      toggleBtn.setAttribute("aria-expanded", "false");
-      toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+      if (toggleBtn) {
+        toggleBtn.setAttribute("aria-label", "Expand sidebar");
+        toggleBtn.setAttribute("aria-expanded", "false");
+        toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+      }
     }
   }
 
   toggleSidebarPinned() {
     const sidebar = document.querySelector(".sidebar");
     const toggleBtn = document.getElementById("sidebarToggleBtn");
-    if (!sidebar || !toggleBtn) return;
+    if (!sidebar) return;
 
     const currentlyPinned = sidebar.classList.contains("expanded");
     const newPinned = !currentlyPinned;
@@ -1560,25 +1777,107 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const toast = document.getElementById("toast");
     if (!toast) return;
     if (this._toastTimeout) clearTimeout(this._toastTimeout);
-    toast.textContent = message;
-    toast.className   = `toast ${type} show`;
-    this._toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
+
+    let iconSvg = "";
+    if (type === "success") {
+      iconSvg = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`;
+    } else if (type === "error") {
+      iconSvg = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+    } else {
+      iconSvg = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>`;
+    }
+
+    toast.innerHTML = `
+      ${iconSvg}
+      <span>${message}</span>
+      <button type="button" class="toast-dismiss" aria-label="Dismiss">&times;</button>
+    `;
+    toast.className = `toast ${type} show`;
+
+    const dismissBtn = toast.querySelector(".toast-dismiss");
+    if (dismissBtn) {
+      dismissBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (this._toastTimeout) clearTimeout(this._toastTimeout);
+        toast.classList.remove("show");
+      };
+    }
+
+    this._toastTimeout = setTimeout(() => toast.classList.remove("show"), 3500);
+  }
+
+  showLoading(message = "Retrieving data from database...", subtext = "Connecting to Cloud Firestore...") {
+    const overlay = document.getElementById("loadingOverlay");
+    if (!overlay) return;
+    const msgEl = document.getElementById("loadingMessage");
+    const subEl = document.getElementById("loadingSubtext");
+    if (msgEl) msgEl.textContent = message;
+    if (subEl) subEl.textContent = subtext;
+    overlay.removeAttribute("hidden");
+    overlay.style.display = "flex";
+    requestAnimationFrame(() => {
+      overlay.style.opacity = "1";
+      overlay.style.pointerEvents = "auto";
+    });
+    this.updateSyncStatus("loading", message);
+  }
+
+  hideLoading() {
+    const overlay = document.getElementById("loadingOverlay");
+    if (!overlay) return;
+    overlay.style.opacity = "0";
+    overlay.style.pointerEvents = "none";
+    setTimeout(() => {
+      overlay.setAttribute("hidden", "");
+      overlay.style.display = "none";
+    }, 300);
+    this.updateSyncStatus("synced");
+  }
+
+  updateSyncStatus(status, label) {
+    const dots = [document.getElementById("dbSyncDot"), document.getElementById("mobileDbSyncDot")];
+    const texts = [document.getElementById("dbSyncText"), document.getElementById("mobileDbSyncText")];
+
+    dots.forEach((dot) => {
+      if (!dot) return;
+      if (status === "loading") {
+        dot.className = dot.id === "mobileDbSyncDot"
+          ? "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"
+          : "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+      } else if (status === "error") {
+        dot.className = dot.id === "mobileDbSyncDot"
+          ? "w-1.5 h-1.5 rounded-full bg-rose-500"
+          : "w-2 h-2 rounded-full bg-rose-500";
+      } else {
+        dot.className = dot.id === "mobileDbSyncDot"
+          ? "w-1.5 h-1.5 rounded-full bg-emerald-500"
+          : "w-2 h-2 rounded-full bg-emerald-500";
+      }
+    });
+
+    texts.forEach((text) => {
+      if (!text) return;
+      if (status === "loading") {
+        text.textContent = text.id === "mobileDbSyncText" ? "Retrieving..." : (label || "Retrieving data...");
+      } else if (status === "error") {
+        text.textContent = text.id === "mobileDbSyncText" ? "Error" : (label || "Database disconnected");
+      } else {
+        text.textContent = text.id === "mobileDbSyncText" ? "Synced" : (label || "Database synced");
+      }
+    });
   }
 }
 
-function showLoading(overlay = document.getElementById("loadingOverlay")) {
-  if (overlay) { overlay.classList.remove("hidden"); overlay.style.display = "flex"; }
+function showLoading(message, subtext) {
+  if (window.app) window.app.showLoading(message, subtext);
 }
 
-function hideLoading(overlay = document.getElementById("loadingOverlay")) {
-  if (overlay) {
-    overlay.classList.add("hidden");
-    // Remove from DOM after transition completes (0.3s)
-    setTimeout(() => overlay.remove(), 350);
-  }
+function hideLoading() {
+  if (window.app) window.app.hideLoading();
 }
 
 const app = new CoinTrackerApp();
+window.app = app;
 app.init();
 
 // Fresh CSS load guard (runs on every page start)

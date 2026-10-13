@@ -39,26 +39,81 @@ const ROWS_PER_PAGE = 15;
 let sortColumn    = "created_at";
 let sortDirection = "desc";
 
-// ── Boot ──────────────────────────────────────────────────────
-onAuthStateChanged(auth, async (user) => {
-  if (!user) { window.location.href = "/login.html"; return; }
+function showLoading(message = "Retrieving admin data from database...", subtext = "Querying Cloud Firestore collections...") {
+  const overlay = document.getElementById("loadingOverlay");
+  if (!overlay) return;
+  const msgEl = document.getElementById("loadingMessage");
+  const subEl = document.getElementById("loadingSubtext");
+  if (msgEl) msgEl.textContent = message;
+  if (subEl) subEl.textContent = subtext;
+  overlay.removeAttribute("hidden");
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => {
+    overlay.style.opacity = "1";
+    overlay.style.pointerEvents = "auto";
+  });
+  updateSyncStatus("loading", message);
+}
 
-  // Verify admin role from Firestore
-  const userSnap = await getDoc(doc(db, "users", user.uid));
-  if (!userSnap.exists() || userSnap.data().role !== "admin") {
-    window.location.href = "/";
-    return;
+function hideLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (!overlay) return;
+  overlay.style.opacity = "0";
+  overlay.style.pointerEvents = "none";
+  setTimeout(() => {
+    overlay.setAttribute("hidden", "");
+    overlay.style.display = "none";
+  }, 300);
+  updateSyncStatus("synced");
+}
+
+function updateSyncStatus(status, label) {
+  const dot = document.getElementById("dbSyncDot");
+  const text = document.getElementById("dbSyncText");
+  if (!dot || !text) return;
+  if (status === "loading") {
+    dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+    text.textContent = label || "Retrieving data...";
+  } else if (status === "error") {
+    dot.className = "w-2 h-2 rounded-full bg-rose-500";
+    text.textContent = label || "Database disconnected";
+  } else {
+    dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+    text.textContent = label || "Database synced";
   }
+}
 
-  currentAdminUid      = user.uid;
-  currentAdminUsername = userSnap.data().username;
+// ── Boot ──────────────────────────────────────────────────────
+showLoading("Connecting to database...", "Verifying admin authentication...");
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { hideLoading(); window.location.href = "/login.html"; return; }
 
-  const el = document.getElementById("adminUsername");
-  if (el) el.textContent = `Logged in as: ${currentAdminUsername}`;
+  try {
+    // Verify admin role from Firestore
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (!userSnap.exists() || userSnap.data().role !== "admin") {
+      hideLoading();
+      window.location.href = "/";
+      return;
+    }
 
-  setupEventListeners();
-  applyTheme();
-  await Promise.all([loadStats(), loadUsers(), loadBroadcast()]);
+    currentAdminUid      = user.uid;
+    currentAdminUsername = userSnap.data().username;
+
+    const el = document.getElementById("adminUsername");
+    if (el) el.textContent = `Logged in as: ${currentAdminUsername}`;
+
+    setupEventListeners();
+    applyTheme();
+    showLoading("Retrieving admin data from database...", "Loading user records and global statistics...");
+    await Promise.all([loadStats(), loadUsers(), loadBroadcast()]);
+  } catch (err) {
+    console.error("Admin init error:", err);
+    showToast("Failed to retrieve admin data from database.", "error");
+    updateSyncStatus("error", "Database error");
+  } finally {
+    hideLoading();
+  }
 });
 
 // ── Event listeners ───────────────────────────────────────────
@@ -123,21 +178,34 @@ function toggleTheme() {
 // ─────────────────────────────────────────────────────────────
 async function loadStats() {
   try {
-    // Read all user_data docs to aggregate stats
     const udSnap = await getDocs(collection(db, "user_data"));
     let totalCoins = 0, totalTransactions = 0;
 
     for (const udDoc of udSnap.docs) {
-      const profilesSnap = await getDocs(
-        collection(db, "user_data", udDoc.id, "profiles")
-      );
-      for (const profileDoc of profilesSnap.docs) {
-        const txns = profileDoc.data().transactions || [];
-        totalTransactions += txns.length;
-        totalCoins += txns
-          .filter((t) => t.amount > 0)
-          .reduce((s, t) => s + t.amount, 0);
+      const data = udDoc.data();
+      // Format 1: profiles map stored inside document
+      if (data && data.profiles && typeof data.profiles === "object") {
+        for (const p of Object.values(data.profiles)) {
+          const txns = p.transactions || [];
+          totalTransactions += txns.length;
+          totalCoins += txns
+            .filter((t) => t.amount > 0)
+            .reduce((s, t) => s + t.amount, 0);
+        }
       }
+      // Format 2: fallback subcollections if present
+      try {
+        const profilesSnap = await getDocs(
+          collection(db, "user_data", udDoc.id, "profiles")
+        );
+        for (const profileDoc of profilesSnap.docs) {
+          const txns = profileDoc.data().transactions || [];
+          totalTransactions += txns.length;
+          totalCoins += txns
+            .filter((t) => t.amount > 0)
+            .reduce((s, t) => s + t.amount, 0);
+        }
+      } catch { /* subcollection may not exist */ }
     }
 
     const usersSnap = await getDocs(collection(db, "users"));
@@ -164,16 +232,32 @@ async function loadUsers() {
       const uid  = userDoc.id;
       const data = userDoc.data();
 
-      // Read Default profile for balance + txn count
       let balance = 0, txnCount = 0, lastUpdated = "N/A";
       try {
-        const profileSnap = await getDocs(collection(db, "user_data", uid, "profiles"));
-        for (const p of profileSnap.docs) {
-          const txns = p.data().transactions || [];
-          txnCount  += txns.length;
-          balance   += txns.reduce((s, t) => s + t.amount, 0);
-          if (p.data().last_updated && (lastUpdated === "N/A" || p.data().last_updated > lastUpdated)) {
-            lastUpdated = p.data().last_updated;
+        const udSnap = await getDoc(doc(db, "user_data", uid));
+        if (udSnap.exists()) {
+          const udData = udSnap.data();
+          if (udData && udData.profiles && typeof udData.profiles === "object") {
+            for (const p of Object.values(udData.profiles)) {
+              const txns = p.transactions || [];
+              txnCount  += txns.length;
+              balance   += txns.reduce((s, t) => s + t.amount, 0);
+              if (p.last_updated && (lastUpdated === "N/A" || p.last_updated > lastUpdated)) {
+                lastUpdated = p.last_updated;
+              }
+            }
+          }
+        }
+        // Subcollection fallback if document had no profiles
+        if (txnCount === 0) {
+          const profileSnap = await getDocs(collection(db, "user_data", uid, "profiles"));
+          for (const p of profileSnap.docs) {
+            const txns = p.data().transactions || [];
+            txnCount  += txns.length;
+            balance   += txns.reduce((s, t) => s + t.amount, 0);
+            if (p.data().last_updated && (lastUpdated === "N/A" || p.data().last_updated > lastUpdated)) {
+              lastUpdated = p.data().last_updated;
+            }
           }
         }
       } catch { /* user may have no data yet */ }
@@ -501,13 +585,36 @@ function handleEscape(e) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Toast
-// ─────────────────────────────────────────────────────────────
+let _adminToastTimeout = null;
 function showToast(message, type = "success") {
   const toast = document.getElementById("toast");
   if (!toast) return;
-  toast.textContent = message;
-  toast.className   = `toast ${type} show`;
-  setTimeout(() => toast.classList.remove("show"), 3000);
+  if (_adminToastTimeout) clearTimeout(_adminToastTimeout);
+
+  let iconSvg = "";
+  if (type === "success") {
+    iconSvg = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`;
+  } else if (type === "error") {
+    iconSvg = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+  } else {
+    iconSvg = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>`;
+  }
+
+  toast.innerHTML = `
+    ${iconSvg}
+    <span>${message}</span>
+    <button type="button" class="toast-dismiss" aria-label="Dismiss">&times;</button>
+  `;
+  toast.className = `toast ${type} show`;
+
+  const dismissBtn = toast.querySelector(".toast-dismiss");
+  if (dismissBtn) {
+    dismissBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (_adminToastTimeout) clearTimeout(_adminToastTimeout);
+      toast.classList.remove("show");
+    };
+  }
+
+  _adminToastTimeout = setTimeout(() => toast.classList.remove("show"), 3500);
 }
