@@ -253,25 +253,6 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = textColor.copy(alpha = 0.55f)
                 )
-
-                Spacer(Modifier.height(12.dp))
-
-                Button(
-                    onClick = { showDeleteAllDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    enabled = !isActionLoading("deleteAllData")
-                ) {
-                    if (isActionLoading("deleteAllData")) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = MaterialTheme.colorScheme.onError,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Delete All Data")
-                    }
-                }
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -634,23 +615,63 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        // Danger Zone
-        GlassCard {
+        // Danger Zone - Dedicated separate block
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f))
+        ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, contentDescription = "Danger zone", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = "Danger zone",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text("Danger Zone", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        "Danger Zone",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("Permanently delete your account and all associated data. You will be logged out immediately and this cannot be undone.",
-                    style = MaterialTheme.typography.bodySmall, color = textColor.copy(alpha = 0.6f))
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Destructive actions that permanently erase your information. Please proceed with caution.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor.copy(alpha = 0.7f)
+                )
+                Spacer(Modifier.height(16.dp))
+
+                // Delete all data
+                Button(
+                    onClick = { showDeleteAllDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    enabled = !isActionLoading("deleteAllData")
+                ) {
+                    if (isActionLoading("deleteAllData")) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onError,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Delete All Data")
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Delete account
                 OutlinedButton(
                     onClick = { showDeleteAccountDialog = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
                     enabled = !isActionLoading("deleteAccount")
                 ) {
                     if (isActionLoading("deleteAccount")) {

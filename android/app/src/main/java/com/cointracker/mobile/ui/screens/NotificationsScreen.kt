@@ -13,8 +13,11 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,6 +91,10 @@ private fun achievementIcon(emoji: String): ImageVector = when (emoji) {
     "👑" -> Icons.Default.EmojiEvents
     "🔥" -> Icons.Default.LocalFireDepartment
     "🛡" -> Icons.Default.Shield
+    "💵" -> Icons.Default.AttachMoney
+    "🎯" -> Icons.Default.TrackChanges
+    "⚡" -> Icons.Default.Bolt
+    "🏆" -> Icons.Default.EmojiEvents
     else -> Icons.Default.EmojiEvents
 }
 
@@ -95,9 +102,13 @@ private fun achievementContentDescription(emoji: String): String = when (emoji) 
     "💰" -> "Getting started achievement"
     "📈" -> "Serious saver achievement"
     "🏦" -> "Coin hoarder achievement"
-    "👑" -> "Goal reached achievement"
+    "👑" -> "Master hoarder or goal reached achievement"
     "🔥" -> "Login streak achievement"
     "🛡" -> "Disciplined achievement"
+    "💵" -> "First payday achievement"
+    "🎯" -> "Active tracker achievement"
+    "⚡" -> "Century club achievement"
+    "🏆" -> "High roller achievement"
     else -> "Achievement unlocked"
 }
 

@@ -217,32 +217,72 @@ fun HistoryScreen(
             Spacer(Modifier.height(12.dp))
         }
 
-        // Pills pagination — TOP
-        if (totalPages > 1) {
-            item {
-                PillsPagination(
-                    totalPages = totalPages,
-                    currentPage = safeCurrentPage,
-                    onPageSelect = { currentPage = it }
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-
         // Empty state
         if (filteredList.isEmpty()) {
             item {
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("No transactions found",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = {
-                            // Navigate to dashboard to add transaction
-                            // This would need navigation access - for now just show toast
-                        }) {
-                            Text("Add your first transaction")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    ) {
+                        if (allTransactions.isEmpty()) {
+                            Icon(
+                                Icons.Default.ReceiptLong,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                "No transactions yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "Start tracking your income and expenses to see your transaction history here.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.FilterListOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                "No matching transactions",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "No transactions match your current search or filter criteria.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            FilledTonalButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    filterSource = "All"
+                                    dateRangeStartDay = null
+                                    dateRangeEndDay = null
+                                    currentPage = 0
+                                }
+                            ) {
+                                Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Clear Filters")
+                            }
                         }
                     }
                 }
@@ -307,12 +347,29 @@ fun HistoryScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                if (tx.amount >= 0) "+${tx.amount}" else "${tx.amount}",
-                                color = if (tx.amount >= 0) WebSuccess else WebDanger,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = if (tx.amount >= 0) WebSuccess.copy(alpha = 0.12f) else WebDanger.copy(alpha = 0.12f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (tx.amount >= 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                        contentDescription = if (tx.amount >= 0) "Income" else "Expense",
+                                        tint = if (tx.amount >= 0) WebSuccess else WebDanger,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = if (tx.amount >= 0) "+${tx.amount}" else "${tx.amount}",
+                                        color = if (tx.amount >= 0) WebSuccess else WebDanger,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
                             FilledTonalIconButton(
                                 onClick = {
                                     editingTxId = tx.id

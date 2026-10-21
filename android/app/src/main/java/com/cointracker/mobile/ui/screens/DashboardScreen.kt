@@ -1,12 +1,14 @@
 package com.cointracker.mobile.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material3.*
@@ -97,28 +99,70 @@ fun DashboardScreen(
         item {
             GlassCard {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    val bal = envelope?.balance ?: 0
+                    val goal = envelope?.goal ?: 0
+                    val remaining = goal - bal
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Current Balance",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Surface(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                            color = if (remaining <= 0) WebSuccess.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = if (remaining <= 0) "🎉 Goal Achieved!" else "⚡ $remaining to goal",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (remaining <= 0) WebSuccess else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     Text(
-                        "Current Balance",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "${envelope?.balance ?: 0} coins",
+                        "$bal coins",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { (envelope?.progress ?: 0) / 100f },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        LinearProgressIndicator(
+                            progress = { (envelope?.progress ?: 0) / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                        )
+                        // Milestone ticks at 25%, 50%, 75%
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Spacer(Modifier.weight(0.25f))
+                            Box(Modifier.width(2.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.45f)))
+                            Spacer(Modifier.weight(0.25f))
+                            Box(Modifier.width(2.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.45f)))
+                            Spacer(Modifier.weight(0.25f))
+                            Box(Modifier.width(2.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.45f)))
+                            Spacer(Modifier.weight(0.25f))
+                        }
+                    }
                     Spacer(Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Goal: ${envelope?.goal ?: 0} • ${envelope?.progress ?: 0}%",
+                            "Goal: $goal • ${envelope?.progress ?: 0}%",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -180,14 +224,20 @@ fun DashboardScreen(
         }
 
         val actions = envelope?.settings?.quickActions ?: emptyList()
-        if (actions.isNotEmpty()) {
-            val chunks = actions.chunked(2)
-            items(chunks) { rowItems ->
+        val totalActionItems = actions.size + 1
+        val numRows = (totalActionItems + 1) / 2
+        for (rowIndex in 0 until numRows) {
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    rowItems.forEach { action ->
+                    val firstIndex = rowIndex * 2
+                    val secondIndex = firstIndex + 1
+
+                    // First item
+                    if (firstIndex < actions.size) {
+                        val action = actions[firstIndex]
                         val isLoading = isActionLoading("addTransaction")
                         Button(
                             onClick = {
@@ -225,8 +275,79 @@ fun DashboardScreen(
                                 }
                             }
                         }
+                    } else if (firstIndex == actions.size) {
+                        OutlinedButton(
+                            onClick = { onNavigate("settings") },
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.medium,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                Icon(Icons.Default.Add, contentDescription = "Add quick action", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(4.dp))
+                                Text("New Action", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
-                    if (rowItems.size < 2) Spacer(Modifier.weight(1f))
+
+                    // Second item
+                    if (secondIndex < actions.size) {
+                        val action = actions[secondIndex]
+                        val isLoading = isActionLoading("addTransaction")
+                        Button(
+                            onClick = {
+                                val haptic = LocalHapticFeedback.current
+                                haptic.performHapticFeedback(HapticFeedbackType.Light)
+                                if (action.isPositive) {
+                                    onAddIncome(action.value, action.text, null)
+                                    onShowSnackbar("+${action.value} coins from ${action.text}")
+                                } else {
+                                    onAddExpense(action.value, action.text, null)
+                                    onShowSnackbar("-${action.value} coins for ${action.text}")
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            shape = MaterialTheme.shapes.medium,
+                            enabled = !isLoading
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(action.text, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        if (action.isPositive) "+${action.value}" else "-${action.value}",
+                                        fontSize = 12.sp,
+                                        color = if (action.isPositive) WebSuccess else WebDanger
+                                    )
+                                }
+                            }
+                        }
+                    } else if (secondIndex == actions.size) {
+                        OutlinedButton(
+                            onClick = { onNavigate("settings") },
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.medium,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                Icon(Icons.Default.Add, contentDescription = "Add quick action", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(4.dp))
+                                Text("New Action", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }

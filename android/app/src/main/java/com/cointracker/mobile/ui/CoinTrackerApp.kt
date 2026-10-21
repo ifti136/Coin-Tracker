@@ -211,8 +211,52 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                         Arrangement.SpaceBetween, Alignment.CenterVertically) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(painterResource(R.drawable.coin), contentDescription = "Logo", tint = Color.Unspecified, modifier = Modifier.size(28.dp))
-                                            Spacer(Modifier.width(12.dp))
-                                            Text("Coin Tracker", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Coin Tracker", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                            Spacer(Modifier.width(8.dp))
+                                            val isSyncing = viewModel.isActionLoading("refreshData") || viewModel.isActionLoading("switchProfile")
+                                            val isOffline = syncState is SyncState.Offline
+                                            Surface(
+                                                shape = RoundedCornerShape(50),
+                                                color = when {
+                                                    isSyncing -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                                    isOffline -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                                                    else -> WebSuccess.copy(alpha = 0.12f)
+                                                }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(6.dp)
+                                                            .clip(CircleShape)
+                                                            .background(
+                                                                when {
+                                                                    isSyncing -> MaterialTheme.colorScheme.primary
+                                                                    isOffline -> MaterialTheme.colorScheme.tertiary
+                                                                    else -> WebSuccess
+                                                                }
+                                                            )
+                                                    )
+                                                    Text(
+                                                        text = when {
+                                                            isSyncing -> "Syncing"
+                                                            isOffline -> "Offline"
+                                                            else -> "Synced"
+                                                        },
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = when {
+                                                            isSyncing -> MaterialTheme.colorScheme.primary
+                                                            isOffline -> MaterialTheme.colorScheme.tertiary
+                                                            else -> WebSuccess
+                                                        }
+                                                    )
+                                                }
+                                            }
                                         }
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             val cbse by navController.currentBackStackEntryAsState()
@@ -330,7 +374,31 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                 .widthIn(max = maxContentWidth)
                                 .align(Alignment.CenterHorizontally)
                         ) {
-                            NavHost(navController, "dashboard") {
+                            val isSwitchingProfile = viewModel.isActionLoading("switchProfile")
+                            if (uiState.profileEnvelope == null || isSwitchingProfile) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 3.dp
+                                        )
+                                        Text(
+                                            if (isSwitchingProfile) "Switching profile..." else "Retrieving data from database...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            } else {
+                                NavHost(navController, "dashboard") {
                                 composable("dashboard") {
                                     DashboardScreen(
                                         envelope = uiState.profileEnvelope,
@@ -397,6 +465,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
+                            }
                             }
                         }
                     }

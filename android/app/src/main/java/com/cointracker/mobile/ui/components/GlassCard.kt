@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
+    border: androidx.compose.foundation.BorderStroke? = null,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -30,6 +31,7 @@ fun GlassCard(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = shape,
         color = MaterialTheme.colorScheme.surface,
+        border = border,
         tonalElevation = elevation,
         shadowElevation = elevation
     ) {
