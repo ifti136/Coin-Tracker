@@ -370,10 +370,13 @@ class CoinTrackerApp {
     document.getElementById("topBarNotificationsBtn").addEventListener("click", () => this.showPage("notifications"));
 
     // Mobile theme toggle (shown in mobile sidebar)
-    document.getElementById("mobileThemeToggle").addEventListener("click", () => this.toggleTheme());
+    document.getElementById("mobileThemeToggle")?.addEventListener("click", () => this.toggleTheme());
 
     // Mobile logout button (shown in mobile sidebar)
-    document.getElementById("mobileLogoutBtn").addEventListener("click", () => this.logout());
+    document.getElementById("mobileLogoutBtn")?.addEventListener("click", () => this.logout());
+
+    // Mobile admin button
+    document.getElementById("mobileAdminBtn")?.addEventListener("click", () => { window.location.href = "/admin.html"; });
 
     // Top bar profile dropdown
     document.getElementById("topBarProfileBtn").addEventListener("click", (e) => this.toggleProfileDropdown(e));
@@ -382,13 +385,18 @@ class CoinTrackerApp {
     document.getElementById("topBarAdminBtn").addEventListener("click", () => { window.location.href = "/admin.html"; });
     document.getElementById("topBarLogoutBtn").addEventListener("click", () => this.logout());
 
-    // Close profile dropdown when clicking outside
+    // Close profile dropdown or mobile burger menu when clicking outside
     document.addEventListener("click", (e) => {
       const dropdown = document.getElementById("profileDropdownMenu");
       const profileBtn = document.getElementById("topBarProfileBtn");
       if (dropdown && dropdown.classList.contains("open") && !dropdown.contains(e.target) && e.target !== profileBtn) {
         dropdown.classList.remove("open");
         profileBtn.setAttribute("aria-expanded", "false");
+      }
+      const sidebar = document.querySelector(".sidebar");
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      if (sidebar && sidebar.classList.contains("nav-expanded") && !sidebar.contains(e.target) && e.target !== hamburgerBtn && !hamburgerBtn.contains(e.target)) {
+        this.toggleMobileNav();
       }
     });
 
@@ -408,7 +416,10 @@ class CoinTrackerApp {
 
     // Sidebar profile selector (mobile)
     document.getElementById("profileSelect").addEventListener("change", (e) => this.switchProfile(e.target.value));
-    document.getElementById("newProfileBtn").addEventListener("click", () => this.showModal("profileModal"));
+    document.getElementById("newProfileBtn").addEventListener("click", () => {
+      if (document.querySelector(".sidebar")?.classList.contains("nav-expanded")) this.toggleMobileNav();
+      this.showModal("profileModal");
+    });
 
     document.getElementById("addCoinsBtn").addEventListener("click", () => this.addFromDashboard());
     document.getElementById("spendCoinsBtn").addEventListener("click", () => this.spendFromDashboard());
@@ -518,9 +529,11 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (this.role === "admin") {
       const c = document.getElementById("adminPanelBtnContainer");
       if (c) c.style.display = "block";
-      // Show admin button in top bar dropdown
+      // Show admin button in top bar dropdown and mobile menu
       const adminBtn = document.getElementById("topBarAdminBtn");
       if (adminBtn) adminBtn.style.display = "flex";
+      const mobileAdminBtn = document.getElementById("mobileAdminBtn");
+      if (mobileAdminBtn) mobileAdminBtn.style.display = "flex";
     }
     // Update profile dropdown select in top bar
     this.updateTopBarProfileDropdown();

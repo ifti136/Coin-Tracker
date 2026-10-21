@@ -162,32 +162,48 @@ body {
   }
 }
 
-/* ── Mobile sidebar nav-expanded ─────────────── */
+/* ── Mobile burger dropdown to the side ────────────────── */
 @media (max-width: 768px) {
+  /* Prevent duplicate navigation buttons on mobile (bottom nav handles pages) */
+  .sidebar .nav,
+  .sidebar .navbar,
   .sidebar.nav-expanded .nav,
-  .sidebar.nav-expanded .navbar { display: flex !important; flex-direction: column; gap: 8px; padding: 16px; }
-  .sidebar.nav-expanded .profile-section,
-  .sidebar.nav-expanded .theme-toggle,
-  .sidebar.nav-expanded .logout-section,
-  .sidebar.nav-expanded .admin-panel-section { display: block !important; }
-  .sidebar.nav-expanded .mobile-theme-toggle,
-  .sidebar.nav-expanded .mobile-logout-btn { display: block !important; }
-}
-
-/* ── Mobile top bar pseudo-content ───────────── */
-@media (max-width: 768px) {
-  .sidebar-header::before {
-    content: "";
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f59e0b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='20' font-weight='bold' font-family='sans-serif'%3EC%3C/text%3E%3C/svg%3E");
-    width: 32px; height: 32px;
-    display: inline-block;
-    margin-right: 12px;
+  .sidebar.nav-expanded .navbar {
+    display: none !important;
   }
-  .sidebar-header::after {
-    content: "Coin Tracker";
-    font-weight: 700;
-    color: var(--text-color);
-    flex-grow: 1;
+
+  .sidebar {
+    height: var(--top-bar-height) !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar .profile-section {
+    display: none;
+  }
+
+  /* Side dropdown container anchored to the top-right side */
+  .sidebar.nav-expanded .profile-section {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    top: calc(var(--top-bar-height) + 8px);
+    right: 12px;
+    width: 270px;
+    max-width: calc(100vw - 24px);
+    background: var(--surface-color) !important;
+    border: 1px solid var(--outline);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 16px;
+    z-index: 1002;
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  .sidebar.nav-expanded .mobile-control-links {
+    display: flex !important;
   }
 }
 
