@@ -23,11 +23,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalActivity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -49,14 +51,22 @@ import java.util.Locale
 
 
 
+private data class SyncBannerInfo(
+    val text: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val color: Color,
+    val iconDesc: String
+)
+
 @Composable
 fun SyncBanner(syncState: SyncState, onDismiss: () -> Unit) {
-    val (text, icon, color, iconDesc) = when (syncState) {
-        SyncState.Offline -> Triple("Offline — showing cached data", Icons.Default.WifiOff, MaterialTheme.colorScheme.tertiary, "Offline indicator")
-        SyncState.RestoredFromCache -> Triple("DB was empty — restored from local safety cache", Icons.Default.Restore, MaterialTheme.colorScheme.secondary, "Restored from cache")
-        SyncState.PushedCacheToDb -> Triple("Offline changes synced to database", Icons.Default.CloudUpload, MaterialTheme.colorScheme.primary, "Synced to database")
+    val bannerInfo = when (syncState) {
+        SyncState.Offline -> SyncBannerInfo("Offline — showing cached data", Icons.Default.WifiOff, MaterialTheme.colorScheme.tertiary, "Offline indicator")
+        SyncState.RestoredFromCache -> SyncBannerInfo("DB was empty — restored from local safety cache", Icons.Default.Restore, MaterialTheme.colorScheme.secondary, "Restored from cache")
+        SyncState.PushedCacheToDb -> SyncBannerInfo("Offline changes synced to database", Icons.Default.CloudUpload, MaterialTheme.colorScheme.primary, "Synced to database")
         else -> return
     }
+    val (text, icon, color, iconDesc) = bannerInfo
     Surface(
         color = color.copy(alpha = 0.12f),
         shape = RoundedCornerShape(12.dp),
@@ -114,10 +124,10 @@ fun ConflictDialog(syncState: SyncState.Conflict, onUseCache: () -> Unit, onUseD
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onUseDatabase) { Text("Use Database") }
-        },
-        secondaryDismissButton = {
-            TextButton(onClick = onDismiss) { Text("Decide Later") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onDismiss) { Text("Decide Later") }
+                OutlinedButton(onClick = onUseDatabase) { Text("Use Database") }
+            }
         }
     )
 }
@@ -129,14 +139,14 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val isDark by viewModel.isDarkMode.collectAsState()
     val context = LocalContext.current
-    val activity = LocalActivity.current
+    val activity = context as? Activity
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val syncState = uiState.syncState
 
     // Window size class for adaptive layouts
-    val windowSizeClass = calculateWindowSizeClass(activity)
-    val isTablet = windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.Expanded
+    val windowSizeClass = activity?.let { calculateWindowSizeClass(it) }
+    val isTablet = windowSizeClass?.widthSizeClass == WindowWidthSizeClass.Expanded
     val maxContentWidth = if (isTablet) 600.dp else Dp.Unspecified
 
     LaunchedEffect(uiState.error) {
@@ -340,14 +350,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                     modifier = Modifier
                                         .fillMaxHeight()
                                         .width(72.dp),
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    itemColors = NavigationRailDefaults.itemColors(
-                                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.primary,
-                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        unselectedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    )
+                                    containerColor = MaterialTheme.colorScheme.surface
                                 ) {
                                     val cbse by navController.currentBackStackEntryAsState()
                                     val cr = cbse?.destination?.route ?: "dashboard"
@@ -361,6 +364,11 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                             icon = { Icon(icon, contentDescription = route) },
                                             label = { Text(route.replaceFirstChar { it.uppercase() }) },
                                             selected = cr == route,
+                                            colors = NavigationRailItemDefaults.colors(
+                                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                            ),
                                             onClick = { navController.navigate(route) { popUpTo(navController.graph.findStartDestination().id) { saveState = true; inclusive = false }; launchSingleTop = true; restoreState = true } }
                                         )
                                     }
@@ -370,10 +378,13 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                     ) { ip ->
                         Box(
                             Modifier
-                                .padding(ip)
-                                .widthIn(max = maxContentWidth)
-                                .align(Alignment.CenterHorizontally)
+                                .fillMaxSize()
+                                .padding(ip),
+                            contentAlignment = Alignment.TopCenter
                         ) {
+                            Box(
+                                Modifier.widthIn(max = maxContentWidth)
+                            ) {
                             val isSwitchingProfile = viewModel.isActionLoading("switchProfile")
                             if (uiState.profileEnvelope == null || isSwitchingProfile) {
                                 Box(
@@ -468,6 +479,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                             }
                             }
                         }
+                    }
                     }
                 }
             }

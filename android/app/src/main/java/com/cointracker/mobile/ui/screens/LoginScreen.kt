@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,7 +49,7 @@ fun LoginScreen(
                 .statusBarsPadding()
         ) {
             Icon(
-                imageVector = if (isDark) LightMode else DarkMode,
+                imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
                 contentDescription = if (isDark) "Light mode" else "Dark mode",
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
@@ -95,7 +92,7 @@ fun LoginScreen(
                             trailingIcon = {
                                 IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                                     Icon(
-                                        imageVector = if (confirmPasswordVisible) VisibilityOff else Visibility,
+                                        imageVector = if (confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                         contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -116,7 +113,7 @@ fun LoginScreen(
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
-                                    imageVector = if (passwordVisible) VisibilityOff else Visibility,
+                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = if (passwordVisible) "Hide password" else "Show password",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

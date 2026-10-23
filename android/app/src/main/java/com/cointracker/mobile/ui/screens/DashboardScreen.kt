@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -15,9 +16,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,8 +38,6 @@ import com.cointracker.mobile.ui.theme.WebDanger
 import com.cointracker.mobile.ui.theme.WebSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +50,7 @@ fun DashboardScreen(
     onNavigate: (String) -> Unit,
     onShowSnackbar: (String) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     var addAmount by remember { mutableStateOf("") }
     var addSource by remember { mutableStateOf("Other") }
     var spendAmount by remember { mutableStateOf("") }
@@ -138,7 +141,7 @@ fun DashboardScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
-                                .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(4.dp))
                         )
                         // Milestone ticks at 25%, 50%, 75%
                         Row(
@@ -241,8 +244,7 @@ fun DashboardScreen(
                         val isLoading = isActionLoading("addTransaction")
                         Button(
                             onClick = {
-                                val haptic = LocalHapticFeedback.current
-                                haptic.performHapticFeedback(HapticFeedbackType.Light)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (action.isPositive) {
                                     onAddIncome(action.value, action.text, null)
                                     onShowSnackbar("+${action.value} coins from ${action.text}")
@@ -298,8 +300,7 @@ fun DashboardScreen(
                         val isLoading = isActionLoading("addTransaction")
                         Button(
                             onClick = {
-                                val haptic = LocalHapticFeedback.current
-                                haptic.performHapticFeedback(HapticFeedbackType.Light)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (action.isPositive) {
                                     onAddIncome(action.value, action.text, null)
                                     onShowSnackbar("+${action.value} coins from ${action.text}")
@@ -389,13 +390,8 @@ fun DashboardScreen(
                                 readOnly = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(contentDescription = "Select source")
-                                },
-                                colors = TextFieldDefaults.textFieldColors(
-                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                    disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = sourceExpanded)
+                                }
                             )
                             ExposedDropdownMenu(
                                 expanded = sourceExpanded,
@@ -414,8 +410,7 @@ fun DashboardScreen(
                         val isAddLoading = isActionLoading("addTransaction")
                         Button(
                             onClick = {
-                                val haptic = LocalHapticFeedback.current
-                                haptic.performHapticFeedback(HapticFeedbackType.Light)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val amt = addAmount.toIntOrNull()
                                 when {
                                     amt == null || amt <= 0 -> onShowSnackbar("Enter a valid positive amount")
@@ -472,13 +467,8 @@ fun DashboardScreen(
                                 readOnly = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(contentDescription = "Select category")
-                                },
-                                colors = TextFieldDefaults.textFieldColors(
-                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                    disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                                }
                             )
                             ExposedDropdownMenu(
                                 expanded = categoryExpanded,
@@ -497,8 +487,7 @@ fun DashboardScreen(
                         val isSpendLoading = isActionLoading("addTransaction")
                         Button(
                             onClick = {
-                                val haptic = LocalHapticFeedback.current
-                                haptic.performHapticFeedback(HapticFeedbackType.Light)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val amt = spendAmount.toIntOrNull()
                                 when {
                                     amt == null || amt <= 0 -> onShowSnackbar("Enter a valid positive amount")
@@ -535,8 +524,7 @@ fun DashboardScreen(
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    val haptic = LocalHapticFeedback.current
-                    haptic.performHapticFeedback(HapticFeedbackType.Light)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     if (envelope != null) {
                         scope.launch(Dispatchers.IO) {
                             ProgressCardGenerator.shareProgressCard(context, envelope)
@@ -568,8 +556,7 @@ fun DashboardScreen(
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    val haptic = LocalHapticFeedback.current
-                    haptic.performHapticFeedback(HapticFeedbackType.Light)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     showSupportDialog = true
                 }
             ) {

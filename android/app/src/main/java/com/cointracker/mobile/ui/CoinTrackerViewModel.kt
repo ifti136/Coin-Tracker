@@ -103,6 +103,7 @@ class CoinTrackerViewModel @Inject constructor(
 
     fun clearError()        { _uiState.update { it.copy(error = null) } }
     fun dismissSyncBanner() { _uiState.update { it.copy(syncState = SyncState.Idle) } }
+    fun dismissConflictDialog() { dismissSyncBanner() }
 
     fun toggleTheme() {
         val v = !_isDarkMode.value

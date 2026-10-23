@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -380,7 +381,7 @@ fun SettingsScreen(
                 val effectiveIncome = currentSettings?.effectiveIncomeCategories() ?: DEFAULT_INCOME_CATEGORIES
                 val isCustomIncome = currentSettings?.incomeCategories?.isNotEmpty() == true
                 if (effectiveIncome.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("No income categories yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(8.dp))
@@ -391,27 +392,28 @@ fun SettingsScreen(
                     }
                 } else {
                     effectiveIncome.forEachIndexed { index, cat ->
-                    val isDeleting = isActionLoading("updateSettings")
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("• $cat", color = textColor)
-                        if (isCustomIncome) {
-                            IconButton(
-                                onClick = {
-                                    val updated = effectiveIncome.toMutableList().also { it.removeAt(index) }
-                                    onUpdateSettings((currentSettings ?: Settings()).copy(incomeCategories = updated))
-                                },
-                                modifier = Modifier.size(32.dp),
-                                enabled = !isDeleting
-                            ) {
-                                if (isDeleting) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        color = MaterialTheme.colorScheme.error,
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Icon(Icons.Default.Delete, contentDescription = "Remove income category", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                        val isDeleting = isActionLoading("updateSettings")
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("• $cat", color = textColor)
+                            if (isCustomIncome) {
+                                IconButton(
+                                    onClick = {
+                                        val updated = effectiveIncome.toMutableList().also { it.removeAt(index) }
+                                        onUpdateSettings((currentSettings ?: Settings()).copy(incomeCategories = updated))
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                    enabled = !isDeleting
+                                ) {
+                                    if (isDeleting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = MaterialTheme.colorScheme.error,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.Delete, contentDescription = "Remove income category", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
@@ -480,7 +482,7 @@ fun SettingsScreen(
                 val effectiveExpense = currentSettings?.effectiveExpenseCategories() ?: DEFAULT_EXPENSE_CATEGORIES
                 val isCustomExpense = currentSettings?.expenseCategories?.isNotEmpty() == true
                 if (effectiveExpense.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("No expense categories yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(8.dp))
@@ -491,27 +493,28 @@ fun SettingsScreen(
                     }
                 } else {
                     effectiveExpense.forEachIndexed { index, cat ->
-                    val isDeleting = isActionLoading("updateSettings")
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("• $cat", color = textColor)
-                        if (isCustomExpense) {
-                            IconButton(
-                                onClick = {
-                                    val updated = effectiveExpense.toMutableList().also { it.removeAt(index) }
-                                    onUpdateSettings((currentSettings ?: Settings()).copy(expenseCategories = updated))
-                                },
-                                modifier = Modifier.size(32.dp),
-                                enabled = !isDeleting
-                            ) {
-                                if (isDeleting) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        color = MaterialTheme.colorScheme.error,
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Icon(Icons.Default.Delete, contentDescription = "Remove expense category", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                        val isDeleting = isActionLoading("updateSettings")
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("• $cat", color = textColor)
+                            if (isCustomExpense) {
+                                IconButton(
+                                    onClick = {
+                                        val updated = effectiveExpense.toMutableList().also { it.removeAt(index) }
+                                        onUpdateSettings((currentSettings ?: Settings()).copy(expenseCategories = updated))
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                    enabled = !isDeleting
+                                ) {
+                                    if (isDeleting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = MaterialTheme.colorScheme.error,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.Delete, contentDescription = "Remove expense category", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }

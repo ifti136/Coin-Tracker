@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -144,6 +145,7 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
             Text("Balance Timeline", style = MaterialTheme.typography.titleMedium, color = textColor)
             GlassCard(modifier = Modifier.height(200.dp)) {
                 if (filtered.isNotEmpty()) {
+                    val chartLineColor = MaterialTheme.colorScheme.primary
                     Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                         val points = filtered.sortedBy { it.date }
                             .runningFold(0f) { sum, tx -> sum + tx.amount.toFloat() }
@@ -153,7 +155,7 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
                         val wpp = size.width / (points.size - 1).coerceAtLeast(1)
                         for (i in 0 until points.size - 1) {
                             drawLine(
-                                MaterialTheme.colorScheme.primary,
+                                chartLineColor,
                                 Offset(i * wpp, size.height - ((points[i] - min) / range * size.height)),
                                 Offset((i + 1) * wpp, size.height - ((points[i + 1] - min) / range * size.height)),
                                 strokeWidth = 5f

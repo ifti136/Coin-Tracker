@@ -47,6 +47,7 @@ private data class Alert(
     val timestamp: String
 )
 
+@Composable
 private fun buildAlerts(envelope: ProfileEnvelope): List<Alert> {
     val alerts = mutableListOf<Alert>()
     val today = LocalDate.now(ZoneOffset.UTC)
