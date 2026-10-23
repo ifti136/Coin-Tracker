@@ -48,18 +48,25 @@ coin-tracker/
 |---|:---:|:---:|:---:|
 | Login / Register | ✅ | ✅ | ✅ |
 | Dashboard (balance, progress, stats) | ✅ | ✅ | ✅ |
-| Quick action buttons | ✅ | ✅ | ✅ |
+| Goal progress bar + milestone ticks | ✅ | — | ✅ |
+| Remaining to goal pill (`⚡ X to goal`) | ✅ | — | ✅ |
+| Quick action buttons & `+ New Action` tile | ✅ | ✅ | ✅ |
 | Add / spend coins | ✅ | ✅ | ✅ |
-| Transaction history + filters | ✅ | ✅ | ✅ |
+| History + Income/Expense badges | ✅ | ✅ | ✅ |
+| History search & date filters | ✅ | ✅ | ✅ |
+| Context-aware empty states | ✅ | — | ✅ |
 | Analytics (charts, breakdowns) | ✅ | ✅ | ✅ |
 | Goal tracking + estimated days | ✅ | ✅ | ✅ |
-| Achievements | ✅ | — | ✅ |
+| Achievements (13 definitions) | ✅ | — | ✅ |
 | Multiple profiles | ✅ | ✅ | ✅ |
 | JSON backup export | ✅ | ✅ | ✅ |
-| JSON import | — | ✅ | ✅ |
+| JSON backup import | ✅ | ✅ | ✅ |
 | Admin panel | ✅ | — | ✅ |
+| Dedicated Danger Zone block | ✅ | — | ✅ |
 | Dark / light theme (persisted) | ✅ | ✅ | ✅ |
-| Offline support | ✅ | ✅ (local) | — |
+| Live DB sync status indicator | ✅ | — | ✅ |
+| Database loading states | ✅ | — | ✅ |
+| Offline safety cache & sync | ✅ | ✅ (local) | — |
 | Firebase / Firestore sync | ✅ | ✅ (optional) | ✅ |
 
 ---

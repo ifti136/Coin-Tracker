@@ -148,6 +148,20 @@ Requires `google-services.json` in `android/app/` before building.
 
 ## Changelog
 
+### v3.3.0 — 2026
+**Web & Mobile Feature Parity**
+- **Achievements Expanded**: Added 6 new achievements mirroring the web app: *Master Hoarder* (25,000 coins), *First Payday* (1st earning), *Active Tracker* (25 txns), *Century Club* (100 txns), *High Roller* (1,000+ single earning), and multi-tier *3-Day*, *7-Day*, and *14-Day* consecutive login streaks
+- **Notifications & Icons**: Added Material 3 vector icons (`AttachMoney`, `TrackChanges`, `Bolt`, `EmojiEvents`) and descriptive accessibility labels for all achievement types
+- **History Badging**: Transaction amounts now rendered with Income (`↑` in green) and Expense (`↓` in red) pill badges
+- **Context-Aware History Empty States**: Clean visual separation between empty history vs no filter matches, with one-tap "Clear Filters" action
+- **Single History Pagination**: Removed redundant top pagination to keep single, uncluttered bottom pagination
+- **Dashboard Goal Indicators**: Real-time remaining pill (`⚡ X to goal` / `🎉 Goal Achieved!`) in balance header, milestone ticks on progress bar at 25%, 50%, and 75%
+- **Quick Action Navigation**: Added `+ New Action` shortcut tile directly in the Quick Actions grid navigating to settings
+- **Live DB Sync Status**: Added compact sync status indicator pill (`Synced` / `Syncing...` / `Offline`) to the top bar
+- **Database Loading State**: Full-screen database retrieval state (`Retrieving data from database...` / `Switching profile...`) during initial data load and profile switching
+- **Danger Zone Isolation**: Separated destructive actions (`Delete All Data` and `Delete My Account`) into an isolated, red-accented Danger Zone block
+- **GlassCard Stroke**: Enhanced `GlassCard` composable with optional border stroke support
+
 ### v3.2.0 — 2026
 **Safety Cache System**
 - Local safety cache introduced — every profile snapshot is written to `filesDir/safety_cache/{userId}/{profile}.json` after every successful data load or save
