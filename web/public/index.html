@@ -594,6 +594,248 @@
           </div>
         </div>
 
+        <!-- About Section -->
+        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5" id="aboutSection">
+          <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
+            <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+            About Coin Tracker
+          </h3>
+          <p class="text-sm text-[var(--muted-color)] mb-4">Application details, current user profile, developer information, and version history.</p>
+
+          <!-- App & Version Meta Banner -->
+          <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-variant)] border border-[var(--outline)] mb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center text-white font-extrabold text-lg shadow-sm">C</div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-base text-[var(--on-surface)]">Coin Tracker</span>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">v3.3.0</span>
+                </div>
+                <p class="text-xs text-[var(--muted-color)] m-0">Cross-platform in-game economy & savings tracker</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--surface-color)] border border-[var(--outline)] text-[var(--muted-color)]">MIT License</span>
+              <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--surface-color)] border border-[var(--outline)] text-[var(--muted-color)]">eFootball Ready</span>
+            </div>
+          </div>
+
+          <!-- Two-column grid for "Me" (Signed-in User) and "Developer & Links" -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <!-- Signed-in User ("Me") Card -->
+            <div class="p-4 rounded-xl bg-[var(--surface-variant)] border border-[var(--outline)] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs uppercase tracking-wider font-semibold text-[var(--muted-color)]">Signed-in Account ("Me")</span>
+                  <span id="aboutUserRoleBadge" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase">User</span>
+                </div>
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="w-10 h-10 rounded-full bg-[var(--primary-color)]/10 text-[var(--primary-color)] flex items-center justify-center font-bold text-base">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <div class="min-w-0">
+                    <div id="aboutUsername" class="font-bold text-[var(--on-surface)] truncate">Loading...</div>
+                    <div id="aboutUserEmail" class="text-xs text-[var(--muted-color)] truncate">...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-[var(--outline)] text-xs flex items-center justify-between text-[var(--muted-color)]">
+                <span>Active Profile: <strong id="aboutActiveProfile" class="text-[var(--on-surface)]">Default</strong></span>
+                <span>ID: <code id="aboutUserId" class="font-mono text-[11px] opacity-75">...</code></span>
+              </div>
+            </div>
+
+            <!-- Developer & Links Card -->
+            <div class="p-4 rounded-xl bg-[var(--surface-variant)] border border-[var(--outline)] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs uppercase tracking-wider font-semibold text-[var(--muted-color)]">Developer & Project</span>
+                  <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">Open Source</span>
+                </div>
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="w-10 h-10 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-base">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </div>
+                  <div>
+                    <div class="font-bold text-[var(--on-surface)]">Ifti (<a href="https://github.com/ifti136" target="_blank" rel="noopener noreferrer" class="text-[var(--primary-color)] hover:underline">@ifti136</a>)</div>
+                    <div class="text-xs text-[var(--muted-color)]">Lead Developer & Maintainer</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-[var(--outline)] flex gap-2 flex-wrap">
+                <a href="https://github.com/ifti136/Coin-Tracker" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--surface-color)] hover:bg-[var(--primary-color)] hover:text-white border border-[var(--outline)] text-[var(--on-surface)] transition-colors no-underline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                  GitHub Repository
+                </a>
+                <a href="https://cointrack-16ce2.web.app" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--surface-color)] hover:bg-[var(--primary-color)] hover:text-white border border-[var(--outline)] text-[var(--on-surface)] transition-colors no-underline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  Web App
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Version History (Changelog like README) -->
+          <div class="border border-[var(--outline)] rounded-xl overflow-hidden bg-[var(--surface-variant)]">
+            <details class="group">
+              <summary class="flex items-center justify-between p-4 cursor-pointer font-semibold text-sm text-[var(--on-surface)] select-none list-none hover:bg-[var(--surface-color)]/60 transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <svg class="w-4 h-4 text-[var(--primary-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span>Version History & Changelog</span>
+                  <span class="text-xs text-[var(--muted-color)] font-normal">(v1.0.0 → v3.3.0)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-[var(--primary-color)] font-medium group-open:hidden">View changelog</span>
+                  <span class="text-xs text-[var(--muted-color)] font-medium hidden group-open:inline">Hide changelog</span>
+                  <svg class="w-4 h-4 text-[var(--muted-color)] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </summary>
+              <div class="p-4 pt-2 border-t border-[var(--outline)] bg-[var(--surface-color)] space-y-4 max-h-[460px] overflow-y-auto text-xs">
+
+                <!-- v3.3.0 -->
+                <div class="relative pl-5 border-l-2 border-emerald-500/50 pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v3.3.0</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-semibold">Latest</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Web & Mobile Feature Parity</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Added 6 new achievements mirroring mobile (Master Hoarder, First Payday, Active Tracker, Century Club, High Roller, streaks)</li>
+                    <li>Transaction history Income (<span class="text-emerald-500">↑</span>) & Expense (<span class="text-rose-500">↓</span>) pill badges</li>
+                    <li>Context-aware empty states with one-tap Clear Filters action</li>
+                    <li>Dashboard real-time remaining goal pill and 25%, 50%, 75% milestone ticks</li>
+                    <li>Isolated Danger Zone block for high-impact destructive operations</li>
+                    <li>Live database sync status indicator and full-screen loading states</li>
+                    <li>Shortcut <code class="px-1 py-0.5 rounded bg-[var(--surface-variant)]">+ New Action</code> tile in Quick Actions grid</li>
+                  </ul>
+                </div>
+
+                <!-- v3.2.0 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v3.2.0</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Safety Cache System & Offline Sync</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Local safety snapshots saved automatically after successful database queries</li>
+                    <li>Automatic cache restore if database is empty; offline conflict resolution dialog</li>
+                    <li>Offline safety banner with cached mode operations</li>
+                  </ul>
+                </div>
+
+                <!-- v3.1.2 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v3.1.2</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Notification Badge Tracking & Pills Pagination</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Persistent unread achievement badge clearing and Read All action</li>
+                    <li>Sliding window pill pagination with rounded buttons and ellipsis</li>
+                    <li>Staggered pulse dot loading animations</li>
+                  </ul>
+                </div>
+
+                <!-- v3.1.1 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v3.1.1</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Notifications Hub & Layout Improvements</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Dedicated notifications page with activity alerts and achievements</li>
+                    <li>Top bar bell badge showing unread notification counter</li>
+                    <li>Clean swipe and edit action separation in history</li>
+                  </ul>
+                </div>
+
+                <!-- v3.1.0 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v3.1.0</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Bug Fixes & Stability</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Resolved build and compile issues across web and mobile targets</li>
+                  </ul>
+                </div>
+
+                <!-- v3.0.0 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v3.0.0</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Analytics Intelligence & Android Widget</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>7-day rolling average estimated days to goal calculation</li>
+                    <li>Best Earning Week and 7-day earning rate cards in Analytics</li>
+                    <li>Glance-based Android home screen widget with balance and progress bar</li>
+                    <li>Milestone notifications and progress card sharing generator</li>
+                  </ul>
+                </div>
+
+                <!-- v2.1.0 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v2.1.0</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Firebase Direct Auth (Flask Backend Removed)</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Direct Firebase Auth integration via synthetic email accounts</li>
+                    <li>JSON backup import & export across all platforms</li>
+                    <li>Target SDK 35, Compose BOM 2025.05.01, and KSP modern build tooling</li>
+                  </ul>
+                </div>
+
+                <!-- v2.0.0 -->
+                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v2.0.0</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">UI Overhaul & Analytics</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Animated gradient background and modern card layout</li>
+                    <li>Analytics dashboard with charts, stats, and period breakdowns</li>
+                    <li>Admin panel and multi-profile support</li>
+                  </ul>
+                </div>
+
+                <!-- v1.0.0 -->
+                <div class="relative pl-5 pb-1">
+                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-[var(--on-surface)]">v1.0.0</span>
+                    <span class="text-[var(--muted-color)] text-[11px]">— 2025</span>
+                  </div>
+                  <p class="font-medium text-[var(--on-surface)] mb-1">Initial Cross-Platform Release</p>
+                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
+                    <li>Cloud Firestore sync, Dashboard, Balance & Goal tracking, Quick Actions, History</li>
+                  </ul>
+                </div>
+
+              </div>
+            </details>
+          </div>
+        </div>
+
         <div class="mt-12 pt-8 border-t-2 border-dashed border-red-500/30">
           <div class="mb-5">
             <h2 class="text-xl font-bold text-[var(--danger-color)] flex items-center gap-2">

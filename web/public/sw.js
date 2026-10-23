@@ -2,9 +2,9 @@
 // Provides offline support with cache-first strategy for static assets
 // and network-first for API calls
 
-const CACHE_NAME = 'coin-tracker-v4';
-const STATIC_CACHE = 'coin-tracker-static-v4';
-const DYNAMIC_CACHE = 'coin-tracker-dynamic-v4';
+const CACHE_NAME = 'coin-tracker-v5';
+const STATIC_CACHE = 'coin-tracker-static-v5';
+const DYNAMIC_CACHE = 'coin-tracker-dynamic-v5';
 
 // Assets to cache on install (same-origin only)
 const STATIC_ASSETS = [

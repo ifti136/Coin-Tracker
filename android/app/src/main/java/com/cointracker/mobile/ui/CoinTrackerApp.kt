@@ -443,6 +443,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                     SettingsScreen(
                                         envelope = uiState.profileEnvelope,
                                         profiles = uiState.profiles,
+                                        session = uiState.session,
                                         isActionLoading = { action -> viewModel.isActionLoading(action) },
                                         onUpdateSettings = { viewModel.updateSettings(it) },
                                         onAddQuickAction = { viewModel.addQuickAction(it) },

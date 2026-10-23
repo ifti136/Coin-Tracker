@@ -1005,6 +1005,26 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     this.renderCategoryList("expense");
     const delBtn = document.getElementById("deleteProfileBtn");
     if (delBtn) delBtn.disabled = this.currentProfile === "Default";
+
+    // Update About section ("Me" details)
+    const aboutUsername = document.getElementById("aboutUsername");
+    if (aboutUsername) aboutUsername.textContent = this.username || "User";
+    const aboutEmail = document.getElementById("aboutUserEmail");
+    if (aboutEmail) aboutEmail.textContent = auth.currentUser?.email || (this.username ? `${this.username}@cointracker.app` : "Authenticated");
+    const aboutRole = document.getElementById("aboutUserRoleBadge");
+    if (aboutRole) {
+      const roleText = (this.role || "user").toUpperCase();
+      aboutRole.textContent = roleText;
+      if (this.role === "admin") {
+        aboutRole.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase";
+      } else {
+        aboutRole.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase";
+      }
+    }
+    const aboutProfile = document.getElementById("aboutActiveProfile");
+    if (aboutProfile) aboutProfile.textContent = this.currentProfile;
+    const aboutUid = document.getElementById("aboutUserId");
+    if (aboutUid) aboutUid.textContent = this.uid ? `${this.uid.slice(0, 10)}…` : "N/A";
   }
 
   renderQuickActionList() {

@@ -1,12 +1,16 @@
 package com.cointracker.mobile.ui.screens
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -20,6 +24,11 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +47,7 @@ import org.json.JSONObject
 fun SettingsScreen(
     envelope: ProfileEnvelope?,
     profiles: List<String>,
+    session: UserSession? = null,
     isActionLoading: (String) -> Boolean,
     onUpdateSettings: (Settings) -> Unit,
     onAddQuickAction: (QuickAction) -> Unit,
@@ -70,6 +80,7 @@ fun SettingsScreen(
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var deleteAccountPassword by remember { mutableStateOf("") }
     var deleteAccountPasswordVisible by remember { mutableStateOf(false) }
+    var showVersionHistory by remember { mutableStateOf(false) }
 
     // File launchers
     val exportLauncher = rememberLauncherForActivityResult(
@@ -611,6 +622,284 @@ fun SettingsScreen(
                             )
                         } else {
                             Text("Delete Current Profile (${envelope.profile})")
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        // About Section
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "About Coin Tracker",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "About Coin Tracker",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
+                        )
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            "v3.3.0",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Cross-platform in-game coin & savings tracker for eFootball.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor.copy(alpha = 0.7f)
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // Signed in account ("Me")
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "CURRENT ACCOUNT (\"ME\")",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textColor.copy(alpha = 0.6f)
+                            )
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    (session?.role ?: "user").uppercase(),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            session?.username ?: "User",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
+                        )
+                        Text(
+                            "Active Profile: ${envelope?.profile ?: session?.currentProfile ?: "Default"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.75f)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Developer & Project Links
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            "DEVELOPER",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textColor.copy(alpha = 0.6f)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Ifti (@ifti136) • MIT License",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = textColor
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ifti136/Coin-Tracker"))
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                            ) {
+                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("GitHub", style = MaterialTheme.typography.labelSmall)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://cointrack-16ce2.web.app"))
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                            ) {
+                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Web App", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Version History Accordion
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showVersionHistory = !showVersionHistory }
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Version History & Changelog",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textColor
+                                )
+                            }
+                            Icon(
+                                if (showVersionHistory) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (showVersionHistory) "Collapse" else "Expand",
+                                tint = textColor.copy(alpha = 0.7f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        if (showVersionHistory) {
+                            Spacer(Modifier.height(12.dp))
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            )
+                            Spacer(Modifier.height(10.dp))
+
+                            val changelogs = listOf(
+                                "v3.3.0 (2026)" to listOf(
+                                    "Web & Mobile feature parity",
+                                    "6 new achievements, streaks, and Material 3 vector icons",
+                                    "Income/Expense pill badges in history",
+                                    "Context-aware empty states with clear filters action",
+                                    "Goal milestone indicators & real-time remaining pill",
+                                    "Dedicated Danger Zone isolation & DB loading state"
+                                ),
+                                "v3.2.0 (2026)" to listOf(
+                                    "Local safety cache snapshot system",
+                                    "Auto cache-to-DB sync & conflict resolution dialog",
+                                    "Offline indicator banner"
+                                ),
+                                "v3.1.2 (2026)" to listOf(
+                                    "Notification badge tracking with Read All action",
+                                    "Sliding window pill pagination",
+                                    "Pulse dot staggered loading animation"
+                                ),
+                                "v3.1.1 (2026)" to listOf(
+                                    "Notifications hub screen with activity alerts",
+                                    "Resizable home screen widget (Glance)",
+                                    "History swipe-to-delete fix"
+                                ),
+                                "v3.1.0 (2026)" to listOf(
+                                    "Minor code bug fixes and build improvements"
+                                ),
+                                "v3.0.0 (2026)" to listOf(
+                                    "7-day rolling rate for estimated days to goal",
+                                    "Best earning week & 7-day rate analytics cards",
+                                    "Glance home screen widget & instant milestone notifications",
+                                    "Progress card image generator & system sharing"
+                                ),
+                                "v2.1.0 (2026)" to listOf(
+                                    "Direct Firebase Auth (Flask removed)",
+                                    "JSON backup export & import across all platforms",
+                                    "KSP migration & targetSdk 35"
+                                ),
+                                "v2.0.0 (2026)" to listOf(
+                                    "UI overhaul with GlassCard and animated gradients",
+                                    "Analytics screen with timeline & donut charts",
+                                    "Admin panel and multiple profile support"
+                                ),
+                                "v1.0.0 (2025)" to listOf(
+                                    "Initial cross-platform release with Firestore cloud sync"
+                                )
+                            )
+
+                            changelogs.forEach { (version, items) ->
+                                Text(
+                                    version,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                items.forEach { item ->
+                                    Row(
+                                        modifier = Modifier.padding(start = 6.dp, top = 2.dp, bottom = 2.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Text("• ", style = MaterialTheme.typography.bodySmall, color = textColor.copy(alpha = 0.6f))
+                                        Text(item, style = MaterialTheme.typography.bodySmall, color = textColor.copy(alpha = 0.8f))
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
                         }
                     }
                 }
