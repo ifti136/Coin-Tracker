@@ -801,11 +801,15 @@ class CoinTrackerApp {
                          <div class="quick-amount">${action.is_positive ? "+" : "-"}${action.value}</div>`;
         btn.onclick = async () => {
           const snapshot = this._snapshotWriteState();
+          const profileName = this.currentProfile;
+          let createdTxn = null;
           const ok = await this._runWrite(
             `quick:${index}`,
             btn,
             "Recording…",
-            () => this.addTransaction(action.is_positive ? action.value : -action.value, action.text),
+            async () => {
+              createdTxn = await this.addTransaction(action.is_positive ? action.value : -action.value, action.text);
+            },
             `Could not record '${action.text}'. Please try again.`
           );
           if (ok === null) return;
@@ -813,7 +817,13 @@ class CoinTrackerApp {
             this._restoreWriteState(snapshot);
             return;
           }
-          this.showToast(`'${action.text}' recorded!`, "success");
+          if (createdTxn) {
+            this.showUndoToast(`'${action.text}' recorded!`, () => {
+              this._undoAddTransaction(profileName, createdTxn.id);
+            });
+          } else {
+            this.showToast(`'${action.text}' recorded!`, "success");
+          }
         };
         grid.appendChild(btn);
       });
@@ -1497,11 +1507,15 @@ class CoinTrackerApp {
     if (amount === null) return;
     const src = document.getElementById("addSource").value;
     const snapshot = this._snapshotWriteState();
+    const profileName = this.currentProfile;
+    let createdTxn = null;
     const ok = await this._runWrite(
       "add",
       document.getElementById("addCoinsBtn"),
       "Adding…",
-      () => this.addTransaction(amount, src),
+      async () => {
+        createdTxn = await this.addTransaction(amount, src);
+      },
       "Could not add coins. Please try again."
     );
     if (ok === null) return;
@@ -1511,7 +1525,13 @@ class CoinTrackerApp {
     }
     input.value = "";
     this._clearFieldError(input, "addAmountError");
-    this.showToast(`Added ${amount.toLocaleString()} coins!`, "success");
+    if (createdTxn) {
+      this.showUndoToast(`Added ${amount.toLocaleString()} coins!`, () => {
+        this._undoAddTransaction(profileName, createdTxn.id);
+      });
+    } else {
+      this.showToast(`Added ${amount.toLocaleString()} coins!`, "success");
+    }
   }
 
   async spendFromDashboard() {
@@ -1520,11 +1540,15 @@ class CoinTrackerApp {
     if (amount === null) return;
     const cat = document.getElementById("spendCategory").value;
     const snapshot = this._snapshotWriteState();
+    const profileName = this.currentProfile;
+    let createdTxn = null;
     const ok = await this._runWrite(
       "spend",
       document.getElementById("spendCoinsBtn"),
       "Spending…",
-      () => this.addTransaction(-amount, cat),
+      async () => {
+        createdTxn = await this.addTransaction(-amount, cat);
+      },
       "Could not record spending. Please try again."
     );
     if (ok === null) return;
@@ -1534,7 +1558,13 @@ class CoinTrackerApp {
     }
     input.value = "";
     this._clearFieldError(input, "spendAmountError");
-    this.showToast(`Spent ${amount.toLocaleString()} coins!`, "success");
+    if (createdTxn) {
+      this.showUndoToast(`Spent ${amount.toLocaleString()} coins!`, () => {
+        this._undoAddTransaction(profileName, createdTxn.id);
+      });
+    } else {
+      this.showToast(`Spent ${amount.toLocaleString()} coins!`, "success");
+    }
   }
 
   showEditModal(transactionId) {
@@ -1597,21 +1627,42 @@ class CoinTrackerApp {
 
   async deleteTransaction(transactionId) {
     if (!await this.confirm("Delete this transaction?")) return;
-    const profile = this.userDataDoc.profiles[this.currentProfile];
+    const profileName = this.currentProfile;
+    const profile = this.userDataDoc.profiles[profileName];
     const deletedTx = profile.transactions.find((t) => t.id === transactionId);
     profile.transactions = profile.transactions.filter((t) => t.id !== transactionId);
     this._recalcPreviousBalances();
     await this.saveUserData();
+    this.updateAllUI();
     // UNDO snackbar
     if (deletedTx) {
-      this.showUndoToast("Transaction deleted", () => {
-        this.userDataDoc.profiles[this.currentProfile].transactions.push(deletedTx);
-        this._recalcPreviousBalances();
-        this.saveUserData();
-        this.updateAllUI();
+      this.showUndoToast("Transaction deleted", async () => {
+        const targetProfile = this.userDataDoc.profiles[profileName];
+        if (!targetProfile) return;
+        if (!targetProfile.transactions.some((t) => t.id === deletedTx.id)) {
+          targetProfile.transactions.push(deletedTx);
+          this._recalcPreviousBalances();
+          await this.saveUserData();
+          this.updateAllUI();
+          this.showToast("Transaction restored.", "success");
+        }
       });
     }
+  }
+
+  async _undoAddTransaction(profileName, transactionId) {
+    const profile = this.userDataDoc.profiles[profileName];
+    if (!profile) return;
+    const idx = profile.transactions.findIndex((t) => t.id === transactionId);
+    if (idx === -1) {
+      this.showToast("Transaction no longer exists.", "error");
+      return;
+    }
+    profile.transactions.splice(idx, 1);
+    this._recalcPreviousBalances();
+    await this.saveUserData();
     this.updateAllUI();
+    this.showToast("Transaction undone.", "success");
   }
 
   showUndoToast(message, onUndo) {
@@ -1628,6 +1679,7 @@ class CoinTrackerApp {
     const undoBtn = document.createElement("button");
     undoBtn.type = "button";
     undoBtn.className = "toast-undo";
+    undoBtn.setAttribute("aria-label", `Undo: ${message}`);
     undoBtn.textContent = "Undo";
     toast.append(text, undoBtn);
     toast.className = "toast success show";

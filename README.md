@@ -170,6 +170,16 @@ In the Firestore console, find the user's document under `users/{userId}` and se
 
 ---
 
+## 🆕 Web v4.0.1
+
+Transaction Undo — accessible undo snackbar extended to Add Coins, Spend Coins, and Quick Actions with safe Firestore rollback and balance recalculation.
+
+- Added undo action to Add Coins, Spend Coins, and Quick Action success snackbars.
+- Reverting a newly added transaction cleanly rolls back the record, recalculates running balances, and persists state without race conditions.
+- Accessible undo button with explicit aria-label and keyboard-navigable feedback.
+
+---
+
 ## 🆕 Web v4.0.0
 
 Web UI overhaul — gold/graphite design system, single `base.css` stylesheet, accessible dialogs, and safer writes.
