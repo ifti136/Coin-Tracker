@@ -1,94 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Coin Tracker</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Coin Tracker</title>
 
-    <link rel="icon" href="/images/coin.ico">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#3b82f6">
+  <link rel="icon" href="/images/coin.ico">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#E8B84A">
 
-    <script>
-        (function() {
-            try {
-                const theme = localStorage.getItem('theme') || 'light';
-                document.documentElement.setAttribute('data-theme', theme);
-            } catch (e) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-        })();
-    </script>
+  <script>
+    (function() {
+      try {
+        const theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        screens: { sm: '600px', md: '768px', lg: '1024px', xl: '1280px' },
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            display: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
           }
         }
       }
-    </script>
+    }
+  </script>
 
-    <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/base.css">
 </head>
-<body class="flex justify-center items-center min-h-screen p-4">
+<body class="font-sans text-[var(--text-primary)] bg-[var(--canvas)] text-sm m-0 p-0 min-h-screen">
 
-  <button id="themeToggleBtn"
-    aria-label="Toggle dark mode"
-    class="fixed top-5 right-5 w-[42px] h-[42px] rounded-full border flex items-center justify-center cursor-pointer transition-all duration-200 z-10
-           border-[var(--outline)] bg-[var(--surface-color)] text-[var(--on-surface)] hover:bg-[var(--surface-variant)] hover:scale-110">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-  </button>
+  <a href="#auth-form" class="skip-link">Skip to sign-in form</a>
 
-  <main id="main-content" role="main" class="w-full max-w-[480px] lg:max-w-[520px]">
-    <div class="auth-card bg-[var(--surface-color)] border border-[var(--outline)] rounded-2xl px-7 py-9 shadow-[var(--shadow-lg)] w-full sm:w-[90%] mx-auto">
-
-      <div class="flex items-center gap-3 text-xl font-bold text-[var(--on-bg-color)] justify-center mb-6">
-        <div class="w-9 h-9 bg-amber-400 rounded-[10px] flex items-center justify-center text-white font-extrabold text-lg">C</div>
-        <span>Coin Tracker</span>
+  <div class="min-h-screen flex flex-col">
+    <header class="flex items-center justify-between gap-4 px-5 sm:px-8 py-4">
+      <div class="flex items-center gap-3">
+        <span class="w-9 h-9 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] flex items-center justify-center font-display font-bold text-base shrink-0" aria-hidden="true">C</span>
+        <span class="font-display font-bold text-lg text-[var(--text-primary)]">Coin Tracker</span>
       </div>
+      <button type="button" id="themeToggleBtn" aria-label="Toggle dark mode" class="btn ghost w-11 h-11 !p-0">
+        <span aria-hidden="true"></span>
+      </button>
+    </header>
 
-      <h2 id="auth-title" class="text-center text-2xl font-bold text-[var(--on-bg-color)] mb-6">Login</h2>
+    <main id="main-content" role="main" class="flex-1 flex justify-center px-5 pb-10 pt-2 sm:pt-8">
+      <div class="w-full max-w-[420px] lg:max-w-[440px]">
+        <section id="auth-form" class="auth-card card p-6 sm:p-8" aria-labelledby="auth-title" tabindex="-1">
+          <div class="mb-6">
+            <h1 id="auth-title" class="font-display text-2xl font-bold m-0">Login</h1>
+            <p class="muted-text mt-1 mb-0">Sign in to continue tracking your coins.</p>
+          </div>
 
-      <div class="mb-4">
-        <label for="username" class="block mb-1.5 font-medium text-sm text-[var(--on-bg-color)]">Username</label>
-        <input type="text" id="username" autocomplete="username" placeholder="Enter username"
-          class="w-full px-3.5 py-[11px] rounded-[10px] border border-[var(--outline)] bg-[var(--surface-variant)] text-[var(--on-surface)] text-sm font-[inherit] transition-colors duration-200
-                 focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
+          <div class="field mb-4">
+            <label for="username" class="field-label">Username</label>
+            <input type="text" id="username" autocomplete="username" placeholder="Enter username" aria-describedby="auth-error">
+          </div>
+
+          <div class="field mb-4" id="confirmPasswordGroup" style="display:none;">
+            <label for="confirmPassword" class="field-label">Confirm password</label>
+            <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="Confirm password" aria-describedby="auth-error">
+          </div>
+
+          <div class="field mb-3">
+            <label for="password" class="field-label">Password</label>
+            <input type="password" id="password" autocomplete="current-password" placeholder="Enter password" aria-describedby="auth-error">
+          </div>
+
+          <p id="auth-error" class="field-error min-h-[20px] mb-1" role="alert" aria-live="polite"></p>
+
+          <div class="flex flex-col gap-2 mt-2">
+            <button type="button" id="auth-submit-btn" class="btn primary w-full">Login</button>
+            <button type="button" id="auth-toggle-btn" class="btn ghost w-full">Need an account? Register</button>
+          </div>
+        </section>
+
+        <p class="muted-text text-center mt-5 mb-0">Your data stays synced with your Coin Tracker account.</p>
       </div>
-
-      <div class="mb-4" id="confirmPasswordGroup" style="display:none;">
-        <label for="confirmPassword" class="block mb-1.5 font-medium text-sm text-[var(--on-bg-color)]">Confirm Password</label>
-        <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="Confirm password"
-          class="w-full px-3.5 py-[11px] rounded-[10px] border border-[var(--outline)] bg-[var(--surface-variant)] text-[var(--on-surface)] text-sm font-[inherit] transition-colors duration-200
-                 focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-      </div>
-
-      <div class="mb-4">
-        <label for="password" class="block mb-1.5 font-medium text-sm text-[var(--on-bg-color)]">Password</label>
-        <input type="password" id="password" autocomplete="current-password" placeholder="Enter password"
-          class="w-full px-3.5 py-[11px] rounded-[10px] border border-[var(--outline)] bg-[var(--surface-variant)] text-[var(--on-surface)] text-sm font-[inherit] transition-colors duration-200
-                 focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-      </div>
-
-      <p id="auth-error" class="text-[var(--error-color)] text-[13px] min-h-[20px] text-center mb-1"></p>
-
-      <div class="flex flex-col gap-2.5 mt-3">
-        <button id="auth-submit-btn"
-          class="btn primary w-full py-3 rounded-[10px] font-semibold text-sm bg-[var(--primary-color)] text-white border-0 cursor-pointer hover:opacity-90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-wait transition-all">
-          Login
-        </button>
-        <button id="auth-toggle-btn"
-          class="bg-none border-0 text-[var(--primary-color)] font-medium cursor-pointer text-[13px] font-[inherit] text-center py-1 hover:underline">
-          Need an account? Register
-        </button>
-      </div>
-    </div>
-  </main>
+    </main>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 

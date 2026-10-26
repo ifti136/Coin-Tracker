@@ -12,21 +12,24 @@ web/
 │   ├── index.html              # Main app shell (dashboard, analytics, history, settings)
 │   ├── login.html              # Login / register page
 │   ├── admin.html              # Admin panel (role-gated)
+│   ├── manifest.json           # PWA manifest (name, icons, theme colors)
+│   ├── sw.js                   # Service worker (offline static-asset cache)
 │   ├── css/
-│   │   ├── style.css           # Main app styles + responsive layout
-│   │   ├── login.css           # Auth page styles
-│   │   └── admin.css           # Admin panel styles
+│   │   └── base.css            # Design tokens + shared component styles
 │   ├── js/
 │   │   ├── app.js              # Main app logic (Firestore CRUD, charts, UI)
 │   │   ├── login.js            # Auth logic (register, login, theme)
-│   │   └── admin.js            # Admin panel logic (stats, user management, broadcast)
+│   │   ├── admin.js            # Admin panel logic (stats, user management, broadcast)
+│   │   └── icons.js            # Shared SVG icon helpers
 │   └── images/
 │       ├── coin.ico            # Favicon
+│       ├── coin.png            # Coin artwork + PWA icon
+│       ├── web_dashboard.png   # PWA screenshot
 │       ├── bkash.png           # Donation card logo
 │       ├── nagad.png           # Donation card logo
 │       └── rocket.png          # Donation card logo
 ├── firebase.json               # Hosting config + URL rewrites
-├── firebase-config.example.js  # Template — copy to firebase-config.js and fill in
+├── firebase-config.example.js  # Template — copy to public/firebase-config.js and fill in
 ├── firestore.rules             # Firestore security rules
 ├── firestore.indexes.json      # Firestore index definitions
 └── README.md
@@ -70,10 +73,10 @@ web/
 3. Enable **Authentication → Sign-in methods → Email/Password**.
 4. Go to **Project Settings → Your apps → Add app → Web**.
 5. Copy the `firebaseConfig` object shown.
-6. In `web/public/js/`, create `firebase-config.js` from the example template:
+6. Create `web/public/firebase-config.js` from the example template:
 
 ```bash
-cp web/public/js/firebase-config.example.js web/public/js/firebase-config.js
+cp web/firebase-config.example.js web/public/firebase-config.js
 # then fill in your project values
 ```
 
@@ -89,7 +92,7 @@ export const firebaseConfig = {
 };
 ```
 
-> `firebase-config.js` is in `.gitignore`. Never commit it.
+> `web/public/firebase-config.js` is in `.gitignore`. Never commit it.
 
 7. Deploy Firestore security rules:
 
@@ -101,7 +104,7 @@ firebase deploy --only firestore:rules
 
 ## Running Locally
 
-No build step needed. Serve the `public/` folder with any static server, or use the Firebase emulator:
+No build step needed. Serve the `web/public/` folder with any static server, or use the Firebase emulator:
 
 ```bash
 npm install -g firebase-tools
@@ -172,7 +175,7 @@ Quick actions are the one-click buttons on the dashboard (e.g. "Login +50", "Box
 
 | Problem | Fix |
 |---|---|
-| Blank page / module error | Check `firebase-config.js` exists in `public/js/` and has correct values |
+| Blank page / module error | Check `firebase-config.js` exists in `web/public/` and has correct values |
 | Login fails with "Username not found" | User doc missing in `users` collection — re-register |
 | Charts not rendering | Ensure Chart.js CDN loads; check browser console for errors |
 | Firestore permission denied | Re-deploy `firestore.rules`; check user has correct `role` field |

@@ -2,9 +2,9 @@
 // Provides offline support with cache-first strategy for static assets
 // and network-first for API calls
 
-const CACHE_NAME = 'coin-tracker-v5';
-const STATIC_CACHE = 'coin-tracker-static-v5';
-const DYNAMIC_CACHE = 'coin-tracker-dynamic-v5';
+const CACHE_NAME = 'coin-tracker-v6';
+const STATIC_CACHE = 'coin-tracker-static-v6';
+const DYNAMIC_CACHE = 'coin-tracker-dynamic-v6';
 
 // Assets to cache on install (same-origin only)
 const STATIC_ASSETS = [
@@ -12,12 +12,12 @@ const STATIC_ASSETS = [
   '/index.html',
   '/login.html',
   '/admin.html',
-  '/css/style.css',
-  '/css/login.css',
-  '/css/admin.css',
+  '/manifest.json',
+  '/css/base.css',
   '/js/app.js',
   '/js/login.js',
   '/js/admin.js',
+  '/js/icons.js',
   '/images/coin.ico',
   '/images/coin.png',
   '/images/bkash.png',
@@ -27,7 +27,8 @@ const STATIC_ASSETS = [
 
 // Cross-origin assets to cache separately (with individual error handling)
 const CROSS_ORIGIN_ASSETS = [
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+  'https://cdn.tailwindcss.com',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap',
   'https://cdn.jsdelivr.net/npm/chart.js'
 ];
 

@@ -7,7 +7,7 @@
 
   <link rel="icon" href="/images/coin.ico">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#3b82f6">
+  <meta name="theme-color" content="#E8B84A">
 
   <script>
     (function() {
@@ -20,14 +20,21 @@
     })();
   </script>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
+        screens: { sm: '600px', md: '768px', lg: '1024px', xl: '1280px' },
         extend: {
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            display: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+          }
         }
       }
     }
@@ -36,1000 +43,982 @@
   <link rel="stylesheet" href="/css/base.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="font-sans text-[var(--on-bg-color)] bg-[var(--bg-color)] text-sm m-0 p-0 min-h-screen overflow-x-hidden">
+<body class="font-sans text-[var(--text-primary)] bg-[var(--canvas)] text-sm m-0 p-0 min-h-screen overflow-x-hidden">
 
   <div id="loadingOverlay" role="status" aria-live="polite">
-    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-[var(--surface-color)] border border-[var(--outline)] shadow-2xl max-w-sm mx-4 text-center">
-      <div class="relative flex items-center justify-center mb-4">
-        <div class="w-12 h-12 rounded-full border-4 border-[var(--outline-variant)] border-t-[var(--primary-color)] animate-spin"></div>
-        <div class="absolute w-6 h-6 bg-amber-400 rounded-md flex items-center justify-center text-white font-bold text-xs shadow-sm">C</div>
-      </div>
-      <div class="flex items-center gap-2 text-[var(--on-surface)] font-semibold text-base mb-1">
-        <svg class="w-4 h-4 text-[var(--primary-color)] shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-        </svg>
+    <div class="card max-w-sm mx-4 text-center">
+      <div id="loadingSpinner" class="mb-4 mx-auto"></div>
+      <div class="flex items-center justify-center gap-2 text-[var(--text-primary)] font-semibold text-base mb-1">
         <span id="loadingMessage">Retrieving data from database...</span>
       </div>
-      <p id="loadingSubtext" class="text-xs text-[var(--muted-color)] m-0">Connecting to Cloud Firestore...</p>
+      <p id="loadingSubtext" class="muted-text m-0">Connecting to Cloud Firestore...</p>
     </div>
   </div>
 
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <div class="flex min-h-screen bg-[var(--surface-color)] w-full max-sm:flex-col">
-
-    <header class="top-bar top bar hidden md:flex fixed top-0 left-0 right-0 h-16 bg-[var(--surface-color)] border-b border-[var(--outline)] z-[1000] px-6 items-center justify-between backdrop-blur-[20px]" role="banner">
-      <div class="flex items-center gap-4">
-        <a href="#" class="flex items-center gap-3 text-xl font-bold text-[var(--on-surface)] no-underline top-bar-logo" data-page="dashboard" aria-label="Coin Tracker Home">
-          <div class="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center text-white font-bold coin-icon">C</div>
-          <span>Coin Tracker</span>
-        </a>
-        <div id="dbSyncStatus" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-[var(--surface-variant)] text-[var(--muted-color)] border border-[var(--outline)]" title="Database connection status">
-          <span id="dbSyncDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span id="dbSyncText">Retrieving data...</span>
-        </div>
+  <header class="top-bar fixed top-0 left-0 right-0 h-16 hidden sm:flex items-center justify-between px-6 bg-[var(--surface)] border-b border-[var(--border)] z-[1000]" role="banner">
+    <div class="flex items-center gap-4 min-w-0">
+      <a href="#" class="top-bar-logo flex items-center gap-3 text-lg font-display font-bold text-[var(--text-primary)] no-underline" data-page="dashboard" aria-label="Coin Tracker home">
+        <span class="w-8 h-8 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] flex items-center justify-center font-display font-bold text-sm shrink-0" aria-hidden="true">C</span>
+        <span class="truncate">Coin Tracker</span>
+      </a>
+      <div id="dbSyncStatus" class="status-pill neutral" title="Database connection status">
+        <span id="dbSyncDot" class="w-2 h-2 rounded-full bg-[var(--brand)]" aria-hidden="true"></span>
+        <span id="dbSyncText">Retrieving data...</span>
       </div>
-      <div class="flex items-center gap-4">
-        <button class="top-bar-icon-btn relative flex items-center justify-center w-10 h-10 rounded-full bg-transparent border-0 text-[var(--on-surface-variant)] cursor-pointer transition-colors duration-200 hover:bg-[var(--surface-variant)] hover:text-[var(--on-surface)]"
-          id="topBarNotificationsBtn" aria-label="Notifications" data-page="notifications">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          <span id="topBarAchievementBadge" class="absolute top-0.5 right-0.5 bg-[var(--error-color)] text-white text-[10px] font-bold rounded-[10px] px-1 py-px min-w-[16px] text-center leading-[14px] top-bar-badge" style="display:none" aria-live="polite" aria-atomic="true"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" class="top-bar-icon-btn relative flex items-center justify-center rounded-full bg-transparent border-0 text-[var(--text-secondary)] cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]" id="topBarNotificationsBtn" aria-label="Notifications" data-page="notifications">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="topBarAchievementBadge" class="badge" style="display:none" aria-live="polite" aria-atomic="true"></span>
+      </button>
+      <button type="button" class="top-bar-icon-btn relative flex items-center justify-center rounded-full bg-transparent border-0 text-[var(--text-secondary)] cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]" id="topBarThemeToggle" aria-label="Toggle dark mode">
+        <span id="topBarThemeIcon" aria-hidden="true"></span>
+      </button>
+      <div class="profile-dropdown-container relative">
+        <button type="button" class="top-bar-icon-btn relative flex items-center justify-center rounded-full bg-transparent border-0 text-[var(--text-secondary)] cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]" id="topBarProfileBtn" aria-label="Profile menu" aria-expanded="false" aria-haspopup="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
-        <button class="top-bar-icon-btn relative flex items-center justify-center w-10 h-10 rounded-full bg-transparent border-0 text-[var(--on-surface-variant)] cursor-pointer transition-colors duration-200 hover:bg-[var(--surface-variant)] hover:text-[var(--on-surface)]"
-          id="topBarThemeToggle" aria-label="Toggle dark mode">
-          <span id="topBarThemeIcon"></span>
-        </button>
-        <div class="profile-dropdown-container" style="position: relative;">
-          <button class="top-bar-icon-btn relative flex items-center justify-center w-10 h-10 rounded-full bg-transparent border-0 text-[var(--on-surface-variant)] cursor-pointer transition-colors duration-200 hover:bg-[var(--surface-variant)] hover:text-[var(--on-surface)]"
-            id="topBarProfileBtn" aria-label="Profile menu" aria-expanded="false" aria-haspopup="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div id="profileDropdownMenu" class="profile-dropdown-menu" role="menu">
+          <div class="px-3 py-2 text-[11px] font-semibold text-[var(--text-muted)]">Profiles</div>
+          <select id="topBarProfileSelect" class="mb-2" aria-label="Switch profile"></select>
+          <button type="button" class="profile-dropdown-item" id="topBarNewProfileBtn" role="menuitem">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add profile
           </button>
-          <div class="profile-dropdown-menu absolute flex-col gap-1 min-w-[220px] bg-[var(--surface-color)] border border-[var(--outline)] rounded-xl shadow-[var(--shadow-lg)] p-2 z-[1001]"
-            id="profileDropdownMenu" role="menu"
-            style="top: calc(var(--top-bar-height) + 8px); right: 24px;">
-            <div class="px-3 py-2 text-xs font-semibold text-[var(--muted-color)] uppercase">Profiles</div>
-            <select id="topBarProfileSelect" class="w-full px-3 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--card-bg)] text-[var(--text-color)] font-[inherit] mb-2" aria-label="Switch profile"></select>
-            <button class="profile-dropdown-item flex items-center gap-3 w-full px-3 py-2.5 border-0 rounded-lg bg-transparent text-[var(--on-surface)] text-sm font-medium cursor-pointer text-left font-[inherit] transition-colors duration-200 hover:bg-[var(--surface-variant)]"
-              id="topBarNewProfileBtn" role="menuitem">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Profile
-            </button>
-            <div class="h-px bg-[var(--outline-variant)] my-1"></div>
-            <button class="profile-dropdown-item flex items-center gap-3 w-full px-3 py-2.5 border-0 rounded-lg bg-transparent text-[var(--on-surface)] text-sm font-medium cursor-pointer text-left font-[inherit] transition-colors duration-200 hover:bg-[var(--surface-variant)]"
-              id="topBarAdminBtn" role="menuitem" style="display: none;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              Admin Panel
-            </button>
-            <button class="profile-dropdown-item flex items-center gap-3 w-full px-3 py-2.5 border-0 rounded-lg bg-transparent text-[var(--error-color)] text-sm font-medium cursor-pointer text-left font-[inherit] transition-colors duration-200 hover:bg-[var(--surface-variant)]"
-              id="topBarLogoutBtn" role="menuitem">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <div class="sidebar fixed top-16 left-0 h-[calc(100vh-var(--top-bar-height))] w-[var(--rail-width)] min-w-[var(--rail-width)] bg-[var(--surface-variant)] border-r border-[var(--outline)] py-4 flex flex-col gap-2 overflow-y-auto z-[900] transition-[width,min-width] duration-[250ms] ease-in-out
-                max-sm:fixed max-sm:top-0 max-sm:left-0 max-sm:right-0 max-sm:w-full max-sm:min-w-0 max-sm:h-auto max-sm:border-r-0 max-sm:border-b max-sm:border-[var(--border-color)] max-sm:py-0 max-sm:gap-0 max-sm:top-0 max-sm:backdrop-blur-[20px] max-sm:overflow-y-visible max-sm:z-[1000]"
-      role="navigation" aria-label="Main navigation">
-
-      <div class="sidebar-header hidden max-sm:flex justify-between items-center w-full px-4 h-16 border-b border-[var(--border-color)] bg-[var(--surface-color)] backdrop-blur-[20px]">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 shrink-0 bg-amber-400 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm coin-icon">C</div>
-          <span class="font-bold text-base text-[var(--text-color)] whitespace-nowrap">Coin Tracker</span>
-          <div id="mobileDbSyncStatus" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[var(--surface-variant)] text-[var(--muted-color)] border border-[var(--outline)] shrink-0" title="Database connection status">
-            <span id="mobileDbSyncDot" class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-            <span id="mobileDbSyncText">Retrieving...</span>
-          </div>
-        </div>
-        <button class="hamburger-btn hidden max-sm:flex flex-col justify-center items-center bg-transparent border-0 cursor-pointer p-2 rounded-lg text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors z-[1001]" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
-          <span class="block w-5 h-0.5 bg-[var(--text-color)] rounded-full my-0.5 transition-all duration-300"></span>
-          <span class="block w-5 h-0.5 bg-[var(--text-color)] rounded-full my-0.5 transition-all duration-300"></span>
-          <span class="block w-5 h-0.5 bg-[var(--text-color)] rounded-full my-0.5 transition-all duration-300"></span>
-        </button>
-      </div>
-
-      <nav class="navbar nav flex flex-col gap-1 flex-1 px-2 max-sm:hidden" role="navigation" aria-label="Main navigation">
-        <button class="nav-btn flex items-center gap-3 bg-transparent border-0 rounded-lg py-3 px-3 text-[var(--on-surface-variant)] text-sm font-medium cursor-pointer whitespace-nowrap overflow-hidden transition-colors duration-200 hover:bg-[var(--surface-color)] hover:text-[var(--on-surface)] active" data-page="dashboard">
-          <span aria-hidden="true" class="shrink-0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
-          <span class="nav-label">Dashboard</span>
-        </button>
-        <button class="nav-btn flex items-center gap-3 bg-transparent border-0 rounded-lg py-3 px-3 text-[var(--on-surface-variant)] text-sm font-medium cursor-pointer whitespace-nowrap overflow-hidden transition-colors duration-200 hover:bg-[var(--surface-color)] hover:text-[var(--on-surface)]" data-page="analytics">
-          <span aria-hidden="true" class="shrink-0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-          <span class="nav-label">Analytics</span>
-        </button>
-        <button class="nav-btn flex items-center gap-3 bg-transparent border-0 rounded-lg py-3 px-3 text-[var(--on-surface-variant)] text-sm font-medium cursor-pointer whitespace-nowrap overflow-hidden transition-colors duration-200 hover:bg-[var(--surface-color)] hover:text-[var(--on-surface)]" data-page="history">
-          <span aria-hidden="true" class="shrink-0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
-          <span class="nav-label">History</span>
-        </button>
-        <button class="nav-btn flex items-center gap-3 bg-transparent border-0 rounded-lg py-3 px-3 text-[var(--on-surface-variant)] text-sm font-medium cursor-pointer whitespace-nowrap overflow-hidden transition-colors duration-200 hover:bg-[var(--surface-color)] hover:text-[var(--on-surface)]" data-page="settings">
-          <span aria-hidden="true" class="shrink-0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-          <span class="nav-label">Settings</span>
-        </button>
-      </nav>
-
-      <div class="profile-section hidden border-t border-[var(--border-color)] p-4 mt-auto">
-        <div class="flex justify-between items-center mb-3">
-          <span class="text-[11px] font-bold text-[var(--muted-color)] uppercase profile-label">PROFILE</span>
-          <span id="loggedInUser" class="logged-in-user text-[11px] font-medium text-[var(--muted-color)] ml-auto whitespace-nowrap overflow-hidden text-ellipsis">
-            Logged in as: <strong id="usernameDisplay">...</strong>
-          </span>
-        </div>
-        <div class="flex gap-2 profile-selector">
-          <select id="profileSelect" class="flex-1 px-2 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--card-bg)] text-[var(--text-color)] profile-dropdown"></select>
-          <button id="newProfileBtn" class="btn secondary profile-btn">＋ New</button>
-        </div>
-        <div class="mobile-control-links flex flex-col gap-2 px-0 py-3 border-t border-[var(--border-color)] mt-2">
-          <button id="mobileAdminBtn" class="mobile-admin-btn flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--primary-color)] text-sm font-medium font-[inherit] cursor-pointer text-left transition-colors duration-200 hover:bg-[var(--surface-variant)]" style="display: none;" aria-label="Admin Panel">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-            <span>Admin Panel</span>
+          <hr class="divider !my-1">
+          <button type="button" class="profile-dropdown-item" id="topBarAdminBtn" role="menuitem" style="display: none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            Admin panel
           </button>
-          <button id="mobileThemeToggle" class="mobile-theme-toggle flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--text-color)] text-sm font-medium font-[inherit] cursor-pointer text-left transition-colors duration-200 hover:bg-[var(--surface-variant)]" aria-label="Toggle dark mode">
-            <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg></span>
-            <span>Dark Mode</span>
-          </button>
-          <button id="mobileLogoutBtn" class="mobile-logout-btn flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--danger-color)] text-sm font-medium font-[inherit] cursor-pointer text-left transition-colors duration-200 hover:bg-red-50/10" aria-label="Logout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            <span>Logout</span>
+          <button type="button" class="profile-dropdown-item danger" id="topBarLogoutBtn" role="menuitem">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
           </button>
         </div>
       </div>
     </div>
+  </header>
 
-    <main class="main-content flex-1 p-[30px] overflow-y-auto bg-transparent ml-[var(--rail-width)] min-h-screen transition-[margin-left] duration-[250ms] ease-in-out
-                 md:pt-[calc(var(--top-bar-height)+30px)]
-                 max-sm:w-full max-sm:ml-0 max-sm:mt-[var(--top-bar-height)] max-sm:p-5 max-sm:pb-[calc(var(--bottom-nav-h)+20px)]"
-      id="main-content" role="main">
+  <div class="sidebar fixed top-16 left-0 h-[calc(100vh-var(--top-bar-height))] w-[var(--rail-width)] min-w-[var(--rail-width)] bg-[var(--surface)] border-r border-[var(--border)] py-3 flex flex-col gap-2 overflow-y-auto z-[900] transition-[width,min-width] duration-200 ease-out max-sm:top-0 max-sm:right-0 max-sm:w-full max-sm:min-w-0 max-sm:h-auto max-sm:border-r-0 max-sm:border-b max-sm:py-0 max-sm:gap-0" role="navigation" aria-label="Main navigation">
 
-      <div id="dashboard" class="page active">
-        <div class="flex justify-between items-center mb-5 max-sm:flex-col max-sm:items-stretch max-sm:gap-4">
-          <h1 class="text-2xl font-bold">Dashboard</h1>
-          <div class="flex gap-5 max-sm:justify-between max-sm:w-full quick-stats">
-            <div class="text-right max-sm:text-center">
-              <div class="text-xs text-[var(--muted-color)]">Today</div>
-              <div id="todayEarnings" class="text-base font-semibold text-[var(--success-color)]">+0</div>
-            </div>
-            <div class="text-right max-sm:text-center">
-              <div class="text-xs text-[var(--muted-color)]">This Week</div>
-              <div id="weekEarnings" class="text-base font-semibold text-[var(--success-color)]">+0</div>
-            </div>
-            <div class="text-right max-sm:text-center">
-              <div class="text-xs text-[var(--muted-color)]">This Month</div>
-              <div id="monthEarnings" class="text-base font-semibold text-[var(--success-color)]">+0</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-[var(--primary-container)] text-[var(--on-primary-container)] border-0 p-6 shadow-[var(--shadow-md)] mb-5 rounded-xl">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <div class="text-sm opacity-80">Current Balance</div>
-              <div id="balanceAmount" class="text-[32px] font-bold mt-1 max-sm:text-[26px]">
-                <span class="inline-flex items-center gap-2 text-xl font-normal opacity-80">
-                  <svg class="w-5 h-5 animate-spin shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                  Retrieving balance...
-                </span>
-              </div>
-            </div>
-            <div class="text-right flex flex-col items-end gap-1">
-              <div id="goalText" class="text-sm opacity-80">Loading goal...</div>
-              <div class="flex items-center gap-2">
-                <span id="remainingPill" class="text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm"></span>
-                <span id="progressPercent" class="text-sm font-bold opacity-90">0%</span>
-              </div>
-            </div>
-          </div>
-          <div class="relative bg-[var(--outline-variant)] rounded-[10px] h-3 overflow-hidden">
-            <div id="progressBar" class="bg-[var(--secondary-color)] h-full rounded-[10px] transition-[width_0.5s_ease]" style="width:0%"></div>
-            <div class="absolute inset-0 flex justify-between px-[25%] pointer-events-none">
-              <span class="w-0.5 h-full bg-white/25"></span>
-              <span class="w-0.5 h-full bg-white/25"></span>
-            </div>
-          </div>
-          <div id="goalEstimate" class="text-center text-[13px] font-medium text-[var(--muted-color)] mt-3"></div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] mb-5 rounded-xl">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-base font-semibold">Quick Actions</h3>
-            <button id="customizeQuickActions" class="bg-transparent border-0 text-[var(--muted-color)] text-xs cursor-pointer">Manage Actions ➔</button>
-          </div>
-          <div class="grid gap-4 quick-actions-grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));" id="quickActionsGrid"></div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] mb-5 rounded-xl">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-base font-semibold flex items-center gap-2">
-              <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><path d="M8.21 13.89 7 23l6-6"/><path d="M15.79 13.88 17 23l-6-6"/></svg></span>
-              Achievements
-            </h3>
-          </div>
-          <div id="achievements-grid" class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
-            <p id="no-achievements-msg" class="text-[var(--muted-color)] italic col-span-full text-center">No achievements unlocked yet. Keep going!</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-5 mb-5 max-sm:grid-cols-1 max-sm:gap-4">
-          <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl">
-            <h3 class="text-base font-semibold mb-4">Add Coins</h3>
-            <div class="mb-4">
-              <label for="addAmount" class="block mb-2 font-medium">Amount</label>
-              <input type="number" id="addAmount" placeholder="e.g., 100" min="1" max="999999"
-                class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-            </div>
-            <div class="mb-4">
-              <label for="addSource" class="block mb-2 font-medium">Source</label>
-              <select id="addSource"
-                class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2"></select>
-            </div>
-            <button id="addCoinsBtn" class="btn success w-full">Add Coins</button>
-          </div>
-          <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl">
-            <h3 class="text-base font-semibold mb-4">Spend Coins</h3>
-            <div class="mb-4">
-              <label for="spendAmount" class="block mb-2 font-medium">Amount</label>
-              <input type="number" id="spendAmount" placeholder="e.g., 900" min="1" max="999999"
-                class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-            </div>
-            <div class="mb-4">
-              <label for="spendCategory" class="block mb-2 font-medium">Category</label>
-              <select id="spendCategory"
-                class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2"></select>
-            </div>
-            <button id="spendCoinsBtn" class="btn danger w-full">Spend Coins</button>
-          </div>
-        </div>
-
-        <div class="mt-10 text-center border-t border-dashed border-[var(--border-color)] pt-5 pb-5">
-          <button id="supportBtn" class="bg-none border-0 text-[var(--muted-color)] text-[13px] font-medium cursor-pointer font-[inherit] transition-all duration-200 hover:text-[var(--primary-color)] hover:underline hover:-translate-y-px">
-            Buy me a coffee <span aria-hidden="true"><svg class="inline-block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2"/><path d="M3 8h18"/><path d="M9 8v12"/><path d="M15 8v12"/></svg></span> • By Ifti
-          </button>
+    <div class="sidebar-header hidden max-sm:flex items-center justify-between gap-3 w-full px-4 h-16 border-b border-[var(--border)] bg-[var(--surface)]">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span class="w-8 h-8 shrink-0 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] flex items-center justify-center font-display font-bold text-sm" aria-hidden="true">C</span>
+        <span class="font-display font-bold text-base text-[var(--text-primary)] whitespace-nowrap max-[340px]:hidden">Coin Tracker</span>
+        <div id="mobileDbSyncStatus" class="status-pill neutral shrink-0" title="Database connection status">
+          <span id="mobileDbSyncDot" class="w-1.5 h-1.5 rounded-full bg-[var(--brand)]" aria-hidden="true"></span>
+          <span id="mobileDbSyncText">Retrieving...</span>
         </div>
       </div>
+      <button type="button" class="hamburger-btn flex flex-col justify-center items-center bg-transparent border-0 cursor-pointer p-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] transition-colors min-w-[44px] min-h-[44px]" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
+        <span class="block w-5 h-0.5 bg-[var(--text-primary)] rounded-full my-0.5"></span>
+        <span class="block w-5 h-0.5 bg-[var(--text-primary)] rounded-full my-0.5"></span>
+        <span class="block w-5 h-0.5 bg-[var(--text-primary)] rounded-full my-0.5"></span>
+      </button>
+    </div>
 
-      <div id="analytics" class="page">
-        <h1 class="text-2xl font-bold mb-5">Analytics</h1>
+    <nav class="navbar nav flex flex-col gap-1 flex-1 px-2 py-2 max-sm:hidden" role="navigation" aria-label="Main navigation">
+      <button type="button" class="nav-btn active" data-page="dashboard">
+        <span class="nav-marker" aria-hidden="true"></span>
+        <span aria-hidden="true" class="shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button type="button" class="nav-btn" data-page="analytics">
+        <span class="nav-marker" aria-hidden="true"></span>
+        <span aria-hidden="true" class="shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+        <span class="nav-label">Analytics</span>
+      </button>
+      <button type="button" class="nav-btn" data-page="history">
+        <span class="nav-marker" aria-hidden="true"></span>
+        <span aria-hidden="true" class="shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+        <span class="nav-label">History</span>
+      </button>
+      <button type="button" class="nav-btn" data-page="settings">
+        <span class="nav-marker" aria-hidden="true"></span>
+        <span aria-hidden="true" class="shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
 
-        <div class="mb-5 flex flex-col gap-3">
-          <div class="flex gap-2 flex-wrap period-chips">
-            <button class="chip px-4 py-1.5 rounded-[20px] border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--muted-color)] text-[13px] font-semibold cursor-pointer font-[inherit] transition-all duration-200 hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] active bg-[var(--primary-color)] text-white border-[var(--primary-color)]" data-period="lifetime">Lifetime</button>
-            <button class="chip px-4 py-1.5 rounded-[20px] border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--muted-color)] text-[13px] font-semibold cursor-pointer font-[inherit] transition-all duration-200 hover:border-[var(--primary-color)] hover:text-[var(--primary-color)]" data-period="monthly">Monthly</button>
-            <button class="chip px-4 py-1.5 rounded-[20px] border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--muted-color)] text-[13px] font-semibold cursor-pointer font-[inherit] transition-all duration-200 hover:border-[var(--primary-color)] hover:text-[var(--primary-color)]" data-period="weekly">Weekly</button>
-            <button class="chip px-4 py-1.5 rounded-[20px] border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--muted-color)] text-[13px] font-semibold cursor-pointer font-[inherit] transition-all duration-200 hover:border-[var(--primary-color)] hover:text-[var(--primary-color)]" data-period="custom">Custom Range</button>
-          </div>
-          <div id="customRangePicker" class="flex gap-3 items-end bg-[var(--card-bg)] border border-[var(--outline)] rounded-xl p-4 max-sm:flex-col w-full max-w-full box-border" style="display:none">
-            <div class="flex flex-col gap-1 min-w-0 max-sm:w-full">
-              <label for="analyticsFrom" class="text-xs text-[var(--muted-color)] font-medium">From</label>
-              <input type="date" id="analyticsFrom"
-                class="w-full min-w-0 px-2.5 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]">
-            </div>
-            <div class="flex flex-col gap-1 min-w-0 max-sm:w-full">
-              <label for="analyticsTo" class="text-xs text-[var(--muted-color)] font-medium">To</label>
-              <input type="date" id="analyticsTo"
-                class="w-full min-w-0 px-2.5 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]">
-            </div>
-            <button id="applyRangeBtn" class="btn primary max-sm:w-full">Apply</button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-5 mb-5 max-sm:grid-cols-1">
-          <div class="bg-[var(--card-bg)] border border-[var(--outline)] shadow-[var(--shadow-md)] rounded-xl p-6">
-            <div class="text-xs text-[var(--muted-color)]">Total Earnings</div>
-            <div id="totalEarnings" class="text-base font-semibold text-[var(--success-color)]">+0</div>
-          </div>
-          <div class="bg-[var(--card-bg)] border border-[var(--outline)] shadow-[var(--shadow-md)] rounded-xl p-6">
-            <div class="text-xs text-[var(--muted-color)]">Total Spending</div>
-            <div id="totalSpending" class="text-base font-semibold text-[var(--danger-color)]">-0</div>
-          </div>
-          <div class="bg-[var(--card-bg)] border border-[var(--outline)] shadow-[var(--shadow-md)] rounded-xl p-6">
-            <div class="text-xs text-[var(--muted-color)]">Net Balance</div>
-            <div id="netBalance" class="text-base font-semibold text-[var(--primary-color)]">0</div>
-          </div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5 analytics-tabs">
-          <div class="flex gap-2.5 border-b border-[var(--border-color)] mb-5 tab-headers">
-            <button class="tab-header bg-transparent border-0 text-[var(--muted-color)] px-3.5 py-2.5 cursor-pointer font-semibold border-b-2 border-transparent font-[inherit] transition-colors active text-[var(--primary-color)] border-[var(--primary-color)]" data-tab="timelinePane">Balance Timeline</button>
-            <button class="tab-header bg-transparent border-0 text-[var(--muted-color)] px-3.5 py-2.5 cursor-pointer font-semibold border-b-2 border-transparent font-[inherit] transition-colors" data-tab="earningsPane">Earnings Breakdown</button>
-            <button class="tab-header bg-transparent border-0 text-[var(--muted-color)] px-3.5 py-2.5 cursor-pointer font-semibold border-b-2 border-transparent font-[inherit] transition-colors" data-tab="spendingPane">Spending Breakdown</button>
-          </div>
-          <div class="tab-content">
-            <div id="timelinePane" class="tab-pane active">
-              <div class="pt-5">
-                <h3 class="text-base font-semibold mb-2.5">Balance Over Time</h3>
-                <div class="relative h-[350px] w-full"><canvas id="timelineChart" aria-label="Line chart showing balance over time" role="img"></canvas></div>
-                <div id="timelineChartSummary" class="visually-hidden" aria-live="polite"></div>
-              </div>
-            </div>
-            <div id="earningsPane" class="tab-pane">
-              <div class="pt-5">
-                <h3 class="text-base font-semibold mb-2.5">Earnings by Source</h3>
-                <div class="relative h-[350px] w-full"><canvas id="earningsChart" aria-label="Doughnut chart showing earnings breakdown by source" role="img"></canvas></div>
-                <div id="earningsChartSummary" class="visually-hidden" aria-live="polite"></div>
-              </div>
-            </div>
-            <div id="spendingPane" class="tab-pane">
-              <div class="pt-5">
-                <h3 class="text-base font-semibold mb-2.5">Spending by Category</h3>
-                <div class="relative h-[350px] w-full"><canvas id="spendingChart" aria-label="Doughnut chart showing spending breakdown by category" role="img"></canvas></div>
-                <div id="spendingChartSummary" class="visually-hidden" aria-live="polite"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-          <div class="bg-[var(--card-bg)] border border-[var(--outline)] shadow-[var(--shadow-md)] rounded-xl p-6">
-            <div class="text-xs text-[var(--muted-color)] font-medium">7-Day Earning Rate</div>
-            <div id="sevenDayRate" class="text-base font-semibold text-[var(--success-color)] mt-0.5">0</div>
-            <div id="sevenDayTotal" class="text-xs text-[var(--muted-color)] mt-1"></div>
-          </div>
-          <div class="bg-[var(--card-bg)] border border-[var(--outline)] shadow-[var(--shadow-md)] rounded-xl p-6 best-week-card" id="bestWeekCard" style="display:none">
-            <div class="text-xs text-[var(--muted-color)] font-medium">Best Earning Week <span aria-hidden="true"><svg class="inline-block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><path d="M8.21 13.89 7 23l6-6"/><path d="M15.79 13.88 17 23l-6-6"/></svg></span></div>
-            <div id="bestWeekAmount" class="text-base font-semibold mt-0.5" style="color:#f59e0b"></div>
-            <div id="bestWeekRange" class="text-xs text-[var(--muted-color)] mt-1"></div>
-          </div>
-        </div>
+    <div class="profile-section hidden border-t border-[var(--border)] p-4 mt-auto">
+      <div class="flex justify-between items-center mb-3 gap-2">
+        <span class="text-[11px] font-semibold text-[var(--text-muted)]">Profile</span>
+        <span id="loggedInUser" class="logged-in-user text-[11px] font-medium text-[var(--text-muted)] ml-auto whitespace-nowrap overflow-hidden text-ellipsis">
+          Logged in as: <strong id="usernameDisplay">...</strong>
+        </span>
       </div>
-
-      <div id="history" class="page">
-        <div class="flex justify-between items-center mb-5 max-sm:flex-col max-sm:items-stretch max-sm:gap-4">
-          <h1 class="text-2xl font-bold">Transaction History</h1>
-          <div id="periodSummary" class="text-right text-[13px] text-[var(--muted-color)] font-medium"></div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl flex flex-col gap-5 w-full box-border">
-          <div class="bg-[var(--surface-variant)] border border-[var(--outline)] rounded-xl p-4 w-full max-w-full box-border grid gap-4 items-end grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="flex flex-col gap-1 min-w-0">
-              <label for="dateFrom" class="text-xs text-[var(--muted-color)] font-medium">From</label>
-              <input type="date" id="dateFrom"
-                class="w-full min-w-0 px-2 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]">
-            </div>
-            <div class="flex flex-col gap-1 min-w-0">
-              <label for="dateTo" class="text-xs text-[var(--muted-color)] font-medium">To</label>
-              <input type="date" id="dateTo"
-                class="w-full min-w-0 px-2 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]">
-            </div>
-            <div class="flex flex-col gap-1 min-w-0">
-              <label for="historySourceFilter" class="text-xs text-[var(--muted-color)] font-medium">Source/Category</label>
-              <select id="historySourceFilter"
-                class="w-full min-w-0 px-2 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]">
-                <option value="all">All Sources</option>
-              </select>
-            </div>
-            <div class="flex flex-col gap-1 min-w-0">
-              <label for="historySearch" class="text-xs text-[var(--muted-color)] font-medium">Search</label>
-              <input type="text" id="historySearch" placeholder="Search by source or amount..."
-                class="w-full min-w-0 px-2 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]">
-            </div>
-          </div>
-
-          <div class="overflow-x-auto desktop-only">
-            <table id="historyTable" class="w-full border-collapse history-table">
-              <thead>
-                <tr>
-                  <th class="px-4 py-3 text-left border-b border-[var(--border-color)] text-xs text-[var(--muted-color)] uppercase font-semibold">DATE</th>
-                  <th class="px-4 py-3 text-left border-b border-[var(--border-color)] text-xs text-[var(--muted-color)] uppercase font-semibold">TYPE</th>
-                  <th class="px-4 py-3 text-left border-b border-[var(--border-color)] text-xs text-[var(--muted-color)] uppercase font-semibold">SOURCE/CATEGORY</th>
-                  <th class="px-4 py-3 text-left border-b border-[var(--border-color)] text-xs text-[var(--muted-color)] uppercase font-semibold">AMOUNT</th>
-                  <th class="px-4 py-3 text-left border-b border-[var(--border-color)] text-xs text-[var(--muted-color)] uppercase font-semibold">BALANCE AFTER</th>
-                  <th class="px-4 py-3 text-right border-b border-[var(--border-color)] text-xs text-[var(--muted-color)] uppercase font-semibold history-actions-header">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody id="historyTableBody">
-                <tr>
-                  <td colspan="6" class="p-0">
-                    <div class="flex flex-col items-center justify-center text-center py-14 px-4">
-                      <div class="w-8 h-8 rounded-full border-3 border-[var(--outline-variant)] border-t-[var(--primary-color)] animate-spin mb-3"></div>
-                      <div class="flex items-center gap-2 text-sm font-semibold text-[var(--on-surface)] mb-1">
-                        <svg class="w-4 h-4 text-[var(--primary-color)] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-                        Retrieving transaction history from database...
-                      </div>
-                      <p class="text-xs text-[var(--muted-color)] max-w-sm m-0">Connecting to Cloud Firestore and compiling your records...</p>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div id="historyCardList" class="mobile-only" style="display:none">
-            <div class="flex flex-col items-center justify-center text-center py-12 px-4 rounded-xl border border-[var(--outline)] bg-[var(--surface-color)]">
-              <div class="w-8 h-8 rounded-full border-3 border-[var(--outline-variant)] border-t-[var(--primary-color)] animate-spin mb-3"></div>
-              <div class="flex items-center gap-2 text-sm font-semibold text-[var(--on-surface)] mb-1">
-                <svg class="w-4 h-4 text-[var(--primary-color)] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-                Retrieving transactions from database...
-              </div>
-              <p class="text-xs text-[var(--muted-color)] max-w-sm m-0">Connecting to Cloud Firestore...</p>
-            </div>
-          </div>
-
-          <div id="paginationControlsBottom" class="pagination-controls"></div>
-        </div>
+      <div class="flex gap-2">
+        <select id="profileSelect" class="flex-1 profile-dropdown" aria-label="Switch profile"></select>
+        <button type="button" id="newProfileBtn" class="btn secondary profile-btn">New</button>
       </div>
-
-      <div id="notifications" class="page">
-        <div class="flex justify-between items-center mb-5">
-          <h1 class="text-2xl font-bold flex items-center gap-2">
-            <span aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
-            Notifications
-          </h1>
-          <button class="bg-transparent border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--primary-color)] text-[13px] font-semibold cursor-pointer font-[inherit] transition-all duration-200 hover:bg-[var(--primary-color)] hover:text-white hover:border-[var(--primary-color)]"
-            id="markAllReadBtn" aria-label="Mark all notifications as read">Mark all as read</button>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5">
-          <h3 class="text-base font-semibold mb-3">Activity Alerts</h3>
-          <div id="alertsList" class="alerts-list flex flex-col gap-2.5 mt-3">
-            <p class="text-[var(--muted-color)] text-[13px]">No alerts right now. Keep tracking!</p>
-          </div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl">
-          <h3 class="text-base font-semibold mb-3">Achievements</h3>
-          <div id="notif-achievements-list" class="notif-achievements-list flex flex-col gap-2.5 mt-3">
-            <div class="text-center py-5 text-[var(--muted-color)]">
-              <p>No achievements unlocked yet.</p>
-              <p class="text-[13px] mt-1.5">Add transactions to start earning badges!</p>
-            </div>
-          </div>
-        </div>
+      <div class="mobile-control-links flex flex-col gap-2 px-0 py-3 border-t border-[var(--border)] mt-3">
+        <button type="button" id="mobileAdminBtn" class="mobile-admin-btn flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--brand-hover)] text-sm font-medium cursor-pointer text-left hover:bg-[var(--surface-subtle)] transition-colors min-h-[44px]" style="display: none;" aria-label="Admin panel">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <span>Admin panel</span>
+        </button>
+        <button type="button" id="mobileThemeToggle" class="mobile-theme-toggle flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-sm font-medium cursor-pointer text-left hover:bg-[var(--surface-subtle)] transition-colors min-h-[44px]" aria-label="Toggle dark mode">
+          <span id="mobileThemeIcon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg></span>
+          <span id="mobileThemeLabel">Dark mode</span>
+        </button>
+        <button type="button" id="mobileLogoutBtn" class="mobile-logout-btn flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--expense)] text-sm font-medium cursor-pointer text-left hover:bg-[var(--expense-soft)] transition-colors min-h-[44px]" aria-label="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </button>
       </div>
-
-      <div id="settings" class="page">
-        <h1 class="text-2xl font-bold mb-5">Settings</h1>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5">
-          <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
-            <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></span>
-            Goal Setting
-          </h3>
-          <p class="text-sm text-[var(--muted-color)] mb-2">Set your coin collection target</p>
-          <div id="currentGoalText" class="text-xs text-[var(--muted-color)] mt-2"></div>
-          <div class="flex gap-2.5 mt-4">
-            <input type="number" id="goalInput" placeholder="Enter new goal amount" min="1"
-              class="flex-1 px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                     focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-            <button id="setGoalBtn" class="btn primary">Update Goal</button>
-          </div>
-          <div id="goalProgressText" class="text-xs text-[var(--muted-color)] mt-2"></div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5">
-          <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
-            <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-            Manage Quick Actions
-          </h3>
-          <p class="text-sm text-[var(--muted-color)] mb-3">Add or remove buttons from your dashboard.</p>
-          <div class="grid gap-3 items-end mb-5 quick-action-form
-                      grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full max-w-full box-border">
-            <div class="mb-0 min-w-0">
-              <label for="quickActionText" class="block mb-2 font-medium">Action Text</label>
-              <input type="text" id="quickActionText" placeholder="e.g., Daily Login"
-                class="w-full min-w-0 px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-            </div>
-            <div class="mb-0 min-w-0">
-              <label for="quickActionAmount" class="block mb-2 font-medium">Amount</label>
-              <input type="number" id="quickActionAmount" placeholder="e.g., 50" min="1"
-                class="w-full min-w-0 px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-            </div>
-            <div class="mb-0 min-w-0">
-              <label for="quickActionType" class="block mb-2 font-medium">Type</label>
-              <select id="quickActionType"
-                class="w-full min-w-0 px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                       focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-                <option value="positive">Income (+)</option>
-                <option value="negative">Expense (-)</option>
-              </select>
-            </div>
-            <button id="addQuickActionBtn" class="btn primary h-[42px] max-sm:h-auto max-sm:py-2.5 w-full">Add Action</button>
-          </div>
-          <div class="border-0 h-px bg-[var(--border-color)] my-6"></div>
-          <h4 class="text-sm font-semibold mb-3">Current Actions</h4>
-          <div id="quickActionList" class="quick-action-list flex flex-col gap-2.5 max-h-[300px] overflow-y-auto"></div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl">
-            <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
-              <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span>
-              Income Categories
-            </h3>
-            <p class="text-sm text-[var(--muted-color)] mb-3">Shown in the Add Coins dropdown.</p>
-            <div id="incomeCategoryManager">
-              <div class="flex gap-2 mb-3 max-sm:flex-col category-add-row">
-                <input type="text" id="newIncomeCategory" placeholder="New category name"
-                  class="flex-1 px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                         focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-                <button id="addIncomeCategoryBtn" class="btn primary">Add</button>
-              </div>
-              <div id="incomeCategoryList" class="category-list flex flex-col gap-1.5 max-h-[200px] overflow-y-auto"></div>
-              <button id="resetIncomeCategoriesBtn" class="btn secondary mt-2.5">Reset to Defaults</button>
-            </div>
-          </div>
-
-          <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl">
-            <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
-              <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
-              Expense Categories
-            </h3>
-            <p class="text-sm text-[var(--muted-color)] mb-3">Shown in the Spend Coins dropdown.</p>
-            <div id="expenseCategoryManager">
-              <div class="flex gap-2 mb-3 max-sm:flex-col category-add-row">
-                <input type="text" id="newExpenseCategory" placeholder="New category name"
-                  class="flex-1 px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                         focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
-                <button id="addExpenseCategoryBtn" class="btn primary">Add</button>
-              </div>
-              <div id="expenseCategoryList" class="category-list flex flex-col gap-1.5 max-h-[200px] overflow-y-auto"></div>
-              <button id="resetExpenseCategoriesBtn" class="btn secondary mt-2.5">Reset to Defaults</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5">
-          <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
-            <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6"/><path d="M3 16a9 9 0 0 1 18 0"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
-            Data Management
-          </h3>
-          <p class="text-sm text-[var(--muted-color)] mb-3">Export or import your transaction data.</p>
-          <div class="flex gap-2.5 mt-4 flex-wrap">
-            <button id="exportDataBtn" class="btn secondary">
-              <span aria-hidden="true"><svg class="inline-block mr-1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-              Export Data
-            </button>
-            <button id="importDataBtn" class="btn secondary">
-              <span aria-hidden="true"><svg class="inline-block mr-1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
-              Import Data
-            </button>
-          </div>
-        </div>
-
-        <!-- About Section -->
-        <div class="bg-[var(--surface-color)] border border-[var(--outline)] p-6 shadow-[var(--shadow-md)] rounded-xl mb-5" id="aboutSection">
-          <h3 class="text-base font-semibold mb-2 flex items-center gap-2">
-            <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-            About Coin Tracker
-          </h3>
-          <p class="text-sm text-[var(--muted-color)] mb-4">Application details, current user profile, developer information, and version history.</p>
-
-          <!-- App & Version Meta Banner -->
-          <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-variant)] border border-[var(--outline)] mb-5">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center text-white font-extrabold text-lg shadow-sm">C</div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-base text-[var(--on-surface)]">Coin Tracker</span>
-                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">v3.3.0</span>
-                </div>
-                <p class="text-xs text-[var(--muted-color)] m-0">Cross-platform in-game economy & savings tracker</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--surface-color)] border border-[var(--outline)] text-[var(--muted-color)]">MIT License</span>
-              <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--surface-color)] border border-[var(--outline)] text-[var(--muted-color)]">eFootball Ready</span>
-            </div>
-          </div>
-
-          <!-- Two-column grid for "Me" (Signed-in User) and "Developer & Links" -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-            <!-- Signed-in User ("Me") Card -->
-            <div class="p-4 rounded-xl bg-[var(--surface-variant)] border border-[var(--outline)] flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs uppercase tracking-wider font-semibold text-[var(--muted-color)]">Signed-in Account ("Me")</span>
-                  <span id="aboutUserRoleBadge" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase">User</span>
-                </div>
-                <div class="flex items-center gap-3 mb-3">
-                  <div class="w-10 h-10 rounded-full bg-[var(--primary-color)]/10 text-[var(--primary-color)] flex items-center justify-center font-bold text-base">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
-                  <div class="min-w-0">
-                    <div id="aboutUsername" class="font-bold text-[var(--on-surface)] truncate">Loading...</div>
-                    <div id="aboutUserEmail" class="text-xs text-[var(--muted-color)] truncate">...</div>
-                  </div>
-                </div>
-              </div>
-              <div class="pt-3 border-t border-[var(--outline)] text-xs flex items-center justify-between text-[var(--muted-color)]">
-                <span>Active Profile: <strong id="aboutActiveProfile" class="text-[var(--on-surface)]">Default</strong></span>
-                <span>ID: <code id="aboutUserId" class="font-mono text-[11px] opacity-75">...</code></span>
-              </div>
-            </div>
-
-            <!-- Developer & Links Card -->
-            <div class="p-4 rounded-xl bg-[var(--surface-variant)] border border-[var(--outline)] flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs uppercase tracking-wider font-semibold text-[var(--muted-color)]">Developer & Project</span>
-                  <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">Open Source</span>
-                </div>
-                <div class="flex items-center gap-3 mb-3">
-                  <div class="w-10 h-10 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-base">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  </div>
-                  <div>
-                    <div class="font-bold text-[var(--on-surface)]">Ifti (<a href="https://github.com/ifti136" target="_blank" rel="noopener noreferrer" class="text-[var(--primary-color)] hover:underline">@ifti136</a>)</div>
-                    <div class="text-xs text-[var(--muted-color)]">Lead Developer & Maintainer</div>
-                  </div>
-                </div>
-              </div>
-              <div class="pt-3 border-t border-[var(--outline)] flex gap-2 flex-wrap">
-                <a href="https://github.com/ifti136/Coin-Tracker" target="_blank" rel="noopener noreferrer"
-                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--surface-color)] hover:bg-[var(--primary-color)] hover:text-white border border-[var(--outline)] text-[var(--on-surface)] transition-colors no-underline">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                  GitHub Repository
-                </a>
-                <a href="https://cointrack-16ce2.web.app" target="_blank" rel="noopener noreferrer"
-                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--surface-color)] hover:bg-[var(--primary-color)] hover:text-white border border-[var(--outline)] text-[var(--on-surface)] transition-colors no-underline">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                  Web App
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Version History (Changelog like README) -->
-          <div class="border border-[var(--outline)] rounded-xl overflow-hidden bg-[var(--surface-variant)]">
-            <details class="group">
-              <summary class="flex items-center justify-between p-4 cursor-pointer font-semibold text-sm text-[var(--on-surface)] select-none list-none hover:bg-[var(--surface-color)]/60 transition-colors">
-                <div class="flex items-center gap-2.5">
-                  <svg class="w-4 h-4 text-[var(--primary-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  <span>Version History & Changelog</span>
-                  <span class="text-xs text-[var(--muted-color)] font-normal">(v1.0.0 → v3.3.0)</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs text-[var(--primary-color)] font-medium group-open:hidden">View changelog</span>
-                  <span class="text-xs text-[var(--muted-color)] font-medium hidden group-open:inline">Hide changelog</span>
-                  <svg class="w-4 h-4 text-[var(--muted-color)] transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-              </summary>
-              <div class="p-4 pt-2 border-t border-[var(--outline)] bg-[var(--surface-color)] space-y-4 max-h-[460px] overflow-y-auto text-xs">
-
-                <!-- v3.3.0 -->
-                <div class="relative pl-5 border-l-2 border-emerald-500/50 pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-emerald-500"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v3.3.0</span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-semibold">Latest</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Web & Mobile Feature Parity</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Added 6 new achievements mirroring mobile (Master Hoarder, First Payday, Active Tracker, Century Club, High Roller, streaks)</li>
-                    <li>Transaction history Income (<span class="text-emerald-500">↑</span>) & Expense (<span class="text-rose-500">↓</span>) pill badges</li>
-                    <li>Context-aware empty states with one-tap Clear Filters action</li>
-                    <li>Dashboard real-time remaining goal pill and 25%, 50%, 75% milestone ticks</li>
-                    <li>Isolated Danger Zone block for high-impact destructive operations</li>
-                    <li>Live database sync status indicator and full-screen loading states</li>
-                    <li>Shortcut <code class="px-1 py-0.5 rounded bg-[var(--surface-variant)]">+ New Action</code> tile in Quick Actions grid</li>
-                  </ul>
-                </div>
-
-                <!-- v3.2.0 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v3.2.0</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Safety Cache System & Offline Sync</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Local safety snapshots saved automatically after successful database queries</li>
-                    <li>Automatic cache restore if database is empty; offline conflict resolution dialog</li>
-                    <li>Offline safety banner with cached mode operations</li>
-                  </ul>
-                </div>
-
-                <!-- v3.1.2 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v3.1.2</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Notification Badge Tracking & Pills Pagination</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Persistent unread achievement badge clearing and Read All action</li>
-                    <li>Sliding window pill pagination with rounded buttons and ellipsis</li>
-                    <li>Staggered pulse dot loading animations</li>
-                  </ul>
-                </div>
-
-                <!-- v3.1.1 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v3.1.1</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Notifications Hub & Layout Improvements</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Dedicated notifications page with activity alerts and achievements</li>
-                    <li>Top bar bell badge showing unread notification counter</li>
-                    <li>Clean swipe and edit action separation in history</li>
-                  </ul>
-                </div>
-
-                <!-- v3.1.0 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v3.1.0</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Bug Fixes & Stability</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Resolved build and compile issues across web and mobile targets</li>
-                  </ul>
-                </div>
-
-                <!-- v3.0.0 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v3.0.0</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Analytics Intelligence & Android Widget</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>7-day rolling average estimated days to goal calculation</li>
-                    <li>Best Earning Week and 7-day earning rate cards in Analytics</li>
-                    <li>Glance-based Android home screen widget with balance and progress bar</li>
-                    <li>Milestone notifications and progress card sharing generator</li>
-                  </ul>
-                </div>
-
-                <!-- v2.1.0 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v2.1.0</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Firebase Direct Auth (Flask Backend Removed)</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Direct Firebase Auth integration via synthetic email accounts</li>
-                    <li>JSON backup import & export across all platforms</li>
-                    <li>Target SDK 35, Compose BOM 2025.05.01, and KSP modern build tooling</li>
-                  </ul>
-                </div>
-
-                <!-- v2.0.0 -->
-                <div class="relative pl-5 border-l-2 border-[var(--outline)] pb-2">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v2.0.0</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2026</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">UI Overhaul & Analytics</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Animated gradient background and modern card layout</li>
-                    <li>Analytics dashboard with charts, stats, and period breakdowns</li>
-                    <li>Admin panel and multi-profile support</li>
-                  </ul>
-                </div>
-
-                <!-- v1.0.0 -->
-                <div class="relative pl-5 pb-1">
-                  <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--primary-color)]"></div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-[var(--on-surface)]">v1.0.0</span>
-                    <span class="text-[var(--muted-color)] text-[11px]">— 2025</span>
-                  </div>
-                  <p class="font-medium text-[var(--on-surface)] mb-1">Initial Cross-Platform Release</p>
-                  <ul class="list-disc pl-4 space-y-0.5 text-[var(--muted-color)]">
-                    <li>Cloud Firestore sync, Dashboard, Balance & Goal tracking, Quick Actions, History</li>
-                  </ul>
-                </div>
-
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="mt-12 pt-8 border-t-2 border-dashed border-red-500/30">
-          <div class="mb-5">
-            <h2 class="text-xl font-bold text-[var(--danger-color)] flex items-center gap-2">
-              <span aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-              Danger Area
-            </h2>
-            <p class="text-sm text-[var(--muted-color)]">High-impact actions that permanently modify or erase your data.</p>
-          </div>
-
-          <div class="flex flex-col gap-5">
-            <div class="bg-[var(--surface-color)] border border-red-400/40 p-6 shadow-[var(--shadow-md)] rounded-xl">
-              <h3 class="text-base font-semibold mb-2 flex items-center gap-2 text-[var(--danger-color)]">
-                Profile Management
-              </h3>
-              <div class="mt-2">
-                <label for="deleteProfileBtn" class="block font-medium mb-1">Delete Current Profile</label>
-                <p class="text-xs text-[var(--muted-color)] mb-3">Cannot delete the Default profile.</p>
-                <button id="deleteProfileBtn" class="btn danger">Delete Current Profile</button>
-              </div>
-            </div>
-
-            <div class="bg-[var(--surface-color)] border border-red-400/40 p-6 shadow-[var(--shadow-md)] rounded-xl">
-              <h3 class="text-base font-semibold mb-2 flex items-center gap-2 text-[var(--danger-color)]">
-                <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
-                Danger Zone
-              </h3>
-              <p class="text-sm text-[var(--muted-color)] mb-2">These actions are permanent and cannot be undone.</p>
-              <div class="flex gap-2.5 mt-4 flex-wrap">
-                <button id="deleteAllDataBtn" class="btn danger">Delete All My Data</button>
-                <button id="deleteAccountBtn" class="btn danger">Delete My Account</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </main>
+    </div>
   </div>
 
-  <nav class="mobile-bottom-nav hidden max-sm:flex fixed bottom-0 left-0 right-0 h-16 bg-[var(--sidebar-bg)] backdrop-blur-[20px] border-t border-[var(--border-color)] z-[100] justify-around items-center px-1"
-    role="navigation" aria-label="Mobile bottom navigation">
-    <button class="mobile-nav-btn flex flex-col items-center justify-center gap-[3px] flex-1 bg-none border-0 text-[var(--muted-color)] text-[10px] font-medium cursor-pointer py-2 px-1 relative font-[inherit] transition-colors duration-200 active" data-page="dashboard">
-      <span class="mobile-nav-icon text-xl leading-none" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
-      <span class="mobile-nav-label text-[12px]">Dashboard</span>
+  <main id="main-content" tabindex="-1" class="main-content flex-1 p-5 sm:pt-[calc(var(--top-bar-height)+24px)] sm:ml-[var(--rail-width)] min-h-screen transition-[margin-left] duration-200 ease-out max-sm:ml-0 max-sm:mt-[var(--top-bar-height)] max-sm:pb-[calc(var(--bottom-nav-h)+20px)]" role="main">
+
+    <div id="dashboard" class="page active space-y-5">
+      <div class="flex justify-between items-start gap-4 max-sm:flex-col">
+        <div>
+          <p class="muted-text m-0">Overview</p>
+          <h1 class="text-2xl font-display font-bold m-0">Dashboard</h1>
+        </div>
+        <span class="status-pill neutral">Live balance</span>
+      </div>
+
+      <section class="focal-panel border-l-4 border-l-[var(--brand)]" aria-labelledby="balanceLabel">
+        <div class="flex justify-between items-start gap-4 max-sm:flex-col">
+          <div class="min-w-0">
+            <div id="balanceLabel" class="text-[13px] font-medium text-[var(--text-secondary)]">Current balance</div>
+            <div id="balanceAmount" class="font-display num text-[40px] leading-tight font-bold mt-1 max-sm:text-[32px]">Retrieving balance...</div>
+            <div id="goalText" class="text-sm text-[var(--text-secondary)] mt-2">Loading goal...</div>
+          </div>
+          <div class="flex items-center gap-2 max-sm:self-start">
+            <span id="remainingPill" class="status-pill neutral"></span>
+            <span id="progressPercent" class="num text-sm font-semibold text-[var(--brand)]">0%</span>
+          </div>
+        </div>
+        <div id="goalProgressTrack" class="progress-track mt-5" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="No goal set" aria-label="Goal progress">
+          <div id="progressBar" class="progress-fill" style="width:0%"></div>
+          <span class="progress-marker" style="left:25%" aria-hidden="true"></span>
+          <span class="progress-marker" style="left:50%" aria-hidden="true"></span>
+          <span class="progress-marker" style="left:75%" aria-hidden="true"></span>
+        </div>
+        <div class="flex items-center justify-between gap-3 mt-3 max-sm:flex-col max-sm:items-start">
+          <div id="goalEstimate" class="text-[13px] font-medium text-[var(--text-muted)]"></div>
+          <span class="text-[11px] text-[var(--text-muted)]">25 · 50 · 75% milestones</span>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="quickActionsHeading">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div class="min-w-0">
+            <h2 id="quickActionsHeading" class="section-title m-0">Quick actions</h2>
+            <p class="section-sub m-0">Repeat common entries in one tap.</p>
+          </div>
+          <button type="button" id="customizeQuickActions" class="btn ghost whitespace-nowrap max-sm:self-start">Manage actions</button>
+        </div>
+        <div class="quick-actions-grid" id="quickActionsGrid"></div>
+      </section>
+
+      <section class="card" aria-labelledby="entryHeading">
+        <div class="mb-4">
+          <h2 id="entryHeading" class="section-title m-0">Add or spend coins</h2>
+          <p class="section-sub m-0">Record a single income or expense entry.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
+          <div class="rounded-[14px] border border-[var(--income)] bg-[var(--income-soft)] p-4">
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <h3 class="text-sm font-semibold text-[var(--text-primary)] m-0">Add coins</h3>
+              <span class="status-pill income">Income +</span>
+            </div>
+            <div class="field mb-3">
+              <label for="addAmount" class="field-label">Amount</label>
+              <input type="number" id="addAmount" placeholder="e.g., 100" min="1" max="999999" inputmode="numeric" aria-describedby="addAmountError">
+              <p id="addAmountError" class="field-error mt-1" role="alert" aria-live="polite"></p>
+            </div>
+            <div class="field mb-4">
+              <label for="addSource" class="field-label">Source</label>
+              <select id="addSource"></select>
+            </div>
+            <button type="button" id="addCoinsBtn" class="btn success w-full">Add coins</button>
+          </div>
+          <div class="rounded-[14px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <h3 class="text-sm font-semibold text-[var(--text-primary)] m-0">Spend coins</h3>
+              <span class="status-pill expense">Expense −</span>
+            </div>
+            <div class="field mb-3">
+              <label for="spendAmount" class="field-label">Amount</label>
+              <input type="number" id="spendAmount" placeholder="e.g., 900" min="1" max="999999" inputmode="numeric" aria-describedby="spendAmountError">
+              <p id="spendAmountError" class="field-error mt-1" role="alert" aria-live="polite"></p>
+            </div>
+            <div class="field mb-4">
+              <label for="spendCategory" class="field-label">Category</label>
+              <select id="spendCategory"></select>
+            </div>
+            <button type="button" id="spendCoinsBtn" class="btn danger w-full">Spend coins</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="open-section" aria-labelledby="summaryHeading">
+        <h2 id="summaryHeading" class="section-title mb-3">Summary</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--border)]">
+          <div class="py-3 sm:py-0 sm:px-4 first:sm:pl-0 last:sm:pr-0">
+            <div class="text-xs text-[var(--text-muted)]">Today</div>
+            <div id="todayEarnings" class="num text-lg font-semibold text-[var(--income)] mt-1">+0</div>
+          </div>
+          <div class="py-3 sm:py-0 sm:px-4">
+            <div class="text-xs text-[var(--text-muted)]">This week</div>
+            <div id="weekEarnings" class="num text-lg font-semibold text-[var(--income)] mt-1">+0</div>
+          </div>
+          <div class="py-3 sm:py-0 sm:px-4">
+            <div class="text-xs text-[var(--text-muted)]">This month</div>
+            <div id="monthEarnings" class="num text-lg font-semibold text-[var(--income)] mt-1">+0</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="open-section" aria-labelledby="achievementsHeading">
+        <div class="flex justify-between items-center gap-3 mb-2">
+          <div>
+            <h2 id="achievementsHeading" class="section-title m-0">Achievements</h2>
+            <p class="section-sub m-0">Milestones from your tracked activity.</p>
+          </div>
+          <button type="button" id="viewAllAchievementsBtn" class="btn ghost whitespace-nowrap">View all</button>
+        </div>
+        <div id="achievements-grid" class="achievements-grid">
+          <p id="no-achievements-msg" class="empty-state m-0">No achievements unlocked yet. Keep going!</p>
+        </div>
+      </section>
+
+      <section class="open-section" aria-labelledby="recentActivityHeading">
+        <div class="flex justify-between items-center gap-3 mb-2">
+          <div>
+            <h2 id="recentActivityHeading" class="section-title m-0">Recent activity</h2>
+            <p class="section-sub m-0">Your latest three entries.</p>
+          </div>
+          <button type="button" id="viewRecentHistoryBtn" class="btn ghost whitespace-nowrap">View history</button>
+        </div>
+        <div id="recentActivityList" class="recent-activity-list"></div>
+      </section>
+
+      <div class="text-center pt-2 pb-2">
+        <button type="button" id="supportBtn" class="btn ghost text-[var(--text-muted)]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2"/><path d="M3 8h18"/><path d="M9 8v12"/><path d="M15 8v12"/></svg>
+          Support the project · By Ifti
+        </button>
+      </div>
+    </div>
+
+    <div id="analytics" class="page space-y-5">
+      <div>
+        <p class="muted-text m-0">Insights</p>
+        <h1 class="text-2xl font-display font-bold m-0">Analytics</h1>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <div class="flex gap-2 flex-wrap period-chips" role="group" aria-label="Analytics period">
+          <button type="button" class="chip active" data-period="lifetime" aria-pressed="true">Lifetime</button>
+          <button type="button" class="chip" data-period="monthly" aria-pressed="false">Monthly</button>
+          <button type="button" class="chip" data-period="weekly" aria-pressed="false">Weekly</button>
+          <button type="button" class="chip" data-period="custom" aria-pressed="false">Custom range</button>
+        </div>
+        <div id="customRangePicker" class="card w-full max-w-full box-border flex flex-wrap gap-3 items-end max-sm:flex-col" style="display:none">
+          <div class="field min-w-0 flex-1 max-sm:w-full">
+            <label for="analyticsFrom" class="field-label">From</label>
+            <input type="date" id="analyticsFrom" class="w-full min-w-0" aria-describedby="analyticsRangeError">
+          </div>
+          <div class="field min-w-0 flex-1 max-sm:w-full">
+            <label for="analyticsTo" class="field-label">To</label>
+            <input type="date" id="analyticsTo" class="w-full min-w-0" aria-describedby="analyticsRangeError">
+          </div>
+          <button type="button" id="applyRangeBtn" class="btn primary max-sm:w-full">Apply range</button>
+          <p id="analyticsRangeError" class="field-error w-full" role="alert" hidden></p>
+        </div>
+      </div>
+
+      <section class="card" aria-label="Period totals">
+        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--border)]">
+          <div class="py-3 sm:py-0 sm:px-4 first:sm:pl-0">
+            <div class="text-xs text-[var(--text-muted)]">Total earnings</div>
+            <div id="totalEarnings" class="num text-xl font-semibold text-[var(--income)] mt-1">+0</div>
+          </div>
+          <div class="py-3 sm:py-0 sm:px-4">
+            <div class="text-xs text-[var(--text-muted)]">Total spending</div>
+            <div id="totalSpending" class="num text-xl font-semibold text-[var(--expense)] mt-1">-0</div>
+          </div>
+          <div class="py-3 sm:py-0 sm:px-4">
+            <div class="text-xs text-[var(--text-muted)]">Net balance</div>
+            <div id="netBalance" class="num text-xl font-semibold text-[var(--text-primary)] mt-1">0</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card analytics-tabs" aria-label="Charts">
+        <div class="flex gap-1 border-b border-[var(--border)] mb-4 overflow-x-auto" role="tablist" aria-label="Analytics charts">
+          <button type="button" class="tab-header active" id="tab-timeline" data-tab="timelinePane" role="tab" aria-selected="true" aria-controls="timelinePane" tabindex="0">Balance timeline</button>
+          <button type="button" class="tab-header" id="tab-earnings" data-tab="earningsPane" role="tab" aria-selected="false" aria-controls="earningsPane" tabindex="-1">Earnings breakdown</button>
+          <button type="button" class="tab-header" id="tab-spending" data-tab="spendingPane" role="tab" aria-selected="false" aria-controls="spendingPane" tabindex="-1">Spending breakdown</button>
+        </div>
+        <div class="tab-content">
+          <div id="timelinePane" class="tab-pane active" role="tabpanel" aria-labelledby="tab-timeline" tabindex="0">
+            <h3 class="text-base font-semibold mb-3">Balance over time</h3>
+            <div class="relative h-[320px] w-full"><canvas id="timelineChart" aria-label="Line chart showing balance over time" role="img"></canvas></div>
+            <div id="timelineChartSummary" class="visually-hidden" aria-live="polite"></div>
+          </div>
+          <div id="earningsPane" class="tab-pane" role="tabpanel" aria-labelledby="tab-earnings" tabindex="0">
+            <h3 class="text-base font-semibold mb-3">Earnings by source</h3>
+            <div class="relative h-[320px] w-full"><canvas id="earningsChart" aria-label="Doughnut chart showing earnings breakdown by source" role="img"></canvas></div>
+            <div id="earningsChartSummary" class="visually-hidden" aria-live="polite"></div>
+          </div>
+          <div id="spendingPane" class="tab-pane" role="tabpanel" aria-labelledby="tab-spending" tabindex="0">
+            <h3 class="text-base font-semibold mb-3">Spending by category</h3>
+            <div class="relative h-[320px] w-full"><canvas id="spendingChart" aria-label="Doughnut chart showing spending breakdown by category" role="img"></canvas></div>
+            <div id="spendingChartSummary" class="visually-hidden" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="muted-text mt-3 mb-0">Chart values are also provided as a text summary for assistive technology.</p>
+      </section>
+
+      <section class="card" aria-label="Rate summaries">
+        <div class="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[var(--border)]">
+          <div class="py-3 sm:py-0 sm:px-4 first:sm:pl-0">
+            <div class="text-xs text-[var(--text-muted)]">7-day earning rate</div>
+            <div id="sevenDayRate" class="num text-lg font-semibold text-[var(--income)] mt-1">0</div>
+            <div id="sevenDayTotal" class="muted-text mt-1"></div>
+          </div>
+          <div class="py-3 sm:py-0 sm:px-4" id="bestWeekCard" style="display:none">
+            <div class="text-xs text-[var(--text-muted)]">Best earning week</div>
+            <div id="bestWeekAmount" class="num text-lg font-semibold text-[var(--brand)] mt-1"></div>
+            <div id="bestWeekRange" class="muted-text mt-1"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="history" class="page space-y-5">
+      <div class="flex justify-between items-start gap-4 max-sm:flex-col">
+        <div>
+          <p class="muted-text m-0">Records</p>
+          <h1 class="text-2xl font-display font-bold m-0">Transaction history</h1>
+        </div>
+        <div id="periodSummary" class="text-right text-[13px] text-[var(--text-muted)] font-medium max-sm:text-left"></div>
+      </div>
+
+      <section class="card">
+        <div class="grid gap-4 items-end grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="field min-w-0">
+            <label for="dateFrom" class="field-label">From</label>
+            <input type="date" id="dateFrom" class="w-full min-w-0">
+          </div>
+          <div class="field min-w-0">
+            <label for="dateTo" class="field-label">To</label>
+            <input type="date" id="dateTo" class="w-full min-w-0">
+          </div>
+          <div class="field min-w-0">
+            <label for="historySourceFilter" class="field-label">Source / category</label>
+            <select id="historySourceFilter" class="w-full min-w-0">
+              <option value="all">All sources</option>
+            </select>
+          </div>
+          <div class="field min-w-0">
+            <label for="historySearch" class="field-label">Search</label>
+            <input type="text" id="historySearch" placeholder="Search by source or amount...">
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-[var(--border)] max-sm:flex-col max-sm:items-start">
+          <div id="historyActiveFilters" class="flex flex-wrap items-center gap-2 min-h-[24px]" aria-live="polite" hidden></div>
+          <button type="button" id="historyClearFiltersBtn" class="btn ghost" onclick="window.app && window.app.clearHistoryFilters()">Clear filters</button>
+        </div>
+      </section>
+
+      <section class="card p-0 overflow-hidden">
+        <div class="overflow-x-auto hidden md:block">
+          <table id="historyTable" class="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Source / category</th>
+                <th>Amount</th>
+                <th>Balance after</th>
+                <th class="history-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr>
+                <td colspan="6" class="p-0">
+                  <div class="empty-state border-0">
+                    <p class="m-0">Retrieving transaction history...</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="historyCardList" class="md:hidden p-4">
+          <div class="empty-state">
+            <p class="m-0">Retrieving transactions...</p>
+          </div>
+        </div>
+
+        <div id="paginationControlsBottom" class="pagination-controls"></div>
+      </section>
+    </div>
+
+    <div id="notifications" class="page space-y-5">
+      <div class="flex justify-between items-start gap-4 max-sm:flex-col">
+        <div>
+          <p class="muted-text m-0">Activity</p>
+          <h1 class="text-2xl font-display font-bold m-0">Notifications</h1>
+        </div>
+        <button type="button" class="btn secondary" id="markAllReadBtn" aria-label="Mark all notifications as read">Mark all as read</button>
+      </div>
+
+      <section class="card" aria-labelledby="activityHeading">
+        <h2 id="activityHeading" class="section-title m-0">Activity alerts</h2>
+        <p class="section-sub m-0 mt-1">Updates from your tracked activity.</p>
+        <div id="alertsList" class="alerts-list flex flex-col gap-2.5 mt-4">
+          <div class="empty-state">
+            <p class="m-0">You’re all caught up.</p>
+            <p class="m-0 mt-1">New activity alerts will appear here.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="notifAchievementsHeading">
+        <h2 id="notifAchievementsHeading" class="section-title m-0">Achievements</h2>
+        <p class="section-sub m-0 mt-1">Milestones you have unlocked.</p>
+        <div id="notif-achievements-list" class="notif-achievements-list flex flex-col gap-2.5 mt-4">
+          <div class="empty-state">
+            <p class="m-0">No achievements unlocked yet.</p>
+            <p class="m-0 mt-1">Add transactions to start earning milestones.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="settings" class="page space-y-5">
+      <div>
+        <p class="muted-text m-0">Preferences</p>
+        <h1 class="text-2xl font-display font-bold m-0">Settings</h1>
+      </div>
+
+      <section class="card" aria-labelledby="goalSettingsHeading">
+        <h2 id="goalSettingsHeading" class="section-title m-0">Goal</h2>
+        <p class="section-sub m-0 mt-1">Set the balance you are working toward.</p>
+        <div id="currentGoalText" class="muted-text mt-3"></div>
+        <div class="flex gap-2.5 mt-4 max-sm:flex-col">
+          <input type="number" id="goalInput" placeholder="Enter new goal amount" min="1" inputmode="numeric" class="flex-1" aria-label="Goal amount" title="Goal amount" aria-describedby="goalInputError">
+          <button type="button" id="setGoalBtn" class="btn primary">Update goal</button>
+        </div>
+        <p id="goalInputError" class="field-error mt-1" role="alert" aria-live="polite"></p>
+        <div id="goalProgressText" class="muted-text mt-2"></div>
+      </section>
+
+      <section class="card" aria-labelledby="quickActionSettingsHeading">
+        <h2 id="quickActionSettingsHeading" class="section-title m-0">Quick actions</h2>
+        <p class="section-sub m-0 mt-1">Add or remove preset entries from the dashboard.</p>
+        <div class="grid gap-3 items-end mb-5 mt-4 quick-action-form grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full max-w-full box-border">
+          <div class="field min-w-0">
+            <label for="quickActionText" class="field-label">Action text</label>
+            <input type="text" id="quickActionText" placeholder="e.g., Daily login">
+          </div>
+          <div class="field min-w-0">
+            <label for="quickActionAmount" class="field-label">Amount</label>
+            <input type="number" id="quickActionAmount" placeholder="e.g., 50" min="1" inputmode="numeric">
+          </div>
+          <div class="field min-w-0">
+            <label for="quickActionType" class="field-label">Type</label>
+            <select id="quickActionType">
+              <option value="positive">Income (+)</option>
+              <option value="negative">Expense (-)</option>
+            </select>
+          </div>
+          <button type="button" id="addQuickActionBtn" class="btn primary w-full">Add action</button>
+        </div>
+        <hr class="divider">
+        <h3 class="text-sm font-semibold mb-3">Current actions</h3>
+        <div id="quickActionList" class="quick-action-list flex flex-col gap-2.5 max-h-[300px] overflow-y-auto"></div>
+      </section>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <section class="card" aria-labelledby="incomeCategoriesHeading">
+          <h2 id="incomeCategoriesHeading" class="section-title m-0">Income categories</h2>
+          <p class="section-sub m-0 mt-1">Shown in the Add coins dropdown.</p>
+          <div id="incomeCategoryManager" class="mt-4">
+            <div class="flex gap-2 mb-3 max-sm:flex-col category-add-row">
+              <input type="text" id="newIncomeCategory" placeholder="New category name" class="flex-1" aria-label="New income category name" title="New income category name">
+              <button type="button" id="addIncomeCategoryBtn" class="btn primary">Add</button>
+            </div>
+            <div id="incomeCategoryList" class="category-list max-h-[200px] overflow-y-auto"></div>
+            <button type="button" id="resetIncomeCategoriesBtn" class="btn secondary mt-3">Reset to defaults</button>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="expenseCategoriesHeading">
+          <h2 id="expenseCategoriesHeading" class="section-title m-0">Expense categories</h2>
+          <p class="section-sub m-0 mt-1">Shown in the Spend coins dropdown.</p>
+          <div id="expenseCategoryManager" class="mt-4">
+            <div class="flex gap-2 mb-3 max-sm:flex-col category-add-row">
+              <input type="text" id="newExpenseCategory" placeholder="New category name" class="flex-1" aria-label="New expense category name" title="New expense category name">
+              <button type="button" id="addExpenseCategoryBtn" class="btn primary">Add</button>
+            </div>
+            <div id="expenseCategoryList" class="category-list max-h-[200px] overflow-y-auto"></div>
+            <button type="button" id="resetExpenseCategoriesBtn" class="btn secondary mt-3">Reset to defaults</button>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" aria-labelledby="profilesHeading">
+        <h2 id="profilesHeading" class="section-title m-0">Profiles</h2>
+        <p class="section-sub m-0 mt-1">Create and switch profiles from the top bar or mobile menu.</p>
+        <hr class="divider">
+        <div class="flex items-start justify-between gap-4 max-sm:flex-col">
+          <div>
+            <h3 class="text-sm font-semibold m-0">Delete current profile</h3>
+            <p class="muted-text mt-1 mb-0">The Default profile cannot be deleted. This removes the profile and its transactions.</p>
+          </div>
+          <button type="button" id="deleteProfileBtn" class="btn danger shrink-0">Delete current profile</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="dataHeading">
+        <h2 id="dataHeading" class="section-title m-0">Data management</h2>
+        <p class="section-sub m-0 mt-1">Export a JSON backup or import an existing backup.</p>
+        <div class="flex gap-2.5 mt-4 flex-wrap">
+          <button type="button" id="exportDataBtn" class="btn secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export data
+          </button>
+          <button type="button" id="importDataBtn" class="btn secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import data
+          </button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="appearanceHeading">
+        <h2 id="appearanceHeading" class="section-title m-0">Appearance</h2>
+        <p class="section-sub m-0 mt-1">Use the theme control in the top bar or mobile menu to switch between light and dark.</p>
+      </section>
+
+      <section class="card" id="aboutSection" aria-labelledby="aboutHeading">
+        <h2 id="aboutHeading" class="section-title m-0">About Coin Tracker</h2>
+        <p class="section-sub m-0 mt-1">Application details, your account, and version history.</p>
+
+        <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-[14px] bg-[var(--surface-subtle)] border border-[var(--border)] mt-4">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-[var(--brand)] text-[var(--on-brand)] flex items-center justify-center font-display font-bold text-lg" aria-hidden="true">C</span>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-display font-bold text-base text-[var(--text-primary)]">Coin Tracker</span>
+                <span class="status-pill warning">v4.0.0</span>
+              </div>
+              <p class="muted-text m-0">In-game economy and savings tracker</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="status-pill neutral">MIT License</span>
+            <span class="status-pill neutral">eFootball ready</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div class="p-4 rounded-[14px] bg-[var(--surface-subtle)] border border-[var(--border)] flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="text-[11px] font-semibold text-[var(--text-muted)]">Signed-in account</span>
+                <span id="aboutUserRoleBadge" class="status-pill neutral">User</span>
+              </div>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-[var(--brand-soft)] text-[var(--brand)] flex items-center justify-center shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div id="aboutUsername" class="font-semibold text-[var(--text-primary)] truncate">Loading...</div>
+                  <div id="aboutUserEmail" class="muted-text truncate">...</div>
+                </div>
+              </div>
+            </div>
+            <div class="pt-3 border-t border-[var(--border)] text-xs flex items-center justify-between gap-3 text-[var(--text-muted)]">
+              <span>Active profile: <strong id="aboutActiveProfile" class="text-[var(--text-primary)]">Default</strong></span>
+              <span>ID: <code id="aboutUserId" class="font-mono text-[11px]">...</code></span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-[14px] bg-[var(--surface-subtle)] border border-[var(--border)] flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="text-[11px] font-semibold text-[var(--text-muted)]">Developer and project</span>
+                <span class="status-pill neutral">Open source</span>
+              </div>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-[var(--brand-soft)] text-[var(--brand)] flex items-center justify-center shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-[var(--text-primary)]">Ifti (<a href="https://github.com/ifti136" target="_blank" rel="noopener noreferrer" class="text-[var(--brand-hover)] hover:underline">@ifti136</a>)</div>
+                  <div class="muted-text">Lead developer and maintainer</div>
+                </div>
+              </div>
+            </div>
+            <div class="pt-3 border-t border-[var(--border)] flex gap-2 flex-wrap">
+              <a href="https://github.com/ifti136/Coin-Tracker" target="_blank" rel="noopener noreferrer" class="btn secondary text-xs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                GitHub repository
+              </a>
+              <a href="https://cointrack-16ce2.web.app" target="_blank" rel="noopener noreferrer" class="btn secondary text-xs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Web app
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="border border-[var(--border)] rounded-[14px] overflow-hidden bg-[var(--surface-subtle)] mt-4">
+          <details class="group">
+            <summary class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-4 cursor-pointer font-semibold text-sm text-[var(--text-primary)] select-none list-none hover:bg-[var(--surface-subtle)] transition-colors">
+              <div class="flex items-start gap-2.5 min-w-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--brand)] shrink-0 mt-0.5" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="min-w-0">
+                  <span class="block">Version history and changelog</span>
+                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.0</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0 max-sm:self-start">
+                <span class="text-xs text-[var(--brand-hover)] font-medium group-open:hidden">View changelog</span>
+                <span class="text-xs text-[var(--text-muted)] font-medium hidden group-open:inline">Hide changelog</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] transition-transform duration-150 group-open:rotate-180" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </summary>
+            <div class="p-4 pt-2 border-t border-[var(--border)] bg-[var(--surface)] space-y-4 max-h-[460px] overflow-y-auto text-xs">
+
+              <div class="relative pl-5 border-l-2 border-[var(--brand)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.0</span>
+                  <span class="status-pill success">Latest</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Gold and graphite web overhaul</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>New gold and graphite design tokens, typography roles, and shared primitives</li>
+                  <li>Rebuilt dashboard with a focal balance and goal panel, milestone markers, and clearer entry hierarchy</li>
+                  <li>Restructured analytics, history, notifications, settings, login, and admin surfaces</li>
+                  <li>Improved keyboard focus, reduced-motion handling, and chart text summaries</li>
+                  <li>Versioned stylesheet and offline asset coverage for the new visual system</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v3.3.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Web and mobile feature parity</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Added six achievements mirroring mobile, including Master Hoarder, First Payday, and streak milestones</li>
+                  <li>Added Income and Expense pill badges to transaction history</li>
+                  <li>Context-aware empty states with a Clear Filters action</li>
+                  <li>Dashboard remaining-goal pill and 25%, 50%, 75% milestone ticks</li>
+                  <li>Separated the Danger Zone for high-impact destructive operations</li>
+                  <li>Live database sync status indicator and full-screen loading states</li>
+                  <li>Added a New Action tile in the Quick Actions grid</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v3.2.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Safety cache system and offline sync</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Local safety snapshots saved after successful database queries</li>
+                  <li>Automatic cache restore if the database is empty, plus offline conflict resolution</li>
+                  <li>Offline safety banner with cached mode operations</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v3.1.2</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Notification badge tracking and pill pagination</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Persistent unread achievement badge clearing and a Read All action</li>
+                  <li>Sliding-window pill pagination with rounded buttons and ellipsis</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v3.1.1</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Notifications hub and layout improvements</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Dedicated notifications page with activity alerts and achievements</li>
+                  <li>Top bar bell badge showing the unread notification counter</li>
+                  <li>Separated swipe and edit actions in history</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v3.1.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Bug fixes and stability</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Resolved build and compile issues across web and mobile targets</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v3.0.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Analytics intelligence and Android widget</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>7-day rolling average and estimated days to goal</li>
+                  <li>Best Earning Week and 7-day earning rate in Analytics</li>
+                  <li>Glance-based Android home screen widget with balance and progress</li>
+                  <li>Milestone notifications and progress card sharing generator</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v2.1.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Firebase direct auth</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Direct Firebase Auth integration via synthetic email accounts</li>
+                  <li>JSON backup import and export across all platforms</li>
+                  <li>Target SDK 35, Compose BOM 2025.05.01, and KSP build tooling</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v2.0.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">UI overhaul and analytics</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Analytics dashboard with charts, stats, and period breakdowns</li>
+                  <li>Admin panel and multi-profile support</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-[var(--text-primary)]">v1.0.0</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2025</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Initial cross-platform release</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Cloud Firestore sync, Dashboard, Balance and Goal tracking, Quick Actions, and History</li>
+                </ul>
+              </div>
+
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="card border-[var(--expense)]" aria-labelledby="dangerHeading">
+        <h2 id="dangerHeading" class="section-title text-[var(--expense)] m-0">Danger zone</h2>
+        <p class="section-sub m-0 mt-1">These actions permanently modify or erase your data.</p>
+        <hr class="divider">
+        <div class="flex flex-col gap-4">
+          <div class="flex items-start justify-between gap-4 max-sm:flex-col">
+            <div>
+              <h3 class="text-sm font-semibold m-0">Delete all my data</h3>
+              <p class="muted-text mt-1 mb-0">Removes every profile and transaction from your account.</p>
+            </div>
+            <button type="button" id="deleteAllDataBtn" class="btn danger shrink-0">Delete all data</button>
+          </div>
+          <hr class="divider !my-0">
+          <div class="flex items-start justify-between gap-4 max-sm:flex-col">
+            <div>
+              <h3 class="text-sm font-semibold m-0">Delete my account</h3>
+              <p class="muted-text mt-1 mb-0">Permanently deletes your account and all associated data.</p>
+            </div>
+            <button type="button" id="deleteAccountBtn" class="btn danger shrink-0">Delete account</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <nav class="mobile-bottom-nav hidden max-sm:flex fixed bottom-0 left-0 right-0 h-16 bg-[var(--surface)] border-t border-[var(--border)] z-[100] justify-around items-center px-1" role="navigation" aria-label="Mobile bottom navigation">
+    <button type="button" class="mobile-nav-btn active relative" data-page="dashboard">
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+      <span class="mobile-nav-label">Dashboard</span>
     </button>
-    <button class="mobile-nav-btn flex flex-col items-center justify-center gap-[3px] flex-1 bg-none border-0 text-[var(--muted-color)] text-[10px] font-medium cursor-pointer py-2 px-1 relative font-[inherit] transition-colors duration-200" data-page="analytics">
-      <span class="mobile-nav-icon text-xl leading-none" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-      <span class="mobile-nav-label text-[12px]">Analytics</span>
+    <button type="button" class="mobile-nav-btn relative" data-page="analytics">
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      <span class="mobile-nav-label">Analytics</span>
     </button>
-    <button class="mobile-nav-btn flex flex-col items-center justify-center gap-[3px] flex-1 bg-none border-0 text-[var(--muted-color)] text-[10px] font-medium cursor-pointer py-2 px-1 relative font-[inherit] transition-colors duration-200" data-page="history">
-      <span class="mobile-nav-icon text-xl leading-none" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
-      <span class="mobile-nav-label text-[12px]">History</span>
+    <button type="button" class="mobile-nav-btn relative" data-page="history">
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+      <span class="mobile-nav-label">History</span>
     </button>
-    <button class="mobile-nav-btn flex flex-col items-center justify-center gap-[3px] flex-1 bg-none border-0 text-[var(--muted-color)] text-[10px] font-medium cursor-pointer py-2 px-1 relative font-[inherit] transition-colors duration-200" data-page="notifications">
-      <span class="mobile-nav-icon text-xl leading-none" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
-      <span class="mobile-nav-label text-[12px]">Alerts</span>
-      <span id="mobileAchievementBadge" class="badge mobile-badge absolute top-1 bg-amber-400 text-white text-[9px] px-1 py-px rounded-[10px] min-w-[18px] text-center leading-4" style="right: calc(50% - 18px); display:none" aria-live="polite" aria-atomic="true"></span>
+    <button type="button" class="mobile-nav-btn relative" data-page="notifications">
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+      <span class="mobile-nav-label">Alerts</span>
+      <span id="mobileAchievementBadge" class="badge" style="right: calc(50% - 18px); display:none" aria-live="polite" aria-atomic="true"></span>
     </button>
-    <button class="mobile-nav-btn flex flex-col items-center justify-center gap-[3px] flex-1 bg-none border-0 text-[var(--muted-color)] text-[10px] font-medium cursor-pointer py-2 px-1 relative font-[inherit] transition-colors duration-200" data-page="settings">
-      <span class="mobile-nav-icon text-xl leading-none" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-      <span class="mobile-nav-label text-[12px]">Settings</span>
+    <button type="button" class="mobile-nav-btn relative" data-page="settings">
+      <span class="mobile-nav-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      <span class="mobile-nav-label">Settings</span>
     </button>
   </nav>
 
-  <div id="supportModal" class="modal fixed z-[1000] inset-0 bg-black/85 backdrop-blur-[8px]" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle">
-    <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div class="px-6 py-6 border-b border-[var(--border-color)] flex justify-between items-center">
-        <h3 class="m-0 text-lg font-semibold" id="supportModalTitle">Buy me a coffee <span aria-hidden="true"><svg class="inline-block" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2"/><path d="M3 8h18"/><path d="M9 8v12"/><path d="M15 8v12"/></svg></span></h3>
-        <button class="close-btn bg-none border-0 text-[var(--muted-color)] text-2xl leading-none cursor-pointer p-1 inline-flex items-center justify-center rounded-md hover:text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors" data-modal="supportModal" aria-label="Close support modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div id="supportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold m-0" id="supportModalTitle">Support the project</h3>
+        <button type="button" class="close-btn btn ghost" data-modal="supportModal" aria-label="Close support dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="px-6 py-6">
-        <p class="text-center mb-5 text-[var(--text-color)] leading-relaxed">If you find this app useful for your eFootball tracking, consider supporting the dev!</p>
+      <div class="modal-body">
+        <p class="text-center mb-5 text-[var(--text-primary)] leading-relaxed">If this app helps your eFootball tracking, you can support the developer.</p>
         <div class="grid grid-cols-1 gap-4">
-          <div class="donation-card bkash rounded-xl p-5 text-white cursor-pointer select-none shadow-[0_4px_15px_rgba(0,0,0,0.1)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.2)] active:scale-[0.98]" data-number="01678713786" tabindex="0" role="button" aria-label="Copy bKash number">
+          <div class="donation-card bkash" data-number="01678713786" tabindex="0" role="button" aria-label="Copy bKash number">
             <div class="flex justify-between items-center mb-4">
-              <span class="text-xl font-extrabold italic">bKash</span>
+              <span class="text-xl font-bold italic">bKash</span>
               <img src="/images/bkash.png" alt="bKash" class="h-9 w-auto object-contain">
             </div>
-            <div class="text-[22px] font-bold tracking-wide mb-1 font-mono">01678713786</div>
-            <div class="text-[11px] opacity-90 font-medium uppercase">Personal • Send Money</div>
+            <div class="num text-[22px] font-bold tracking-wide mb-1">01678713786</div>
+            <div class="text-[11px] opacity-90 font-medium">Personal · Send money</div>
           </div>
-          <div class="donation-card nagad rounded-xl p-5 text-white cursor-pointer select-none shadow-[0_4px_15px_rgba(0,0,0,0.1)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.2)] active:scale-[0.98]" data-number="01678713786" tabindex="0" role="button" aria-label="Copy Nagad number">
+          <div class="donation-card nagad" data-number="01678713786" tabindex="0" role="button" aria-label="Copy Nagad number">
             <div class="flex justify-between items-center mb-4">
-              <span class="text-xl font-extrabold italic">Nagad</span>
+              <span class="text-xl font-bold italic">Nagad</span>
               <img src="/images/nagad.png" alt="Nagad" class="h-9 w-auto object-contain">
             </div>
-            <div class="text-[22px] font-bold tracking-wide mb-1 font-mono card-number">01678713786</div>
-            <div class="text-[11px] opacity-90 font-medium uppercase">Personal • Send Money</div>
+            <div class="num text-[22px] font-bold tracking-wide mb-1 card-number">01678713786</div>
+            <div class="text-[11px] opacity-90 font-medium">Personal · Send money</div>
           </div>
-          <div class="donation-card rocket rounded-xl p-5 text-white cursor-pointer select-none shadow-[0_4px_15px_rgba(0,0,0,0.1)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.2)] active:scale-[0.98]" data-number="01678713786" tabindex="0" role="button" aria-label="Copy Rocket number">
+          <div class="donation-card rocket" data-number="01678713786" tabindex="0" role="button" aria-label="Copy Rocket number">
             <div class="flex justify-between items-center mb-4">
-              <span class="text-xl font-extrabold italic">Rocket</span>
+              <span class="text-xl font-bold italic">Rocket</span>
               <img src="/images/rocket.png" alt="Rocket" class="h-9 w-auto object-contain">
             </div>
-            <div class="text-[22px] font-bold tracking-wide mb-1 font-mono">01678713786</div>
-            <div class="text-[11px] opacity-90 font-medium uppercase">Personal • Send Money</div>
+            <div class="num text-[22px] font-bold tracking-wide mb-1">01678713786</div>
+            <div class="text-[11px] opacity-90 font-medium">Personal · Send money</div>
           </div>
         </div>
-        <p class="text-center text-xs text-[var(--muted-color)] mt-4">Tap a card to copy the number!</p>
+        <p class="text-center text-xs text-[var(--text-muted)] mt-4">Select a card to copy the number.</p>
       </div>
     </div>
   </div>
 
-  <div id="transactionModal" class="modal fixed z-[1000] inset-0 bg-black/85 backdrop-blur-[8px]" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
-    <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div class="px-6 py-6 border-b border-[var(--border-color)] flex justify-between items-center">
-        <h3 class="m-0 text-lg font-semibold" id="transactionModalTitle">Edit Transaction</h3>
-        <button class="close-btn bg-none border-0 text-[var(--muted-color)] text-2xl leading-none cursor-pointer p-1 inline-flex items-center justify-center rounded-md hover:text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors" data-modal="transactionModal" aria-label="Close transaction modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div id="transactionModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold m-0" id="transactionModalTitle">Edit transaction</h3>
+        <button type="button" class="close-btn btn ghost" data-modal="transactionModal" aria-label="Close transaction dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="px-6 py-6">
+      <div class="modal-body">
         <input type="hidden" id="transactionId">
-        <div class="mb-4">
-          <label for="transactionDate" class="block mb-2 font-medium">Date &amp; Time</label>
-          <input type="datetime-local" id="transactionDate"
-            class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                   focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
+        <div class="field mb-4">
+          <label for="transactionDate" class="field-label">Date and time</label>
+          <input type="datetime-local" id="transactionDate">
         </div>
-        <div class="mb-4">
-          <label for="transactionAmount" class="block mb-2 font-medium">Amount</label>
-          <input type="number" id="transactionAmount" min="1" max="999999"
-            class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                   focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
+        <div class="field mb-4">
+          <label for="transactionAmount" class="field-label">Amount</label>
+          <input type="number" id="transactionAmount" min="1" max="999999" inputmode="numeric" aria-describedby="transactionAmountError">
+          <p id="transactionAmountError" class="field-error mt-1" role="alert" aria-live="polite"></p>
         </div>
-        <div class="mb-4">
-          <label for="transactionSource" id="sourceLabel" class="block mb-2 font-medium">Source</label>
-          <input type="text" id="transactionSource"
-            class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                   focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
+        <div class="field">
+          <label for="transactionSource" id="sourceLabel" class="field-label">Source</label>
+          <input type="text" id="transactionSource">
         </div>
       </div>
-      <div class="px-6 py-5 border-t border-[var(--border-color)] text-right">
-        <button id="saveTransactionBtn" class="btn primary">Save Transaction</button>
+      <div class="modal-footer">
+        <button type="button" id="saveTransactionBtn" class="btn primary">Save transaction</button>
       </div>
     </div>
   </div>
 
-  <div id="profileModal" class="modal fixed z-[1000] inset-0 bg-black/85 backdrop-blur-[8px]" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
-    <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div class="px-6 py-6 border-b border-[var(--border-color)] flex justify-between items-center">
-        <h3 class="m-0 text-lg font-semibold" id="profileModalTitle">Create New Profile</h3>
-        <button class="close-btn bg-none border-0 text-[var(--muted-color)] text-2xl leading-none cursor-pointer p-1 inline-flex items-center justify-center rounded-md hover:text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors" data-modal="profileModal" aria-label="Close profile modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div id="profileModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold m-0" id="profileModalTitle">Create new profile</h3>
+        <button type="button" class="close-btn btn ghost" data-modal="profileModal" aria-label="Close profile dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="px-6 py-6">
-        <div class="mb-4">
-          <label for="newProfileName" class="block mb-2 font-medium">Profile Name</label>
-          <input type="text" id="newProfileName" placeholder="Enter profile name"
-            class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                   focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
+      <div class="modal-body">
+        <div class="field">
+          <label for="newProfileName" class="field-label">Profile name</label>
+          <input type="text" id="newProfileName" placeholder="Enter profile name">
         </div>
       </div>
-      <div class="px-6 py-5 border-t border-[var(--border-color)] text-right">
-        <button id="createProfileBtn" class="btn primary">Create Profile</button>
+      <div class="modal-footer">
+        <button type="button" id="createProfileBtn" class="btn primary">Create profile</button>
       </div>
     </div>
   </div>
 
-  <div id="deleteAccountModal" class="modal fixed z-[1000] inset-0 bg-black/85 backdrop-blur-[8px]" role="dialog" aria-modal="true" aria-labelledby="deleteAccountModalTitle">
-    <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div class="px-6 py-6 border-b border-[var(--border-color)] flex justify-between items-center">
-        <h3 class="m-0 text-lg font-semibold" id="deleteAccountModalTitle">Delete Account</h3>
-        <button class="close-btn bg-none border-0 text-[var(--muted-color)] text-2xl leading-none cursor-pointer p-1 inline-flex items-center justify-center rounded-md hover:text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors" data-modal="deleteAccountModal" aria-label="Close delete account modal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div id="deleteAccountModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteAccountModalTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold m-0" id="deleteAccountModalTitle">Delete account</h3>
+        <button type="button" class="close-btn btn ghost" data-modal="deleteAccountModal" aria-label="Close delete account dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="px-6 py-6">
-        <p class="mb-4 text-[var(--danger-color)] font-semibold">
-          <span aria-hidden="true"><svg class="inline-block mr-1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-          This will permanently delete your account and all data.
-        </p>
-        <div class="mb-4">
-          <label for="deleteAccountPassword" class="block mb-2 font-medium">Confirm your password</label>
-          <input type="password" id="deleteAccountPassword" placeholder="Enter your password"
-            class="w-full px-2.5 py-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-color)] text-[var(--text-color)] font-[inherit]
-                   focus:border-[var(--primary-color)] focus:outline-[2px] focus:outline-[var(--primary-color)] focus:outline-offset-2">
+      <div class="modal-body">
+        <div class="error-state mb-4">
+          <p class="m-0">This permanently deletes your account and all data.</p>
+        </div>
+        <div class="field">
+          <label for="deleteAccountPassword" class="field-label">Confirm your password</label>
+          <input type="password" id="deleteAccountPassword" placeholder="Enter your password" autocomplete="current-password">
         </div>
       </div>
-      <div class="px-6 py-5 border-t border-[var(--border-color)] text-right">
-        <button id="confirmDeleteAccountBtn" class="btn danger">Delete My Account</button>
+      <div class="modal-footer">
+        <button type="button" id="confirmDeleteAccountBtn" class="btn danger">Delete my account</button>
       </div>
     </div>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <div id="confirmModal" class="modal fixed z-[1000] inset-0 bg-black/85 backdrop-blur-[8px]" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-    <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div class="px-6 py-6 border-b border-[var(--border-color)] flex justify-between items-center">
-        <h3 class="m-0 text-lg font-semibold" id="confirmModalTitle">Confirm</h3>
-        <button class="close-btn bg-none border-0 text-[var(--muted-color)] text-2xl leading-none cursor-pointer p-1 inline-flex items-center justify-center rounded-md hover:text-[var(--text-color)] hover:bg-[var(--surface-variant)] transition-colors" data-modal="confirmModal" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold m-0" id="confirmModalTitle">Confirm</h3>
+        <button type="button" class="close-btn btn ghost" data-modal="confirmModal" aria-label="Close confirmation dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="px-6 py-6">
+      <div class="modal-body">
         <p id="confirmModalMessage"></p>
       </div>
-      <div class="px-6 py-5 border-t border-[var(--border-color)] text-right flex gap-2 justify-end">
-        <button id="confirmModalCancel"  class="btn secondary">Cancel</button>
-        <button id="confirmModalConfirm" class="btn danger">Confirm</button>
+      <div class="modal-footer">
+        <button type="button" id="confirmModalCancel" class="btn secondary">Cancel</button>
+        <button type="button" id="confirmModalConfirm" class="btn danger">Confirm</button>
       </div>
     </div>
   </div>

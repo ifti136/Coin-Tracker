@@ -66,15 +66,18 @@ const confirmPwEl    = document.getElementById("confirmPassword");
 const themeToggleBtn = document.getElementById("themeToggleBtn");
 
 let isRegisterMode = false;
+let isSubmitting  = false;
 
 // ── Theme ─────────────────────────────────────────────────────
 let currentTheme = document.documentElement.getAttribute("data-theme") || "light";
 themeToggleBtn.innerHTML = currentTheme === "light" ? getIcon('moon') : getIcon('sun');
+themeToggleBtn.setAttribute("aria-label", currentTheme === "light" ? "Switch to dark mode" : "Switch to light mode");
 themeToggleBtn.addEventListener("click", () => {
   currentTheme = currentTheme === "light" ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", currentTheme);
   localStorage.setItem("theme", currentTheme);
   themeToggleBtn.innerHTML = currentTheme === "light" ? getIcon('moon') : getIcon('sun');
+  themeToggleBtn.setAttribute("aria-label", currentTheme === "light" ? "Switch to dark mode" : "Switch to light mode");
 });
 
 // ── Toggle login/register ─────────────────────────────────────
@@ -92,19 +95,30 @@ function toggleAuthMode() {
 toggleBtn.addEventListener("click", toggleAuthMode);
 
 // ── Submit ────────────────────────────────────────────────────
+function showValidationError(message, fieldEl) {
+  [usernameEl, passwordEl, confirmPwEl].forEach((el) => el.removeAttribute("aria-invalid"));
+  errorEl.textContent = message;
+  if (fieldEl) {
+    fieldEl.setAttribute("aria-invalid", "true");
+    fieldEl.focus({ preventScroll: true });
+  }
+}
+
 async function handleSubmit() {
+  if (isSubmitting) return;
   errorEl.textContent = "";
   const username = usernameEl.value.trim();
   const password = passwordEl.value;
 
   const uErr = RULES.username(username);
-  if (uErr) { errorEl.textContent = uErr; return; }
+  if (uErr) { showValidationError(uErr, usernameEl); return; }
   const pErr = RULES.password(password);
-  if (pErr) { errorEl.textContent = pErr; return; }
+  if (pErr) { showValidationError(pErr, passwordEl); return; }
   if (isRegisterMode && password !== confirmPwEl.value) {
-    errorEl.textContent = "Passwords do not match."; return;
+    showValidationError("Passwords do not match.", confirmPwEl); return;
   }
 
+  isSubmitting = true;
   setLoading(true);
   try {
     if (isRegisterMode) await handleRegister(username, password);
@@ -113,6 +127,7 @@ async function handleSubmit() {
     console.error("Auth error:", err);
     errorEl.textContent = friendlyError(err.code || err.message);
   } finally {
+    isSubmitting = false;
     setLoading(false);
   }
 }
@@ -190,7 +205,10 @@ async function handleLogin(username, password) {
 
 // ── Helpers ───────────────────────────────────────────────────
 function setLoading(on) {
-  submitBtn.disabled  = on;
+  submitBtn.disabled = on;
+  toggleBtn.disabled = on;
+  [usernameEl, passwordEl, confirmPwEl].forEach((el) => { el.disabled = on; });
+  submitBtn.setAttribute("aria-busy", on ? "true" : "false");
   submitBtn.innerHTML = on
     ? `<span class="btn-spinner"></span>${isRegisterMode ? "Creating..." : "Logging in..."}`
     : (isRegisterMode ? "Create Account" : "Login");
@@ -221,4 +239,8 @@ function showToast(message, type = "success") {
 submitBtn.addEventListener("click", handleSubmit);
 [usernameEl, passwordEl, confirmPwEl].forEach((el) => {
   el.addEventListener("keypress", (e) => { if (e.key === "Enter") handleSubmit(); });
+  el.addEventListener("input", () => {
+    el.removeAttribute("aria-invalid");
+    if (errorEl.textContent) errorEl.textContent = "";
+  });
 });

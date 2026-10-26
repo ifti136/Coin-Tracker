@@ -39,6 +39,12 @@ const ROWS_PER_PAGE = 15;
 let sortColumn    = "created_at";
 let sortDirection = "desc";
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+
 function showLoading(message = "Retrieving admin data from database...", subtext = "Querying Cloud Firestore collections...") {
   const overlay = document.getElementById("loadingOverlay");
   if (!overlay) return;
@@ -71,14 +77,16 @@ function updateSyncStatus(status, label) {
   const dot = document.getElementById("dbSyncDot");
   const text = document.getElementById("dbSyncText");
   if (!dot || !text) return;
+  dot.className = "w-2 h-2 rounded-full";
   if (status === "loading") {
-    dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+    dot.style.background = "var(--warning)";
+    dot.classList.add("animate-pulse");
     text.textContent = label || "Retrieving data...";
   } else if (status === "error") {
-    dot.className = "w-2 h-2 rounded-full bg-rose-500";
+    dot.style.background = "var(--expense)";
     text.textContent = label || "Database disconnected";
   } else {
-    dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+    dot.style.background = "var(--income)";
     text.textContent = label || "Database synced";
   }
 }
@@ -129,7 +137,7 @@ function setupEventListeners() {
 
   // Sortable column headers
   document.querySelectorAll("th[data-sort]").forEach((th) => {
-    th.addEventListener("click", () => {
+    const activate = () => {
       const col = th.dataset.sort;
       if (sortColumn === col) sortDirection = sortDirection === "asc" ? "desc" : "asc";
       else { sortColumn = col; sortDirection = "asc"; }
@@ -137,22 +145,31 @@ function setupEventListeners() {
       sortUsers();
       renderTablePage();
       updateSortIndicators();
+    };
+    th.addEventListener("click", activate);
+    th.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        activate();
+      }
     });
   });
 
   // Confirm modal close button
   document.querySelectorAll("[data-modal]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const modalId = btn.dataset.modal;
-      const modal = document.getElementById(modalId);
+      if (btn.dataset.modal === "confirmModal" && _confirmCleanup) {
+        _confirmCleanup(false);
+        return;
+      }
+      const modal = document.getElementById(btn.dataset.modal);
       if (modal) {
-        modal.style.display = "none";
+        modal.classList.remove("open");
+        modal.setAttribute("hidden", "");
+        modal.style.removeProperty("display");
         document.body.style.overflow = '';
-        if (_lastFocused) _lastFocused.focus();
-        if (_confirmResolver) {
-          _confirmResolver(false);
-          _confirmResolver = null;
-        }
+        if (_lastFocused && document.contains(_lastFocused)) _lastFocused.focus();
+        _lastFocused = null;
       }
     });
   });
@@ -281,6 +298,15 @@ async function loadUsers() {
     renderNewUsersChart(allUsers);
   } catch (err) {
     console.error("loadUsers error:", err);
+    const tbody = document.getElementById("userTableBody");
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--expense)">Failed to load users. Refresh to try again.</td></tr>`;
+    }
+    ["paginationControlsTop", "paginationControlsBottom"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+    updateSyncStatus("error", "Failed to load users");
     showToast("Failed to load users.", "error");
   }
 }
@@ -339,7 +365,10 @@ function renderTablePage() {
   const pageUsers = filteredUsers.slice(start, start + ROWS_PER_PAGE);
 
   if (pageUsers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted-color)">No users found.</td></tr>`;
+    const message = allUsers.length === 0
+      ? "No users found."
+      : "No users match your search.";
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted-color)">${message}</td></tr>`;
     renderPaginationControls();
     return;
   }
@@ -354,7 +383,7 @@ function renderTablePage() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>
-        ${u.username}
+        ${escapeHtml(u.username)}
         ${isMe ? '<span class="you-badge">You</span>' : ""}
       </td>
       <td class="${balClass}">${u.balance.toLocaleString()}</td>
@@ -363,17 +392,19 @@ function renderTablePage() {
       <td>${lastActive}</td>
       <td>
         ${isMe
-          ? `<span style="color:var(--muted-color);font-size:12px">—</span>`
-          : `<button class="btn danger btn-delete-user" data-uid="${u.uid}" data-username="${u.username}">${getIcon('trash2')} Delete</button>`
+          ? `<span style="color:var(--text-muted);font-size:12px">—</span>`
+          : `<button class="btn danger btn-delete-user" data-uid="${escapeHtml(u.uid)}" data-username="${escapeHtml(u.username)}">${getIcon('trash2')} Delete</button>`
         }
       </td>`;
 
     if (!isMe) {
       tr.querySelector(".btn-delete-user").addEventListener("click", async (e) => {
-        const uid      = e.currentTarget.dataset.uid;
-        const username = e.currentTarget.dataset.username;
+        const btn      = e.currentTarget;
+        const uid      = btn.dataset.uid;
+        const username = btn.dataset.username;
+        if (btn.disabled) return;
         if (await confirm(`Delete user '${username}'?\nThis permanently deletes all their data.`)) {
-          deleteUserById(uid, username);
+          await deleteUserById(uid, username, btn);
         }
       });
     }
@@ -444,15 +475,26 @@ function sortUsers() {
 function updateSortIndicators() {
   document.querySelectorAll("th[data-sort]").forEach((th) => {
     th.classList.remove("sort-asc", "sort-desc");
-    if (th.dataset.sort === sortColumn)
+    const isActive = th.dataset.sort === sortColumn;
+    if (isActive)
       th.classList.add(sortDirection === "asc" ? "sort-asc" : "sort-desc");
+    th.setAttribute("aria-sort", isActive
+      ? (sortDirection === "asc" ? "ascending" : "descending")
+      : "none");
   });
 }
 
 // ─────────────────────────────────────────────────────────────
 //  Delete user
 // ─────────────────────────────────────────────────────────────
-async function deleteUserById(uid, username) {
+async function deleteUserById(uid, username, button) {
+  const originalHTML = button ? button.innerHTML : null;
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-pending");
+    button.textContent = "Deleting…";
+  }
   try {
     // Delete all profile subcollection docs
     const profilesSnap = await getDocs(collection(db, "user_data", uid, "profiles"));
@@ -475,6 +517,13 @@ async function deleteUserById(uid, username) {
   } catch (err) {
     console.error("deleteUserById error:", err);
     showToast("Failed to delete user.", "error");
+  } finally {
+    if (button && document.contains(button)) {
+      if (originalHTML !== null) button.innerHTML = originalHTML;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.classList.remove("is-pending");
+    }
   }
 }
 
@@ -492,7 +541,14 @@ async function loadBroadcast() {
 }
 
 async function setBroadcast() {
+  const button = document.getElementById("setBroadcastBtn");
+  if (!button || button.disabled) return;
   const message = document.getElementById("broadcastMessage").value.trim();
+  const originalHTML = button.innerHTML;
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.classList.add("is-pending");
+  button.textContent = "Saving…";
   try {
     await setDoc(doc(db, "app_config", "broadcast"), { message });
     const el = document.getElementById("currentBroadcast");
@@ -501,6 +557,11 @@ async function setBroadcast() {
   } catch (err) {
     console.error("setBroadcast error:", err);
     showToast("Failed to update broadcast.", "error");
+  } finally {
+    button.innerHTML = originalHTML;
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+    button.classList.remove("is-pending");
   }
 }
 
@@ -509,17 +570,20 @@ async function setBroadcast() {
 // ─────────────────────────────────────────────────────────────
 let _lastFocused = null;
 let _confirmResolver = null;
+let _confirmCleanup = null;
 let _trapFocusRef = null;
 let _handleEscapeRef = null;
 
 function confirm(message) {
   return new Promise((resolve) => {
-    _confirmResolver = resolve;
     const modal = document.getElementById("confirmModal");
     if (!modal) { resolve(false); return; }
+    _confirmResolver = resolve;
     document.getElementById("confirmModalMessage").textContent = message;
-    modal.style.display = "block";
     _lastFocused = document.activeElement;
+    modal.removeAttribute("hidden");
+    modal.classList.add("open");
+    modal.style.removeProperty("display");
     const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
     if (focusable) focusable.focus();
     _trapFocusRef = trapFocus.bind(null);
@@ -528,29 +592,31 @@ function confirm(message) {
     modal.addEventListener('keydown', _handleEscapeRef);
     document.body.style.overflow = 'hidden';
 
-    const cleanup = () => {
-      modal.style.display = "none";
+    const confirmBtn = document.getElementById("confirmModalConfirm");
+    const cancelBtn  = document.getElementById("confirmModalCancel");
+
+    const cleanup = (value) => {
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
       modal.removeEventListener('keydown', _trapFocusRef);
       modal.removeEventListener('keydown', _handleEscapeRef);
+      modal.classList.remove("open");
+      modal.setAttribute("hidden", "");
+      modal.style.removeProperty("display");
       document.body.style.overflow = '';
-      if (_lastFocused) _lastFocused.focus();
+      if (_lastFocused && document.contains(_lastFocused)) _lastFocused.focus();
+      _lastFocused = null;
       _confirmResolver = null;
+      _confirmCleanup = null;
+      resolve(value);
     };
 
-    const onConfirm = () => {
-      cleanup();
-      document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
-      document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
-      resolve(true);
-    };
-    const onCancel = () => {
-      cleanup();
-      document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
-      document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
-      resolve(false);
-    };
-    document.getElementById("confirmModalConfirm").addEventListener("click", onConfirm);
-    document.getElementById("confirmModalCancel").addEventListener("click", onCancel);
+    const onConfirm = () => cleanup(true);
+    const onCancel  = () => cleanup(false);
+
+    _confirmCleanup = cleanup;
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
   });
 }
 
@@ -570,18 +636,9 @@ function trapFocus(e) {
 }
 
 function handleEscape(e) {
-  if (e.key === 'Escape') {
-    if (_confirmResolver) {
-      _confirmResolver(false);
-      _confirmResolver = null;
-    }
-    const modal = document.getElementById("confirmModal");
-    modal.style.display = "none";
-    modal.removeEventListener('keydown', _trapFocusRef);
-    modal.removeEventListener('keydown', _handleEscapeRef);
-    document.body.style.overflow = '';
-    if (_lastFocused) _lastFocused.focus();
-    _confirmResolver = null;
+  if (e.key === 'Escape' && _confirmCleanup) {
+    e.preventDefault();
+    _confirmCleanup(false);
   }
 }
 
@@ -602,9 +659,11 @@ function showToast(message, type = "success") {
 
   toast.innerHTML = `
     ${iconSvg}
-    <span>${message}</span>
     <button type="button" class="toast-dismiss" aria-label="Dismiss">&times;</button>
   `;
+  const messageEl = document.createElement("span");
+  messageEl.textContent = message;
+  toast.insertBefore(messageEl, toast.querySelector(".toast-dismiss"));
   toast.className = `toast ${type} show`;
 
   const dismissBtn = toast.querySelector(".toast-dismiss");

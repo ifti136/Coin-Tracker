@@ -29,7 +29,7 @@ coin-tracker/
 │   │   ├── index.html          # Main app shell
 │   │   ├── login.html          # Auth page
 │   │   ├── admin.html          # Admin panel
-│   │   ├── css/                # style.css, login.css, admin.css
+│   │   ├── css/                # base.css (single shared stylesheet)
 │   │   └── js/                 # app.js, login.js, admin.js
 │   ├── firebase.json           # Firebase Hosting + Firestore config
 │   ├── firestore.rules         # Security rules
@@ -49,7 +49,7 @@ coin-tracker/
 | Login / Register | ✅ | ✅ | ✅ |
 | Dashboard (balance, progress, stats) | ✅ | ✅ | ✅ |
 | Goal progress bar + milestone ticks | ✅ | — | ✅ |
-| Remaining to goal pill (`⚡ X to goal`) | ✅ | — | ✅ |
+| Remaining to goal pill (`X to goal`) | ✅ | — | ✅ |
 | Quick action buttons & `+ New Action` tile | ✅ | ✅ | ✅ |
 | Add / spend coins | ✅ | ✅ | ✅ |
 | History + Income/Expense badges | ✅ | ✅ | ✅ |
@@ -167,6 +167,19 @@ service cloud.firestore {
 ### Promoting a user to admin
 
 In the Firestore console, find the user's document under `users/{userId}` and set `role` → `"admin"`.
+
+---
+
+## 🆕 Web v4.0.0
+
+Web UI overhaul — gold/graphite design system, single `base.css` stylesheet, accessible dialogs, and safer writes.
+
+- New design tokens and components across dashboard, analytics, history, notifications, settings, login, and admin.
+- Add, spend, quick-action, and edit writes now prevent duplicate submission, show truthful pending states, validate inline, and preserve input on failure.
+- Goal panel handles missing/zero/reached goals without invalid percentages or negative remaining values; ETA hidden when unsupported.
+- Dialog lifecycle now uses `.modal.open` with focus trap/restore and Escape handling.
+- Removed dead `style.css`, `login.css`, and `admin.css`; service worker now caches `base.css`, Tailwind CDN, fonts, and Chart.js under `v6` caches.
+- Manifest and theme colors aligned to graphite `#11151B` / gold `#E8B84A`.
 
 ---
 

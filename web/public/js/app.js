@@ -28,6 +28,20 @@ const DEFAULT_EXPENSE_CATEGORIES = ["Box Draw","Manager Purchase","Pack Purchase
 const DEFAULT_GOAL               = 13500;
 const TRANSACTIONS_PER_PAGE      = 10;
 
+// Escape user-derived strings before inserting them into innerHTML.
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+
+function hashString(value) {
+  const str = String(value ?? "");
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(hash).toString(36);
+}
+
 const DEFAULT_QUICK_ACTIONS = [
   { text: "Event Reward",      value: 50,  is_positive: true  },
   { text: "Ads",               value: 10,  is_positive: true  },
@@ -54,7 +68,7 @@ const ACHIEVEMENT_DEFS = [
   { id: "serious_saver",   icon: "trendingUpAch2", name: "Serious Saver",      desc: "Reach a balance of 5,000 coins",  check: (s) => s.balance >= 5000 },
   { id: "coin_hoarder",    icon: "accountBalance", name: "Coin Hoarder",       desc: "Reach a balance of 10,000 coins", check: (s) => s.balance >= 10000 },
   { id: "master_hoarder",  icon: "crown", name: "Master Hoarder",       desc: "Reach a balance of 25,000 coins", check: (s) => s.balance >= 25000 },
-  { id: "goal_reached",    icon: "emojiEvents", name: "Epic Box Secured!",   desc: "Reach your goal balance",         check: (s) => s.balance >= s.goal },
+  { id: "goal_reached",    icon: "emojiEvents", name: "Epic Box Secured!",   desc: "Reach your goal balance",         check: (s) => s.goal > 0 && s.balance >= s.goal },
   { id: "first_coin",      icon: "dollarSign", name: "First Payday",        desc: "Record your first earning transaction", check: (s) => s.incomeCount >= 1 },
   { id: "active_tracker",  icon: "target", name: "Active Tracker",      desc: "Record 25 total transactions",    check: (s) => s.txnCount >= 25 },
   { id: "century_club",    icon: "zap", name: "Century Club",        desc: "Record 100 total transactions",   check: (s) => s.txnCount >= 100 },
@@ -84,6 +98,8 @@ class CoinTrackerApp {
     this.historyFiltered = [];
     this._lastFocused    = null;
     this._toastTimeout   = null;
+    this._writeLocks     = new Set();
+    this._confirmCleanup = null;
   }
 
   // ── Bootstrap ─────────────────────────────────────────────────
@@ -183,7 +199,9 @@ class CoinTrackerApp {
   }
 
   get goal() {
-    return this.settings.goal || DEFAULT_GOAL;
+    const raw = this.settings.goal;
+    const value = typeof raw === "number" ? raw : Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
   }
 
   // Mobile uses is_positive, not isPositive
@@ -206,10 +224,13 @@ class CoinTrackerApp {
   }
 
   get progress() {
-    return this.goal > 0 ? Math.min(100, Math.round((this.balance / this.goal) * 100)) : 0;
+    const goal = this.goal;
+    if (goal <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((this.balance / goal) * 100)));
   }
 
   get estimatedDays() {
+    if (this.goal <= 0) return "N/A";
     if (this.balance >= this.goal) return 0;
     const needed = this.goal - this.balance;
     const txns   = this.transactions;
@@ -310,12 +331,12 @@ class CoinTrackerApp {
   }
 
   get notificationAlerts() {
-    const alerts = [], p = this.progress;
-    if (this.balance >= this.goal)
-      alerts.push({ icon: getAlertIcon("🎉"), title: "Goal Reached!", sub: `You hit your goal of ${this.goal.toLocaleString()} coins!` });
-    else if (p >= 75)
-      alerts.push({ icon: getAlertIcon("🔥"), title: "75% of your goal reached", sub: `Only ${(this.goal - this.balance).toLocaleString()} coins to go!` });
-    else if (p >= 50)
+    const alerts = [], p = this.progress, goal = this.goal;
+    if (goal > 0 && this.balance >= goal)
+      alerts.push({ icon: getAlertIcon("🎉"), title: "Goal Reached!", sub: `You hit your goal of ${goal.toLocaleString()} coins!` });
+    else if (goal > 0 && p >= 75)
+      alerts.push({ icon: getAlertIcon("🔥"), title: "75% of your goal reached", sub: `Only ${(goal - this.balance).toLocaleString()} coins to go!` });
+    else if (goal > 0 && p >= 50)
       alerts.push({ icon: getAlertIcon("⚡"), title: "Halfway there!", sub: "You're 50% of the way to your goal." });
     const stats = this.dashboardStats;
     if (stats.today >= 300)
@@ -325,7 +346,7 @@ class CoinTrackerApp {
       alerts.push({ icon: getAlertIcon("⏰"), title: "Goal is close!", sub: `~${est} day${est === 1 ? "" : "s"} to reach your goal.` });
     const best = this.bestEarningWeek;
     if (best)
-      alerts.push({ icon: "🏆", title: "Best Earning Week", sub: `${best.range}: ${best.amount.toLocaleString()} coins` });
+      alerts.push({ icon: getAlertIcon("🏆"), title: "Best Earning Week", sub: `${best.range}: ${best.amount.toLocaleString()} coins` });
     return alerts;
   }
 
@@ -338,6 +359,119 @@ class CoinTrackerApp {
       ...this.settings,
       ...partial,
     };
+  }
+
+  // ── Write safety helpers ──────────────────────────────────────
+  _snapshotWriteState() {
+    return JSON.parse(JSON.stringify({
+      transactions: this.profileData.transactions || [],
+      settings:     this.profileData.settings || {},
+    }));
+  }
+
+  _restoreWriteState(snapshot) {
+    const profile = this.userDataDoc?.profiles?.[this.currentProfile];
+    if (!profile || !snapshot) return;
+    profile.transactions = snapshot.transactions;
+    profile.settings     = snapshot.settings;
+  }
+
+  _withAlpha(color, alpha) {
+    const value = (color || "").trim();
+    if (!value.startsWith("#")) return value || `rgba(232, 184, 74, ${alpha})`;
+    let hex = value.slice(1);
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    const num = parseInt(hex.slice(0, 6), 16);
+    if (Number.isNaN(num)) return `rgba(232, 184, 74, ${alpha})`;
+    return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+  }
+
+  _setFieldError(input, errorId, message) {
+    if (input) {
+      input.setAttribute("aria-invalid", "true");
+      if (errorId && !input.getAttribute("aria-describedby")) {
+        input.setAttribute("aria-describedby", errorId);
+      }
+    }
+    const err = errorId ? document.getElementById(errorId) : null;
+    if (err) err.textContent = message;
+  }
+
+  _clearFieldError(input, errorId) {
+    if (input) input.removeAttribute("aria-invalid");
+    const err = errorId ? document.getElementById(errorId) : null;
+    if (err) err.textContent = "";
+  }
+
+  _setAnalyticsRangeError(message, focusInput = null) {
+    ["analyticsFrom", "analyticsTo"].forEach((id) => {
+      document.getElementById(id)?.setAttribute("aria-invalid", "true");
+    });
+    const err = document.getElementById("analyticsRangeError");
+    if (err) {
+      err.textContent = message;
+      err.hidden = false;
+    }
+    if (focusInput) focusInput.focus({ preventScroll: true });
+  }
+
+  _clearAnalyticsRangeError() {
+    ["analyticsFrom", "analyticsTo"].forEach((id) => {
+      document.getElementById(id)?.removeAttribute("aria-invalid");
+    });
+    const err = document.getElementById("analyticsRangeError");
+    if (err) {
+      err.textContent = "";
+      err.hidden = true;
+    }
+  }
+
+  _validateAmountInput(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    if (!input) return null;
+    const raw = input.value.trim();
+    const amount = Number(raw);
+    if (!raw || !Number.isInteger(amount) || amount < 1 || amount > 999999) {
+      this._setFieldError(input, errorId, "Enter an amount between 1 and 999,999.");
+      input.focus({ preventScroll: true });
+      return null;
+    }
+    this._clearFieldError(input, errorId);
+    return amount;
+  }
+
+  async _runWrite(key, button, pendingLabel, work, failureMessage) {
+    if (this._writeLocks.has(key)) return null;
+    this._writeLocks.add(key);
+
+    const originalHTML     = button ? button.innerHTML : null;
+    const wasDisabled      = button ? button.disabled : false;
+    const originalAriaLabel = button ? button.getAttribute("aria-label") : null;
+
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.classList.add("is-pending");
+      if (pendingLabel) button.textContent = pendingLabel;
+    }
+
+    try {
+      await work();
+      return true;
+    } catch (err) {
+      console.error(`Write failed [${key}]:`, err);
+      if (failureMessage) this.showToast(failureMessage, "error");
+      return false;
+    } finally {
+      if (button) {
+        if (originalHTML !== null) button.innerHTML = originalHTML;
+        button.disabled = wasDisabled;
+        button.removeAttribute("aria-busy");
+        button.classList.remove("is-pending");
+        if (originalAriaLabel !== null) button.setAttribute("aria-label", originalAriaLabel);
+      }
+      this._writeLocks.delete(key);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -400,6 +534,24 @@ class CoinTrackerApp {
       }
     });
 
+    // Escape closes safe overlays and restores focus
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const dropdown = document.getElementById("profileDropdownMenu");
+      const profileBtn = document.getElementById("topBarProfileBtn");
+      if (dropdown && dropdown.classList.contains("open")) {
+        dropdown.classList.remove("open");
+        profileBtn?.setAttribute("aria-expanded", "false");
+        profileBtn?.focus();
+        return;
+      }
+      const sidebar = document.querySelector(".sidebar");
+      if (sidebar && sidebar.classList.contains("nav-expanded")) {
+        this.toggleMobileNav();
+        document.getElementById("hamburgerBtn")?.focus();
+      }
+    });
+
     // Sidebar hover & collapse handling
     const sidebarEl = document.querySelector(".sidebar");
     if (sidebarEl) {
@@ -424,6 +576,8 @@ class CoinTrackerApp {
     document.getElementById("addCoinsBtn").addEventListener("click", () => this.addFromDashboard());
     document.getElementById("spendCoinsBtn").addEventListener("click", () => this.spendFromDashboard());
     document.getElementById("customizeQuickActions").addEventListener("click", () => this.showPage("settings"));
+    document.getElementById("viewAllAchievementsBtn")?.addEventListener("click", () => this.showPage("notifications"));
+    document.getElementById("viewRecentHistoryBtn")?.addEventListener("click", () => this.showPage("history"));
 
     ["dateFrom", "dateTo", "historySourceFilter"].forEach((id) => {
       document.getElementById(id)?.addEventListener("change", () => this.buildHistory());
@@ -432,22 +586,44 @@ class CoinTrackerApp {
 
     document.querySelectorAll(".chip[data-period]").forEach((chip) => {
       chip.addEventListener("click", () => {
-        document.querySelectorAll(".chip[data-period]").forEach((c) => c.classList.remove("active"));
+        document.querySelectorAll(".chip[data-period]").forEach((c) => {
+          c.classList.remove("active");
+          c.setAttribute("aria-pressed", "false");
+        });
         chip.classList.add("active");
+        chip.setAttribute("aria-pressed", "true");
         this.analyticsPeriod = chip.dataset.period;
+        this._clearAnalyticsRangeError();
         const picker = document.getElementById("customRangePicker");
         if (picker) picker.style.display = this.analyticsPeriod === "custom" ? "flex" : "none";
-        if (this.analyticsPeriod !== "custom") this.updateAnalyticsUI();
+        this.updateAnalyticsUI();
       });
     });
     document.getElementById("applyRangeBtn")?.addEventListener("click", () => {
-      this.analyticsCustomFrom = document.getElementById("analyticsFrom").value;
-      this.analyticsCustomTo   = document.getElementById("analyticsTo").value;
+      const fromInput = document.getElementById("analyticsFrom");
+      const toInput   = document.getElementById("analyticsTo");
+      const from = fromInput?.value || "";
+      const to   = toInput?.value || "";
+      if (!from || !to) {
+        this._setAnalyticsRangeError("Choose both a start and end date.", !from ? fromInput : toInput);
+        return;
+      }
+      if (from > to) {
+        this._setAnalyticsRangeError("Start date must be on or before end date.", fromInput);
+        return;
+      }
+      this._clearAnalyticsRangeError();
+      this.analyticsCustomFrom = from;
+      this.analyticsCustomTo   = to;
       this.updateAnalyticsUI();
+    });
+    ["analyticsFrom", "analyticsTo"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("input", () => this._clearAnalyticsRangeError());
     });
 
     document.querySelectorAll(".tab-header").forEach((tab) => {
       tab.addEventListener("click", (e) => this.switchTab(e.currentTarget));
+      tab.addEventListener("keydown", (e) => this._handleTabKeydown(e));
     });
 
     document.getElementById("setGoalBtn").addEventListener("click", () => this.setGoal());
@@ -467,19 +643,35 @@ class CoinTrackerApp {
     document.getElementById("confirmDeleteAccountBtn").addEventListener("click", () => this.deleteAccount());
 
     document.getElementById("createProfileBtn").addEventListener("click", () => this.createProfile());
-document.getElementById("supportBtn").addEventListener("click", () => this.showModal("supportModal"));
+    document.getElementById("supportBtn").addEventListener("click", () => this.showModal("supportModal"));
     document.querySelectorAll(".donation-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const num = card.dataset.number;
-        navigator.clipboard.writeText(num).then(() => this.showToast(`Copied: ${num}`, "success"));
-        card.style.transform = "scale(0.96)";
-        setTimeout(() => (card.style.transform = ""), 150);
+      const activate = () => this._copyDonationNumber(card);
+      card.addEventListener("click", activate);
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
+        }
       });
     });
 
     document.querySelectorAll(".close-btn[data-modal]").forEach((btn) => {
-      btn.addEventListener("click", () => this.closeModal(btn.dataset.modal));
+      btn.addEventListener("click", () => {
+        if (btn.dataset.modal === "confirmModal" && this._confirmCleanup) {
+          this._confirmCleanup(false);
+          return;
+        }
+        this.closeModal(btn.dataset.modal);
+      });
     });
+
+    [["addAmount", "addAmountError"], ["spendAmount", "spendAmountError"], ["transactionAmount", "transactionAmountError"]]
+      .forEach(([inputId, errorId]) => {
+        const input = document.getElementById(inputId);
+        if (input) input.addEventListener("input", () => this._clearFieldError(input, errorId));
+      });
+    const goalInput = document.getElementById("goalInput");
+    if (goalInput) goalInput.addEventListener("input", () => this._clearFieldError(goalInput, "goalInputError"));
 
     document.getElementById("saveTransactionBtn").addEventListener("click", () => this.saveEditedTransaction());
 
@@ -501,6 +693,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     this.buildHistory();
     this.updateSettingsUI();
     this.updateAchievementsUI();
+    this.updateRecentActivityUI();
     this.updateNotificationsUI();
     this.updateProfileDropdown();
   }
@@ -515,10 +708,22 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (btn) {
       btn.innerHTML = dark ? `${getIcon('sun')} Light Mode` : `${getIcon('moon')} Dark Mode`;
     }
+    // Update mobile theme toggle label/icon
+    const mobileThemeBtn = document.getElementById("mobileThemeToggle");
+    if (mobileThemeBtn) {
+      const mobileIcon = document.getElementById("mobileThemeIcon");
+      const mobileLabel = document.getElementById("mobileThemeLabel");
+      if (mobileIcon) mobileIcon.innerHTML = dark ? getIcon('sun') : getIcon('moon');
+      if (mobileLabel) mobileLabel.textContent = dark ? "Light mode" : "Dark mode";
+      mobileThemeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    }
     // Update top bar theme toggle icon
     const topBarThemeBtn = document.getElementById("topBarThemeToggle");
     if (topBarThemeBtn) {
-      topBarThemeBtn.innerHTML = dark ? getIcon('sun') : getIcon('moon');
+      const topBarIcon = document.getElementById("topBarThemeIcon");
+      if (topBarIcon) topBarIcon.innerHTML = dark ? getIcon('sun') : getIcon('moon');
+      else topBarThemeBtn.innerHTML = dark ? getIcon('sun') : getIcon('moon');
+      topBarThemeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
     }
     if (Object.keys(this.charts).length > 0) this.updateAnalyticsUI();
   }
@@ -540,26 +745,38 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   }
 
   updateBalanceUI() {
-    const bal = this.balance, prog = this.progress, est = this.estimatedDays;
+    const bal = this.balance, goal = this.goal, prog = this.progress, est = this.estimatedDays;
     document.getElementById("balanceAmount").textContent    = `${bal.toLocaleString()} coins`;
-    document.getElementById("goalText").textContent         = `Goal: ${this.goal.toLocaleString()} coins`;
-    document.getElementById("progressBar").style.width     = `${prog}%`;
-    document.getElementById("progressPercent").textContent = `${prog}%`;
+    document.getElementById("goalText").textContent         = goal > 0
+      ? `Goal: ${goal.toLocaleString()} coins`
+      : "No goal set";
+    document.getElementById("progressBar").style.width     = `${goal > 0 ? prog : 0}%`;
+    document.getElementById("progressPercent").textContent = goal > 0 ? `${prog}%` : "—";
+
+    const progressTrack = document.getElementById("goalProgressTrack");
+    if (progressTrack) {
+      progressTrack.setAttribute("aria-valuenow", String(goal > 0 ? prog : 0));
+      progressTrack.setAttribute("aria-valuetext", goal > 0 ? `${prog}% of goal` : "No goal set");
+    }
 
     const remainingEl = document.getElementById("remainingPill");
     if (remainingEl) {
-      if (bal >= this.goal) {
-        remainingEl.textContent = "🎉 Goal Achieved!";
-        remainingEl.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-100 font-semibold backdrop-blur-sm";
+      if (goal <= 0) {
+        remainingEl.textContent = "No goal set";
+        remainingEl.className = "status-pill neutral";
+      } else if (bal >= goal) {
+        remainingEl.textContent = "Goal achieved";
+        remainingEl.className = "status-pill success";
       } else {
-        const remaining = Math.max(0, this.goal - bal);
-        remainingEl.textContent = `⚡ ${remaining.toLocaleString()} to goal`;
-        remainingEl.className = "text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm";
+        const remaining = Math.max(0, goal - bal);
+        remainingEl.textContent = `${remaining.toLocaleString()} to goal`;
+        remainingEl.className = "status-pill neutral";
       }
     }
 
     const estEl = document.getElementById("goalEstimate");
-    if (est === 0)          estEl.innerHTML = `${getIcon('partyPopper')} Goal reached!`;
+    if (goal <= 0)          estEl.textContent = "Set a goal to see your estimate";
+    else if (est === 0)     estEl.textContent = "Goal achieved";
     else if (est === "N/A") estEl.textContent = "Add earnings to see your estimate";
     else                    estEl.textContent = `Estimated time to goal: ~${est} day${est === 1 ? "" : "s"}`;
   }
@@ -576,16 +793,26 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     grid.innerHTML = "";
     const actions = this.quickActions;
     if (actions.length) {
-      actions.forEach((action) => {
+      actions.forEach((action, index) => {
         const btn = document.createElement("button");
         // Mobile uses is_positive (snake_case)
         btn.className = `quick-btn ${action.is_positive ? "positive" : "negative"}`;
-        btn.innerHTML = `<div class="quick-text">${action.text}</div>
+        btn.innerHTML = `<div class="quick-text">${escapeHtml(action.text)}</div>
                          <div class="quick-amount">${action.is_positive ? "+" : "-"}${action.value}</div>`;
         btn.onclick = async () => {
-          btn.classList.add("is-processing");
-          await this.addTransaction(action.is_positive ? action.value : -action.value, action.text);
-          btn.classList.remove("is-processing");
+          const snapshot = this._snapshotWriteState();
+          const ok = await this._runWrite(
+            `quick:${index}`,
+            btn,
+            "Recording…",
+            () => this.addTransaction(action.is_positive ? action.value : -action.value, action.text),
+            `Could not record '${action.text}'. Please try again.`
+          );
+          if (ok === null) return;
+          if (!ok) {
+            this._restoreWriteState(snapshot);
+            return;
+          }
           this.showToast(`'${action.text}' recorded!`, "success");
         };
         grid.appendChild(btn);
@@ -610,7 +837,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     addTile.onclick = () => {
       this.showPage("settings");
       setTimeout(() => {
-        const input = document.getElementById("newActionText");
+        const input = document.getElementById("quickActionText");
         if (input) {
           input.focus();
           input.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -623,14 +850,14 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   populateCategoryDropdowns() {
     const addSrc   = document.getElementById("addSource");
     const spendCat = document.getElementById("spendCategory");
-    if (addSrc)   addSrc.innerHTML   = this.incomeCategories.map((c) => `<option value="${c}">${c}</option>`).join("");
-    if (spendCat) spendCat.innerHTML = this.expenseCategories.map((c) => `<option value="${c}">${c}</option>`).join("");
+    if (addSrc)   addSrc.innerHTML   = this.incomeCategories.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    if (spendCat) spendCat.innerHTML = this.expenseCategories.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
 
     const allSources = [...new Set(this.transactions.map((t) => t.source))].sort();
     const sf = document.getElementById("historySourceFilter");
     const cur = sf.value;
     sf.innerHTML = '<option value="all">All Sources</option>' +
-      allSources.map((s) => `<option value="${s}">${s}</option>`).join("");
+      allSources.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     sf.value = allSources.includes(cur) ? cur : "all";
   }
 
@@ -638,7 +865,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const sel = document.getElementById("profileSelect");
     if (!sel) return;
     sel.innerHTML = this.allProfiles.map((p) =>
-      `<option value="${p}" ${p === this.currentProfile ? "selected" : ""}>${p}</option>`
+      `<option value="${escapeHtml(p)}" ${p === this.currentProfile ? "selected" : ""}>${escapeHtml(p)}</option>`
     ).join("");
   }
 
@@ -646,7 +873,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const sel = document.getElementById("topBarProfileSelect");
     if (!sel) return;
     sel.innerHTML = this.allProfiles.map((p) =>
-      `<option value="${p}" ${p === this.currentProfile ? "selected" : ""}>${p}</option>`
+      `<option value="${escapeHtml(p)}" ${p === this.currentProfile ? "selected" : ""}>${escapeHtml(p)}</option>`
     ).join("");
   }
 
@@ -688,12 +915,12 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   }
 
   getNotificationIds() {
-    // Generate stable IDs for current notifications based on their content
+    // Stable content-derived IDs so read state never bleeds between alerts.
     const alerts = this.notificationAlerts;
     const achs = this.achievements;
     const ids = [];
-    alerts.forEach((a, i) => ids.push(`alert-${i}-${a.title.replace(/\s+/g, '-')}`));
-    achs.forEach((a, i) => ids.push(`achievement-${a.id}`));
+    alerts.forEach((a) => ids.push(`alert-${hashString(`${a.title}|${a.sub}`)}`));
+    achs.forEach((a) => ids.push(`achievement-${a.id}`));
     return ids;
   }
 
@@ -716,6 +943,12 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
         badge.textContent = count > 9 ? "9+" : String(count);
       }
     });
+    const markAllBtn = document.getElementById("markAllReadBtn");
+    if (markAllBtn) {
+      markAllBtn.disabled = count === 0;
+      markAllBtn.setAttribute("aria-disabled", count === 0 ? "true" : "false");
+      markAllBtn.setAttribute("aria-label", count === 0 ? "No unread notifications" : "Mark all notifications as read");
+    }
   }
 
   markNotificationsAsRead(notificationIds) {
@@ -728,14 +961,10 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
 
   markAllNotificationsRead() {
     const allIds = this.getNotificationIds();
-    this.markNotificationsAsRead(allIds);
+    const unreadIds = allIds.filter((id) => !new Set(this.getReadNotificationIds()).has(id));
+    if (!unreadIds.length) return;
+    this.markNotificationsAsRead(unreadIds);
     this.showToast("All notifications marked as read", "success");
-  }
-
-  // Called when notifications page is shown
-  onNotificationsPageShown() {
-    const allIds = this.getNotificationIds();
-    this.markNotificationsAsRead(allIds);
   }
 
   getAnalyticsTxns() {
@@ -750,6 +979,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       to   = now.toISOString().slice(0, 10);
     } else if (this.analyticsPeriod === "custom") {
       from = this.analyticsCustomFrom; to = this.analyticsCustomTo;
+      if (!from || !to || from > to) return [];
     }
     if (!from || !to) return this.transactions;
     return this.transactions.filter((t) => t.date.slice(0, 10) >= from && t.date.slice(0, 10) <= to);
@@ -812,6 +1042,7 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (search)           txns = txns.filter((t) =>
       t.source.toLowerCase().includes(search) || String(Math.abs(t.amount)).includes(search));
     this.historyFiltered = txns;
+    this._renderHistoryActiveFilters();
     this.renderHistoryPage(1);
     const earned = txns.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
     const spent  = txns.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
@@ -821,15 +1052,66 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
 
   getTypeBadge(isIncome) {
     if (isIncome) {
-      return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+      return `<span class="status-pill income">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
         Income
       </span>`;
     }
-    return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    return `<span class="status-pill expense">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
       Expense
     </span>`;
+  }
+
+  _renderHistoryActiveFilters() {
+    const container = document.getElementById("historyActiveFilters");
+    if (!container) return;
+    const from = document.getElementById("dateFrom")?.value || "";
+    const to = document.getElementById("dateTo")?.value || "";
+    const source = document.getElementById("historySourceFilter")?.value || "all";
+    const search = document.getElementById("historySearch")?.value.trim() || "";
+
+    const filters = [];
+    if (from) filters.push({ key: "dateFrom", label: `From: ${from}` });
+    if (to) filters.push({ key: "dateTo", label: `To: ${to}` });
+    if (source !== "all") filters.push({ key: "source", label: `Source: ${source}` });
+    if (search) filters.push({ key: "search", label: `Search: “${search}”` });
+
+    container.innerHTML = "";
+    if (!filters.length) {
+      container.hidden = true;
+      container.setAttribute("aria-label", "No active history filters");
+      return;
+    }
+
+    container.hidden = false;
+    container.setAttribute("aria-label", "Active history filters");
+    filters.forEach((filter) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip filter-chip";
+      chip.setAttribute("aria-label", `Remove filter ${filter.label}`);
+
+      const text = document.createElement("span");
+      text.textContent = filter.label;
+      const remove = document.createElement("span");
+      remove.className = "filter-chip-remove";
+      remove.setAttribute("aria-hidden", "true");
+      remove.textContent = "×";
+      chip.append(text, remove);
+
+      chip.addEventListener("click", () => {
+        if (filter.key === "source") {
+          const srcEl = document.getElementById("historySourceFilter");
+          if (srcEl) srcEl.value = "all";
+        } else {
+          const input = document.getElementById(filter.key);
+          if (input) input.value = "";
+        }
+        this.buildHistory();
+      });
+      container.appendChild(chip);
+    });
   }
 
   clearHistoryFilters() {
@@ -892,12 +1174,12 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
         tr.innerHTML = `
           <td>${new Date(t.date).toLocaleString()}</td>
           <td>${this.getTypeBadge(t.amount >= 0)}</td>
-          <td>${t.source}</td>
+          <td>${escapeHtml(t.source)}</td>
           <td class="${cls}">${t.amount >= 0 ? "+" : ""}${t.amount.toLocaleString()}</td>
           <td>${balAfter.toLocaleString()}</td>
           <td class="history-actions">
             <button class="btn secondary btn-edit" data-id="${t.id}">${getIcon('edit')} Edit</button>
-            <button class="btn danger btn-delete" data-id="${t.id}">${getIcon('trash2')}</button>
+            <button class="btn danger btn-delete" data-id="${t.id}" aria-label="Delete transaction" title="Delete transaction">${getIcon('trash2')}</button>
           </td>`;
         tr.querySelector(".btn-edit").addEventListener("click",   () => this.showEditModal(t.id));
         tr.querySelector(".btn-delete").addEventListener("click", () => this.deleteTransaction(t.id));
@@ -948,13 +1230,13 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
             ${this.getTypeBadge(t.amount >= 0)}
           </div>
           <div class="history-card-body">
-            <div><span class="history-card-label">Source</span><span class="history-card-value">${t.source}</span></div>
+            <div><span class="history-card-label">Source</span><span class="history-card-value">${escapeHtml(t.source)}</span></div>
             <div><span class="history-card-label">Amount</span><span class="history-card-value ${cls}">${t.amount >= 0 ? "+" : ""}${t.amount.toLocaleString()}</span></div>
             <div><span class="history-card-label">Balance After</span><span class="history-card-value">${balAfter.toLocaleString()}</span></div>
           </div>
           <div class="history-card-actions">
             <button class="btn secondary btn-edit" data-id="${t.id}">${getIcon('edit')} Edit</button>
-            <button class="btn danger btn-delete" data-id="${t.id}">${getIcon('trash2')}</button>
+            <button class="btn danger btn-delete" data-id="${t.id}" aria-label="Delete transaction" title="Delete transaction">${getIcon('trash2')}</button>
           </div>
         </div>
       `;
@@ -997,9 +1279,16 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   //  Settings UI
   // ─────────────────────────────────────────────────────────────
   updateSettingsUI() {
-    document.getElementById("goalInput").value              = this.goal;
-    document.getElementById("currentGoalText").textContent  = `Current Goal: ${this.goal.toLocaleString()} coins`;
-    document.getElementById("goalProgressText").textContent = `You are ${this.progress}% of the way to your goal.`;
+    const goal = this.goal;
+    const goalInput = document.getElementById("goalInput");
+    if (goalInput) goalInput.value = goal > 0 ? goal : "";
+    document.getElementById("currentGoalText").textContent = goal > 0
+      ? `Current Goal: ${goal.toLocaleString()} coins`
+      : "No goal set. Enter a target to start tracking progress.";
+    document.getElementById("goalProgressText").textContent = goal > 0
+      ? `You are ${this.progress}% of the way to your goal.`
+      : "";
+    this._clearFieldError(goalInput, "goalInputError");
     this.renderQuickActionList();
     this.renderCategoryList("income");
     this.renderCategoryList("expense");
@@ -1016,9 +1305,9 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       const roleText = (this.role || "user").toUpperCase();
       aboutRole.textContent = roleText;
       if (this.role === "admin") {
-        aboutRole.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase";
+        aboutRole.className = "status-pill warning uppercase";
       } else {
-        aboutRole.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase";
+        aboutRole.className = "status-pill neutral uppercase";
       }
     }
     const aboutProfile = document.getElementById("aboutActiveProfile");
@@ -1031,10 +1320,13 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     const listEl = document.getElementById("quickActionList");
     if (!listEl) return;
     const actions = this.quickActions;
-    if (!actions.length) { 
-      listEl.innerHTML = `<p style="color:var(--muted-color)">No quick actions yet.</p>
-        <button class="btn primary" style="margin-top:12px;width:100%" onclick="document.getElementById('quickActionText').focus()">Create your first quick action</button>`; 
-      return; 
+    if (!actions.length) {
+      listEl.innerHTML = `<p class="muted-text">No quick actions yet.</p>
+        <button type="button" class="btn primary quick-action-empty-btn">Create your first quick action</button>`;
+      listEl.querySelector(".quick-action-empty-btn")?.addEventListener("click", () => {
+        document.getElementById("quickActionText")?.focus();
+      });
+      return;
     }
     listEl.innerHTML = "";
     actions.forEach((action, i) => {
@@ -1042,10 +1334,10 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
       item.className = "quick-action-list-item";
       item.innerHTML = `
         <div class="quick-action-details">
-          <span class="quick-action-text">${action.text}</span>
+          <span class="quick-action-text">${escapeHtml(action.text)}</span>
           <span class="quick-action-amount ${action.is_positive ? "positive" : "negative"}">${action.is_positive ? "+" : "-"}${action.value}</span>
         </div>
-        <button class="delete-btn" data-index="${i}">Delete</button>`;
+        <button type="button" class="delete-btn" data-index="${i}" aria-label="Delete quick action">Delete</button>`;
       item.querySelector(".delete-btn").addEventListener("click", () => this.deleteQuickAction(i));
       listEl.appendChild(item);
     });
@@ -1058,14 +1350,17 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (!listEl) return;
     listEl.innerHTML = "";
     if (!cats.length) {
-      listEl.innerHTML = `<p style="color:var(--muted-color);margin-bottom:12px">No ${isIncome ? "income" : "expense"} categories yet.</p>
-        <button class="btn primary" style="width:100%" onclick="document.getElementById('${isIncome ? "newIncomeCategory" : "newExpenseCategory"}').focus()">Add your first ${isIncome ? "income" : "expense"} category</button>`;
+      listEl.innerHTML = `<p class="muted-text">No ${isIncome ? "income" : "expense"} categories yet.</p>
+        <button type="button" class="btn primary category-empty-btn">Add your first ${isIncome ? "income" : "expense"} category</button>`;
+      listEl.querySelector(".category-empty-btn")?.addEventListener("click", () => {
+        document.getElementById(isIncome ? "newIncomeCategory" : "newExpenseCategory")?.focus();
+      });
       return;
     }
     cats.forEach((cat, i) => {
       const item = document.createElement("div");
       item.className = "category-item";
-      item.innerHTML = `<span>${cat}</span><button class="delete-btn">×</button>`;
+      item.innerHTML = `<span>${escapeHtml(cat)}</span><button type="button" class="delete-btn" aria-label="Delete ${isIncome ? "income" : "expense"} category ${escapeHtml(cat)}">×</button>`;
       item.querySelector(".delete-btn").addEventListener("click", () => this.deleteCategory(type, i));
       listEl.appendChild(item);
     });
@@ -1088,12 +1383,39 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
         const div = document.createElement("div");
         div.className = "achievement-item";
         div.innerHTML = `<div class="achievement-icon">${getIcon(a.icon)}</div>
-                         <div class="achievement-name">${a.name}</div>
-                         <div class="achievement-desc">${a.desc}</div>`;
+                         <div>
+                           <div class="achievement-name">${escapeHtml(a.name)}</div>
+                           <div class="achievement-desc">${escapeHtml(a.desc)}</div>
+                         </div>`;
         grid.appendChild(div);
       });
     }
     // Badge updates are now handled by updateNotificationBadges() based on unread count
+  }
+
+  updateRecentActivityUI() {
+    const listEl = document.getElementById("recentActivityList");
+    if (!listEl) return;
+    const recent = [...this.transactions]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 3);
+    if (!recent.length) {
+      listEl.innerHTML = `<p class="muted-text m-0">No transactions yet. Add your first entry to see it here.</p>`;
+      return;
+    }
+    listEl.innerHTML = recent.map((t) => {
+      const isIncome = t.amount >= 0;
+      const amount = `${isIncome ? "+" : ""}${t.amount.toLocaleString()}`;
+      return `
+        <div class="recent-activity-row">
+          <span class="recent-activity-icon" aria-hidden="true">${isIncome ? getIcon("dollarSign") : getIcon("shoppingCart")}</span>
+          <div class="recent-activity-info">
+            <div class="recent-activity-source">${escapeHtml(t.source)}</div>
+            <div class="recent-activity-date">${new Date(t.date).toLocaleDateString()}</div>
+          </div>
+          <span class="recent-activity-amount ${isIncome ? "positive" : "negative"}">${amount}</span>
+        </div>`;
+    }).join("");
   }
 
   updateNotificationsUI() {
@@ -1105,16 +1427,20 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (alertsEl) {
       alertsEl.innerHTML = alerts.length === 0
         ? `<p class="muted-text">No alerts right now. Keep tracking!</p>`
-        : alerts.map((a, i) => {
-            const id = `alert-${i}-${a.title.replace(/\s+/g, '-')}`;
+        : alerts.map((a) => {
+            const id = `alert-${hashString(`${a.title}|${a.sub}`)}`;
             const isRead = readIds.has(id);
+            const state = isRead
+              ? `<span class="status-pill neutral notif-state">Read</span>`
+              : `<span class="status-pill income notif-state">New</span>`;
             return `
               <div class="alert-item ${isRead ? 'read' : ''}" data-notif-id="${id}">
                 <div class="alert-icon">${a.icon}</div>
                 <div class="alert-text">
-                  <div class="alert-title">${a.title}</div>
-                  <div class="alert-sub">${a.sub}</div>
+                  <div class="alert-title">${escapeHtml(a.title)}</div>
+                  <div class="alert-sub">${escapeHtml(a.sub)}</div>
                 </div>
+                ${state}
               </div>`;
           }).join("");
     }
@@ -1127,14 +1453,17 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
         : achs.map((a) => {
             const id = `achievement-${a.id}`;
             const isRead = readIds.has(id);
+            const state = isRead
+              ? `<span class="status-pill neutral notif-state">Read</span>`
+              : `<span class="status-pill income notif-state">New</span>`;
             return `
               <div class="notif-achievement-item ${isRead ? 'read' : ''}" data-notif-id="${id}">
                 <div class="notif-achievement-icon">${getIcon(a.icon)}</div>
                 <div class="notif-achievement-info">
-                  <div class="notif-achievement-name">${a.name}</div>
-                  <div class="notif-achievement-desc">${a.desc}</div>
+                  <div class="notif-achievement-name">${escapeHtml(a.name)}</div>
+                  <div class="notif-achievement-desc">${escapeHtml(a.desc)}</div>
                 </div>
-                <div class="notif-achievement-check">✓</div>
+                ${state}
               </div>`;
           }).join("");
     }
@@ -1163,21 +1492,49 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   }
 
   async addFromDashboard() {
-    const amt = parseInt(document.getElementById("addAmount").value);
+    const input = document.getElementById("addAmount");
+    const amount = this._validateAmountInput("addAmount", "addAmountError");
+    if (amount === null) return;
     const src = document.getElementById("addSource").value;
-    if (!amt || amt <= 0 || amt > 999999) { this.showToast("Enter a valid amount (1–999,999).", "error"); return; }
-    await this.addTransaction(amt, src);
-    document.getElementById("addAmount").value = "";
-    this.showToast(`Added ${amt.toLocaleString()} coins!`, "success");
+    const snapshot = this._snapshotWriteState();
+    const ok = await this._runWrite(
+      "add",
+      document.getElementById("addCoinsBtn"),
+      "Adding…",
+      () => this.addTransaction(amount, src),
+      "Could not add coins. Please try again."
+    );
+    if (ok === null) return;
+    if (!ok) {
+      this._restoreWriteState(snapshot);
+      return;
+    }
+    input.value = "";
+    this._clearFieldError(input, "addAmountError");
+    this.showToast(`Added ${amount.toLocaleString()} coins!`, "success");
   }
 
   async spendFromDashboard() {
-    const amt = parseInt(document.getElementById("spendAmount").value);
+    const input = document.getElementById("spendAmount");
+    const amount = this._validateAmountInput("spendAmount", "spendAmountError");
+    if (amount === null) return;
     const cat = document.getElementById("spendCategory").value;
-    if (!amt || amt <= 0 || amt > 999999) { this.showToast("Enter a valid amount (1–999,999).", "error"); return; }
-    await this.addTransaction(-amt, cat);
-    document.getElementById("spendAmount").value = "";
-    this.showToast(`Spent ${amt.toLocaleString()} coins!`, "success");
+    const snapshot = this._snapshotWriteState();
+    const ok = await this._runWrite(
+      "spend",
+      document.getElementById("spendCoinsBtn"),
+      "Spending…",
+      () => this.addTransaction(-amount, cat),
+      "Could not record spending. Please try again."
+    );
+    if (ok === null) return;
+    if (!ok) {
+      this._restoreWriteState(snapshot);
+      return;
+    }
+    input.value = "";
+    this._clearFieldError(input, "spendAmountError");
+    this.showToast(`Spent ${amount.toLocaleString()} coins!`, "success");
   }
 
   showEditModal(transactionId) {
@@ -1194,18 +1551,45 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   }
 
   async saveEditedTransaction() {
-    const id     = document.getElementById("transactionId").value;
-    const amount = parseInt(document.getElementById("transactionAmount").value);
+    const id = document.getElementById("transactionId").value;
+    const amount = this._validateAmountInput("transactionAmount", "transactionAmountError");
+    if (amount === null) return;
     const source = document.getElementById("transactionSource").value;
-    const date   = new Date(document.getElementById("transactionDate").value).toISOString();
-    if (!id || !amount || amount <= 0 || !source) { this.showToast("Fill all fields correctly.", "error"); return; }
+    const dateValue = document.getElementById("transactionDate").value;
+    const dateObj = dateValue ? new Date(dateValue) : null;
+    if (!id || !source.trim()) {
+      this.showToast("Fill all fields correctly.", "error");
+      return;
+    }
+    if (!dateObj || Number.isNaN(dateObj.getTime())) {
+      this.showToast("Enter a valid date and time.", "error");
+      return;
+    }
     const txns = this.userDataDoc.profiles[this.currentProfile].transactions;
     const idx  = txns.findIndex((t) => t.id === id);
-    if (idx === -1) return;
-    const sign = txns[idx].amount >= 0 ? 1 : -1;
-    txns[idx] = { ...txns[idx], amount: sign * amount, source, date };
-    this._recalcPreviousBalances();
-    await this.saveUserData();
+    if (idx === -1) {
+      this.showToast("Transaction not found.", "error");
+      return;
+    }
+    const snapshot = this._snapshotWriteState();
+    const ok = await this._runWrite(
+      "edit",
+      document.getElementById("saveTransactionBtn"),
+      "Saving…",
+      async () => {
+        const sign = txns[idx].amount >= 0 ? 1 : -1;
+        txns[idx] = { ...txns[idx], amount: sign * amount, source, date: dateObj.toISOString() };
+        this._recalcPreviousBalances();
+        await this.saveUserData();
+      },
+      "Could not save changes. Please try again."
+    );
+    if (ok === null) return;
+    if (!ok) {
+      this._restoreWriteState(snapshot);
+      return;
+    }
+    this._clearFieldError(document.getElementById("transactionAmount"), "transactionAmountError");
     this.closeModal("transactionModal");
     this.showToast("Transaction updated!", "success");
     this.updateAllUI();
@@ -1218,7 +1602,6 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     profile.transactions = profile.transactions.filter((t) => t.id !== transactionId);
     this._recalcPreviousBalances();
     await this.saveUserData();
-    this.showToast("Transaction deleted.", "success");
     // UNDO snackbar
     if (deletedTx) {
       this.showUndoToast("Transaction deleted", () => {
@@ -1234,17 +1617,32 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   showUndoToast(message, onUndo) {
     const toast = document.getElementById("toast");
     if (!toast) return;
-    toast.innerHTML = `${message} <button class="toast-undo" style="margin-left:12px;padding:4px 12px;border:none;border-radius:4px;background:var(--primary-color);color:white;cursor:pointer">UNDO</button>`;
-    toast.className = `toast success show`;
-    const undoBtn = toast.querySelector(".toast-undo");
-    const timeout = setTimeout(() => {
+    if (this._toastTimeout) {
+      clearTimeout(this._toastTimeout);
+      this._toastTimeout = null;
+    }
+    toast.textContent = "";
+    const text = document.createElement("span");
+    text.className = "toast-message";
+    text.textContent = message;
+    const undoBtn = document.createElement("button");
+    undoBtn.type = "button";
+    undoBtn.className = "toast-undo";
+    undoBtn.textContent = "Undo";
+    toast.append(text, undoBtn);
+    toast.className = "toast success show";
+    this._toastTimeout = setTimeout(() => {
       toast.classList.remove("show");
-    }, 5000);
-    undoBtn.onclick = () => {
-      clearTimeout(timeout);
+      this._toastTimeout = null;
+    }, 8000);
+    undoBtn.addEventListener("click", () => {
+      if (this._toastTimeout) {
+        clearTimeout(this._toastTimeout);
+        this._toastTimeout = null;
+      }
       toast.classList.remove("show");
       onUndo();
-    };
+    });
   }
 
   _recalcPreviousBalances() {
@@ -1260,8 +1658,14 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   //  Settings actions — all snake_case
   // ─────────────────────────────────────────────────────────────
   async setGoal() {
-    const val = parseInt(document.getElementById("goalInput").value);
-    if (!val || val <= 0) { this.showToast("Enter a valid goal.", "error"); return; }
+    const input = document.getElementById("goalInput");
+    const val = Number(input?.value);
+    if (!input || !Number.isInteger(val) || val <= 0) {
+      this._setFieldError(input, "goalInputError", "Enter a goal of at least 1 coin.");
+      input?.focus({ preventScroll: true });
+      return;
+    }
+    this._clearFieldError(input, "goalInputError");
     this._setSettings({ goal: val });
     await this.saveUserData();
     this.showToast("Goal updated!", "success");
@@ -1499,50 +1903,47 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
     if (!data || !data.length || data.every(d => d === 0)) {
       const container = ctx.parentElement;
       if (container) {
-        // Replace canvas with a new one to preserve the element for future updates
-        const newCanvas = document.createElement('canvas');
+        const canvasLabel = ctx.getAttribute("aria-label") || "Analytics chart";
+        container.innerHTML = "";
+        const newCanvas = document.createElement("canvas");
         newCanvas.id = canvasId;
-        newCanvas.style.width = '100%';
-        newCanvas.style.height = '100%';
-        container.innerHTML = '';
+        newCanvas.setAttribute("role", "img");
+        newCanvas.setAttribute("aria-label", canvasLabel);
         container.appendChild(newCanvas);
+
+        const overlay = document.createElement("div");
+        overlay.className = "chart-empty-overlay";
+        overlay.innerHTML = `
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <p>No data for this period</p>`;
+        const emptyBtn = document.createElement("button");
+        emptyBtn.type = "button";
+        emptyBtn.className = "btn primary";
+        emptyBtn.textContent = "Add transactions to see analytics";
+        emptyBtn.addEventListener("click", () => {
+          this.showPage("dashboard");
+          document.querySelector('[data-page="dashboard"]')?.focus();
+        });
+        overlay.appendChild(emptyBtn);
+        container.appendChild(overlay);
         ctx = newCanvas;
-        
-        // Show empty state message
-        const messageDiv = document.createElement('div');
-        messageDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:300px;color:var(--muted-color);text-align:center;padding:20px';
-        messageDiv.innerHTML = `
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          <p style="font-size:14px;font-weight:500;margin-bottom:8px">No data for this period</p>
-          <button class="btn primary" style="margin-top:12px" onclick="document.querySelector('[data-page=\"dashboard\"]').click()">Add transactions to see analytics</button>
-        `;
-        container.appendChild(messageDiv);
       }
       // Clear summary for empty state
-      this.updateChartSummary(canvasId, "");
+      this.updateChartSummary(canvasId, [], []);
       return;
     }
     
+    ctx.parentElement?.querySelector(".chart-empty-overlay")?.remove();
     const s       = getComputedStyle(document.documentElement);
-    const text    = s.getPropertyValue("--text-color").trim();
-    const grid    = s.getPropertyValue("--border-color").trim();
-    const primary = s.getPropertyValue("--primary-color").trim();
-    const success = s.getPropertyValue("--success-color").trim();
-    const danger  = s.getPropertyValue("--danger-color").trim();
-    const palette = [primary, success, "#f59e0b", danger, "#8b5cf6", "#06b6d4", "#ec4899"];
-
-    let lineGradient = "rgba(59,130,246,0.15)";
-    if (type === "line" && ctx.getContext) {
-      try {
-        const c2d = ctx.getContext("2d");
-        const grad = c2d.createLinearGradient(0, 0, 0, 320);
-        grad.addColorStop(0, "rgba(59, 130, 246, 0.35)");
-        grad.addColorStop(1, "rgba(59, 130, 246, 0.0)");
-        lineGradient = grad;
-      } catch (e) {
-        lineGradient = "rgba(59,130,246,0.15)";
-      }
-    }
+    const text    = s.getPropertyValue("--text-primary").trim();
+    const grid    = s.getPropertyValue("--border").trim();
+    const brand   = s.getPropertyValue("--brand").trim();
+    const income  = s.getPropertyValue("--income").trim();
+    const expense = s.getPropertyValue("--expense").trim();
+    const info    = s.getPropertyValue("--info").trim();
+    const warning = s.getPropertyValue("--warning").trim();
+    const palette = [brand, income, info, warning, expense];
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     this.charts[canvasId] = new Chart(ctx, {
       type,
@@ -1550,20 +1951,21 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
         labels,
         datasets: [{
           data,
-          backgroundColor: type === "doughnut" ? palette : type === "line" ? lineGradient : danger,
-          borderColor: type === "line" ? (primary || "#3b82f6") : "transparent",
+          backgroundColor: type === "doughnut" ? palette : brand,
+          borderColor: type === "line" ? brand : "transparent",
           borderWidth: type === "line" ? 2.5 : 2,
           tension: type === "line" ? 0.35 : 0.1,
-          fill: type === "line",
-          pointBackgroundColor: type === "line" ? (primary || "#3b82f6") : undefined,
-          pointBorderColor: "#fff",
-          pointBorderWidth: type === "line" ? 1.5 : 0,
+          fill: false,
+          pointBackgroundColor: type === "line" ? brand : undefined,
+          pointBorderColor: type === "line" ? brand : undefined,
+          pointBorderWidth: 0,
           pointRadius: type === "line" ? 3 : 0,
           pointHoverRadius: 6,
         }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        animation: prefersReducedMotion ? false : undefined,
         plugins: {
           legend: { display: type === "doughnut", position: "bottom", labels: { color: text } },
           tooltip: {
@@ -1590,6 +1992,10 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   updateChartSummary(canvasId, labels, data) {
     const summaryEl = document.getElementById(`${canvasId}Summary`);
     if (!summaryEl) return;
+    if (!data || !data.length) {
+      summaryEl.textContent = "No data for this period";
+      return;
+    }
 
     let summary = "";
     if (canvasId === "timelineChart") {
@@ -1632,29 +2038,74 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   showPage(pageId) {
     document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
     document.getElementById(pageId)?.classList.add("active");
-    document.querySelectorAll("nav.nav > .nav-btn, nav.navbar > .nav-btn, .navbar > .nav-btn").forEach((b) =>
-      b.classList.toggle("active", b.dataset.page === pageId));
-    document.querySelectorAll(".mobile-nav-btn").forEach((b) =>
-      b.classList.toggle("active", b.dataset.page === pageId));
+    document.querySelectorAll("nav.nav > .nav-btn, nav.navbar > .nav-btn, .navbar > .nav-btn").forEach((b) => {
+      const isActive = b.dataset.page === pageId;
+      b.classList.toggle("active", isActive);
+      if (isActive) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    });
+    document.querySelectorAll(".mobile-nav-btn").forEach((b) => {
+      const isActive = b.dataset.page === pageId;
+      b.classList.toggle("active", isActive);
+      if (isActive) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    });
     if (pageId === "analytics")     this.updateAnalyticsUI();
     if (pageId === "notifications") {
       this.updateNotificationsUI();
-      this.onNotificationsPageShown();
     }
   }
 
   switchTab(tabEl) {
-    tabEl.parentElement.querySelectorAll(".tab-header").forEach((t) => t.classList.remove("active"));
-    tabEl.classList.add("active");
-    tabEl.closest(".analytics-tabs").querySelectorAll(".tab-pane").forEach((p) => p.classList.remove("active"));
-    document.getElementById(tabEl.dataset.tab)?.classList.add("active");
+    const tablist = tabEl.closest('[role="tablist"]');
+    if (!tablist) return;
+    const tabs = [...tablist.querySelectorAll(".tab-header")];
+    tabs.forEach((t) => {
+      const isActive = t === tabEl;
+      t.classList.toggle("active", isActive);
+      t.setAttribute("aria-selected", isActive ? "true" : "false");
+      t.setAttribute("tabindex", isActive ? "0" : "-1");
+    });
+    const content = tablist.parentElement.querySelector(".tab-content");
+    content?.querySelectorAll(".tab-pane").forEach((p) => p.classList.remove("active"));
+    const pane = document.getElementById(tabEl.dataset.tab);
+    if (pane) pane.classList.add("active");
+  }
+
+  _handleTabKeydown(event) {
+    const tablist = event.currentTarget.closest('[role="tablist"]');
+    if (!tablist) return;
+    const tabs = [...tablist.querySelectorAll(".tab-header")];
+    const currentIndex = tabs.indexOf(event.currentTarget);
+    let nextIndex = null;
+
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    this.switchTab(nextTab);
+    nextTab.focus();
+  }
+
+  _copyDonationNumber(card) {
+    const num = card.dataset.number;
+    if (!num) return;
+    navigator.clipboard.writeText(num).then(() => this.showToast(`Copied: ${num}`, "success"));
+    card.style.transform = "scale(0.96)";
+    setTimeout(() => (card.style.transform = ""), 150);
   }
 
   toggleMobileNav() {
     const sidebar = document.querySelector(".sidebar");
     sidebar.classList.toggle("nav-expanded");
-    document.getElementById("hamburgerBtn")
-      .setAttribute("aria-expanded", sidebar.classList.contains("nav-expanded"));
+    const expanded = sidebar.classList.contains("nav-expanded");
+    const hamburger = document.getElementById("hamburgerBtn");
+    hamburger.setAttribute("aria-expanded", expanded);
+    hamburger.setAttribute("aria-label", expanded ? "Close navigation menu" : "Open navigation menu");
   }
 
   // Sidebar pinned state (desktop)
@@ -1712,9 +2163,11 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   showModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
-    m.style.display = "block";
-    // Focus management
     this._lastFocused = document.activeElement;
+    m.removeAttribute("hidden");
+    m.classList.add("open");
+    m.style.removeProperty("display");
+    // Focus management
     const focusable = m.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
     if (focusable) focusable.focus();
     // Trap focus - store bound ref for cleanup
@@ -1729,56 +2182,48 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   closeModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
-    m.style.display = "none";
-    // Restore focus
-    if (this._lastFocused) this._lastFocused.focus();
+    m.classList.remove("open");
+    m.setAttribute("hidden", "");
+    m.style.removeProperty("display");
     // Clean up using stored refs
     if (this._trapFocusRef) m.removeEventListener('keydown', this._trapFocusRef);
     if (this._handleEscapeRef) m.removeEventListener('keydown', this._handleEscapeRef);
+    this._trapFocusRef = null;
+    this._handleEscapeRef = null;
     document.body.style.overflow = '';
+    // Restore focus
+    if (this._lastFocused && document.contains(this._lastFocused)) {
+      this._lastFocused.focus();
+    }
+    this._lastFocused = null;
   }
 
   // Generic confirm modal (replaces native confirm)
   confirm(message) {
     return new Promise((resolve) => {
-      this._confirmResolver = resolve; // Store resolver for Escape handling
       const modal = document.getElementById("confirmModal");
       if (!modal) { resolve(false); return; }
       document.getElementById("confirmModalMessage").textContent = message;
-      modal.style.display = "block";
-      this._lastFocused = document.activeElement;
-      const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (focusable) focusable.focus();
-      // Store bound refs for cleanup
-      this._trapFocusRef = this._trapFocus.bind(this, modal);
-      this._handleEscapeRef = this._handleEscape.bind(this, "confirmModal");
-      modal.addEventListener('keydown', this._trapFocusRef);
-      modal.addEventListener('keydown', this._handleEscapeRef);
-      document.body.style.overflow = 'hidden';
+      this._confirmResolver = resolve;
+      this.showModal("confirmModal");
 
-      const cleanup = () => {
-        modal.style.display = "none";
-        modal.removeEventListener('keydown', this._trapFocusRef);
-        modal.removeEventListener('keydown', this._handleEscapeRef);
-        document.body.style.overflow = '';
-        if (this._lastFocused) this._lastFocused.focus();
+      const confirmBtn = document.getElementById("confirmModalConfirm");
+      const cancelBtn  = document.getElementById("confirmModalCancel");
+
+      const finish = (value) => {
+        confirmBtn.removeEventListener("click", onConfirm);
+        cancelBtn.removeEventListener("click", onCancel);
         this._confirmResolver = null;
+        this._confirmCleanup = null;
+        this.closeModal("confirmModal");
+        resolve(value);
       };
+      const onConfirm = () => finish(true);
+      const onCancel  = () => finish(false);
 
-      const onConfirm = () => {
-        cleanup();
-        document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
-        document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
-        resolve(true);
-      };
-      const onCancel = () => {
-        cleanup();
-        document.getElementById("confirmModalConfirm").removeEventListener("click", onConfirm);
-        document.getElementById("confirmModalCancel").removeEventListener("click", onCancel);
-        resolve(false);
-      };
-      document.getElementById("confirmModalConfirm").addEventListener("click", onConfirm);
-      document.getElementById("confirmModalCancel").addEventListener("click", onCancel);
+      this._confirmCleanup = finish;
+      confirmBtn.addEventListener("click", onConfirm);
+      cancelBtn.addEventListener("click", onCancel);
     });
   }
 
@@ -1797,13 +2242,13 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
   }
 
   _handleEscape(id, e) {
-    if (e.key === 'Escape') {
-      if (id === "confirmModal" && this._confirmResolver) {
-        this._confirmResolver(false);
-        this._confirmResolver = null;
-      }
-      this.closeModal(id);
+    if (e.key !== 'Escape') return;
+    if (id === "confirmModal" && this._confirmCleanup) {
+      e.preventDefault();
+      this._confirmCleanup(false);
+      return;
     }
+    this.closeModal(id);
   }
 
   showToast(message, type = "success") {
@@ -1822,9 +2267,11 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
 
     toast.innerHTML = `
       ${iconSvg}
-      <span>${message}</span>
       <button type="button" class="toast-dismiss" aria-label="Dismiss">&times;</button>
     `;
+    const messageEl = document.createElement("span");
+    messageEl.textContent = message;
+    toast.insertBefore(messageEl, toast.querySelector(".toast-dismiss"));
     toast.className = `toast ${type} show`;
 
     const dismissBtn = toast.querySelector(".toast-dismiss");
@@ -1873,18 +2320,16 @@ document.getElementById("supportBtn").addEventListener("click", () => this.showM
 
     dots.forEach((dot) => {
       if (!dot) return;
+      dot.className = dot.id === "mobileDbSyncDot"
+        ? "w-1.5 h-1.5 rounded-full"
+        : "w-2 h-2 rounded-full";
       if (status === "loading") {
-        dot.className = dot.id === "mobileDbSyncDot"
-          ? "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"
-          : "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+        dot.style.background = "var(--warning)";
+        dot.classList.add("animate-pulse");
       } else if (status === "error") {
-        dot.className = dot.id === "mobileDbSyncDot"
-          ? "w-1.5 h-1.5 rounded-full bg-rose-500"
-          : "w-2 h-2 rounded-full bg-rose-500";
+        dot.style.background = "var(--expense)";
       } else {
-        dot.className = dot.id === "mobileDbSyncDot"
-          ? "w-1.5 h-1.5 rounded-full bg-emerald-500"
-          : "w-2 h-2 rounded-full bg-emerald-500";
+        dot.style.background = "var(--income)";
       }
     });
 
@@ -1912,12 +2357,3 @@ function hideLoading() {
 const app = new CoinTrackerApp();
 window.app = app;
 app.init();
-
-// Fresh CSS load guard (runs on every page start)
-(function() {
-    var link = document.querySelector('link[href*="style.css"]');
-    if (link) {
-        // Add timestamp to prevent HTTP cache staleing
-        link.href += (link.href.indexOf('?') === -1 ? '?' : '&') + 't=' + new Date().getTime();
-    }
-})();
