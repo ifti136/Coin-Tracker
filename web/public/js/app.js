@@ -681,6 +681,10 @@ class CoinTrackerApp {
     // Keyboard shortcuts help dialog
     document.getElementById("topBarShortcutsBtn")?.addEventListener("click", () => this.showModal("shortcutsModal"));
     document.getElementById("viewShortcutsBtn")?.addEventListener("click", () => this.showModal("shortcutsModal"));
+
+    // Chart selection bar dismiss (v4.0.3)
+    document.getElementById("chartSelectionDismissBtn")?.addEventListener("click", () => this._clearChartSelection());
+
     this.setupKeyboardShortcuts();
   }
 
@@ -2119,6 +2123,17 @@ class CoinTrackerApp {
           y: { ticks: { color: text }, grid: { color: grid } },
           x: { ticks: { color: text }, grid: { color: grid } },
         } : {},
+        onClick: (event, elements) => {
+          if (!elements || !elements.length) return;
+          const idx = elements[0].index;
+          if (canvasId === "timelineChart") {
+            const dateLabel = labels[idx];
+            this._showChartSelection("timelineChart", dateLabel, null);
+          } else if (canvasId === "earningsChart" || canvasId === "spendingChart") {
+            const sourceLabel = labels[idx];
+            this._showChartSelection(canvasId, null, sourceLabel);
+          }
+        },
       },
     });
 
@@ -2168,6 +2183,92 @@ class CoinTrackerApp {
       }
     }
     summaryEl.textContent = summary;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Chart-to-History navigation (v4.0.3)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Show the chart selection bar with a description and a "View matching
+   * transactions" button that navigates to History with pre-set filters.
+   * @param {string} chartId - 'timelineChart' | 'earningsChart' | 'spendingChart'
+   * @param {string|null} dateLabel - Localised date string from timeline (e.g. "1/11/2026")
+   * @param {string|null} source   - Source/category label from doughnut charts
+   */
+  _showChartSelection(chartId, dateLabel, source) {
+    const bar = document.getElementById("chartSelectionBar");
+    const desc = document.getElementById("chartSelectionDesc");
+    const btn  = document.getElementById("chartSelectionViewBtn");
+    if (!bar || !desc || !btn) return;
+
+    let descText = "";
+    if (chartId === "timelineChart" && dateLabel) {
+      // Try to resolve the localised date label back to YYYY-MM-DD for the filter
+      let isoDate = "";
+      try {
+        // The label is produced by toLocaleDateString() — parse it back
+        const parsed = new Date(dateLabel);
+        if (!isNaN(parsed.getTime())) {
+          isoDate = parsed.toISOString().slice(0, 10);
+        }
+      } catch (_) { /* ignored */ }
+      descText = `Balance on ${dateLabel}`;
+      btn.onclick = () => {
+        this._clearChartSelection();
+        const fromEl = document.getElementById("dateFrom");
+        const toEl   = document.getElementById("dateTo");
+        const srcEl  = document.getElementById("historySourceFilter");
+        if (fromEl) fromEl.value = isoDate;
+        if (toEl)   toEl.value   = isoDate;
+        if (srcEl)  srcEl.value  = "all";
+        this.showPage("history");
+        this.buildHistory();
+        document.getElementById("historySearch")?.focus();
+      };
+    } else if (source) {
+      const chartLabel = chartId === "earningsChart" ? "earnings" : "spending";
+      descText = `${source} — ${chartLabel}`;
+      btn.onclick = () => {
+        this._clearChartSelection();
+        const srcEl  = document.getElementById("historySourceFilter");
+        const fromEl = document.getElementById("dateFrom");
+        const toEl   = document.getElementById("dateTo");
+        // Apply analytics period dates so the filter matches the visible chart
+        if (fromEl) fromEl.value = "";
+        if (toEl)   toEl.value   = "";
+        if (srcEl) {
+          // Set to source if it exists as an option, otherwise fall back to search
+          const hasOption = [...srcEl.options].some(o => o.value === source);
+          if (hasOption) {
+            srcEl.value = source;
+          } else {
+            srcEl.value = "all";
+            const searchEl = document.getElementById("historySearch");
+            if (searchEl) searchEl.value = source;
+          }
+        }
+        this.showPage("history");
+        this.buildHistory();
+        document.getElementById("historySearch")?.focus();
+      };
+    } else {
+      return;
+    }
+
+    desc.textContent = descText;
+    bar.hidden = false;
+    bar.removeAttribute("aria-hidden");
+    btn.focus();
+  }
+
+  /** Dismiss the chart selection bar and clear its state. */
+  _clearChartSelection() {
+    const bar = document.getElementById("chartSelectionBar");
+    if (bar) {
+      bar.hidden = true;
+      bar.setAttribute("aria-hidden", "true");
+    }
   }
 
   // ─────────────────────────────────────────────────────────────

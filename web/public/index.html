@@ -378,6 +378,18 @@
           </div>
         </div>
         <p class="muted-text mt-3 mb-0">Chart values are also provided as a text summary for assistive technology.</p>
+
+        <!-- Chart selection bar (v4.0.3): shown when user clicks a chart data point -->
+        <div id="chartSelectionBar" class="chart-selection-bar" hidden aria-hidden="true" role="region" aria-label="Chart selection">
+          <div class="chart-selection-inner">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span id="chartSelectionDesc" class="chart-selection-desc"></span>
+          </div>
+          <div class="chart-selection-actions">
+            <button type="button" id="chartSelectionViewBtn" class="btn primary btn-sm">View matching transactions</button>
+            <button type="button" id="chartSelectionDismissBtn" class="btn ghost btn-sm" aria-label="Dismiss chart selection">✕</button>
+          </div>
+        </div>
       </section>
 
       <section class="card" aria-label="Rate summaries">
@@ -622,7 +634,7 @@
             <div>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-display font-bold text-base text-[var(--text-primary)]">Coin Tracker</span>
-                <span class="status-pill warning">v4.0.2</span>
+                <span class="status-pill warning">v4.0.3</span>
               </div>
               <p class="muted-text m-0">In-game economy and savings tracker</p>
             </div>
@@ -692,7 +704,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--brand)] shrink-0 mt-0.5" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div class="min-w-0">
                   <span class="block">Version history and changelog</span>
-                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.2</span>
+                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.3</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0 max-sm:self-start">
@@ -706,8 +718,22 @@
               <div class="relative pl-5 border-l-2 border-[var(--brand)] pb-2">
                 <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
-                  <span class="font-bold text-[var(--text-primary)]">v4.0.2</span>
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.3</span>
                   <span class="status-pill success">Latest</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Chart-to-History navigation and accessible data tables</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Click any chart data point or doughnut segment to see a selection bar with a "View matching transactions" button</li>
+                  <li>Timeline click pre-fills the History date range for that day; doughnut click pre-fills the source/category filter</li>
+                  <li>Selection bar includes a dismiss action and is announced to assistive technology via ARIA region</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.2</span>
                   <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
                 </div>
                 <p class="font-medium text-[var(--text-primary)] mb-1">Keyboard navigation and shortcut guide</p>

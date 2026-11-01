@@ -170,6 +170,17 @@ In the Firestore console, find the user's document under `users/{userId}` and se
 
 ---
 
+## 🆕 Web v4.0.3
+
+Chart-to-History Navigation & Accessible Chart Data Tables — click any chart element to jump straight to matching transactions.
+
+- Clicking a point on the Balance Timeline pre-fills the History date range for that exact day.
+- Clicking a segment on the Earnings or Spending doughnut pre-fills the source/category filter in History.
+- A selection bar appears below the charts describing the chosen data point with a "View matching transactions" button.
+- Dismiss action on the bar and full ARIA region announcement for assistive technology.
+
+---
+
 ## 🆕 Web v4.0.2
 
 Keyboard Shortcuts & Help Guide — intuitive power-user navigation and shortcut discovery.
