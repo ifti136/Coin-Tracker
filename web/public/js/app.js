@@ -677,6 +677,92 @@ class CoinTrackerApp {
 
     // Notification read functionality
     document.getElementById("markAllReadBtn")?.addEventListener("click", () => this.markAllNotificationsRead());
+
+    // Keyboard shortcuts help dialog
+    document.getElementById("topBarShortcutsBtn")?.addEventListener("click", () => this.showModal("shortcutsModal"));
+    document.getElementById("viewShortcutsBtn")?.addEventListener("click", () => this.showModal("shortcutsModal"));
+    this.setupKeyboardShortcuts();
+  }
+
+  setupKeyboardShortcuts() {
+    let lastKey = null;
+    let lastKeyTime = 0;
+
+    window.addEventListener("keydown", (e) => {
+      // Never trigger shortcuts if modifier keys are pressed
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      const target = e.target;
+      const tag = target && target.tagName ? target.tagName.toLowerCase() : "";
+      const isEditable = tag === "input" || tag === "textarea" || tag === "select" || (target && target.isContentEditable);
+
+      // Escape is handled by modal and dropdown escape listeners
+      if (e.key === "Escape") return;
+
+      // Do not trigger global shortcuts when typing inside an editable field
+      if (isEditable) return;
+
+      // Handle '?' to toggle shortcuts modal
+      if (e.key === "?") {
+        e.preventDefault();
+        const shortcutsModal = document.getElementById("shortcutsModal");
+        if (shortcutsModal && shortcutsModal.classList.contains("open")) {
+          this.closeModal("shortcutsModal");
+        } else {
+          this.showModal("shortcutsModal");
+        }
+        return;
+      }
+
+      // If a modal is open, do not trigger navigation or search shortcuts
+      if (document.querySelector(".modal.open")) return;
+
+      // Handle '/' to focus History search
+      if (e.key === "/") {
+        e.preventDefault();
+        this.showPage("history");
+        setTimeout(() => {
+          const searchInput = document.getElementById("historySearch");
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        }, 50);
+        return;
+      }
+
+      // Handle sequential 'g' navigation (g then d, a, h, n, s)
+      const now = Date.now();
+      const key = e.key.toLowerCase();
+
+      if (key === "g") {
+        lastKey = "g";
+        lastKeyTime = now;
+        return;
+      }
+
+      if (lastKey === "g" && (now - lastKeyTime) < 1200) {
+        lastKey = null;
+        if (key === "d") {
+          e.preventDefault();
+          this.showPage("dashboard");
+        } else if (key === "a") {
+          e.preventDefault();
+          this.showPage("analytics");
+        } else if (key === "h") {
+          e.preventDefault();
+          this.showPage("history");
+        } else if (key === "n") {
+          e.preventDefault();
+          this.showPage("notifications");
+        } else if (key === "s") {
+          e.preventDefault();
+          this.showPage("settings");
+        }
+      } else {
+        lastKey = null;
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────────────

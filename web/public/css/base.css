@@ -740,3 +740,22 @@ input[aria-invalid="true"], .field-error input, .field-error select { border-col
 
 .hamburger-btn { min-width: 44px; min-height: 44px; }
 .mobile-control-links button { min-height: 44px; }
+
+/* ── Keyboard shortcut badges ──────────────────────────── */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  box-shadow: 0 1px 0 var(--border-strong);
+  line-height: 1;
+}

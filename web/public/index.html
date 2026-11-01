@@ -76,6 +76,9 @@
       <button type="button" class="top-bar-icon-btn relative flex items-center justify-center rounded-full bg-transparent border-0 text-[var(--text-secondary)] cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]" id="topBarThemeToggle" aria-label="Toggle dark mode">
         <span id="topBarThemeIcon" aria-hidden="true"></span>
       </button>
+      <button type="button" class="top-bar-icon-btn relative flex items-center justify-center rounded-full bg-transparent border-0 text-[var(--text-secondary)] cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] max-sm:hidden" id="topBarShortcutsBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
       <div class="profile-dropdown-container relative">
         <button type="button" class="top-bar-icon-btn relative flex items-center justify-center rounded-full bg-transparent border-0 text-[var(--text-secondary)] cursor-pointer transition-colors duration-150 hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]" id="topBarProfileBtn" aria-label="Profile menu" aria-expanded="false" aria-haspopup="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -420,7 +423,7 @@
           </div>
           <div class="field min-w-0">
             <label for="historySearch" class="field-label">Search</label>
-            <input type="text" id="historySearch" placeholder="Search by source or amount...">
+            <input type="text" id="historySearch" placeholder="Search by source or amount (press /)...">
           </div>
         </div>
         <div class="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-[var(--border)] max-sm:flex-col max-sm:items-start">
@@ -597,8 +600,16 @@
       </section>
 
       <section class="card" aria-labelledby="appearanceHeading">
-        <h2 id="appearanceHeading" class="section-title m-0">Appearance</h2>
-        <p class="section-sub m-0 mt-1">Use the theme control in the top bar or mobile menu to switch between light and dark.</p>
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 id="appearanceHeading" class="section-title m-0">Appearance & Shortcuts</h2>
+            <p class="section-sub m-0 mt-1">Use theme controls to switch themes, or explore keyboard shortcuts.</p>
+          </div>
+          <button type="button" id="viewShortcutsBtn" class="btn secondary text-xs">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+            Keyboard Shortcuts (<kbd class="kbd">?</kbd>)
+          </button>
+        </div>
       </section>
 
       <section class="card" id="aboutSection" aria-labelledby="aboutHeading">
@@ -611,7 +622,7 @@
             <div>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-display font-bold text-base text-[var(--text-primary)]">Coin Tracker</span>
-                <span class="status-pill warning">v4.0.1</span>
+                <span class="status-pill warning">v4.0.2</span>
               </div>
               <p class="muted-text m-0">In-game economy and savings tracker</p>
             </div>
@@ -681,7 +692,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--brand)] shrink-0 mt-0.5" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div class="min-w-0">
                   <span class="block">Version history and changelog</span>
-                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.1</span>
+                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.2</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0 max-sm:self-start">
@@ -695,8 +706,22 @@
               <div class="relative pl-5 border-l-2 border-[var(--brand)] pb-2">
                 <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
-                  <span class="font-bold text-[var(--text-primary)]">v4.0.1</span>
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.2</span>
                   <span class="status-pill success">Latest</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Keyboard navigation and shortcut guide</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Added global navigation shortcuts (G then D, A, H, N, S)</li>
+                  <li>Added slash (/) shortcut to quickly jump to and focus History search</li>
+                  <li>Added interactive shortcut help modal toggled via ? or top bar icon</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.1</span>
                   <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
                 </div>
                 <p class="font-medium text-[var(--text-primary)] mb-1">Transaction undo capability</p>
@@ -1033,6 +1058,62 @@
       <div class="modal-footer">
         <button type="button" id="confirmModalCancel" class="btn secondary">Cancel</button>
         <button type="button" id="confirmModalConfirm" class="btn danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shortcutsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="shortcutsModalTitle">
+    <div class="modal-panel max-w-lg">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold m-0" id="shortcutsModalTitle">Keyboard Shortcuts</h3>
+        <button type="button" class="close-btn btn ghost" data-modal="shortcutsModal" aria-label="Close keyboard shortcuts dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body space-y-4">
+        <div>
+          <h4 class="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2">Navigation</h4>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-sm py-1.5 border-b border-[var(--border)]">
+              <span class="text-[var(--text-primary)]">Go to Dashboard</span>
+              <div class="flex gap-1"><kbd class="kbd">G</kbd><kbd class="kbd">D</kbd></div>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1.5 border-b border-[var(--border)]">
+              <span class="text-[var(--text-primary)]">Go to Analytics</span>
+              <div class="flex gap-1"><kbd class="kbd">G</kbd><kbd class="kbd">A</kbd></div>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1.5 border-b border-[var(--border)]">
+              <span class="text-[var(--text-primary)]">Go to History</span>
+              <div class="flex gap-1"><kbd class="kbd">G</kbd><kbd class="kbd">H</kbd></div>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1.5 border-b border-[var(--border)]">
+              <span class="text-[var(--text-primary)]">Go to Notifications</span>
+              <div class="flex gap-1"><kbd class="kbd">G</kbd><kbd class="kbd">N</kbd></div>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1.5">
+              <span class="text-[var(--text-primary)]">Go to Settings</span>
+              <div class="flex gap-1"><kbd class="kbd">G</kbd><kbd class="kbd">S</kbd></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2">Actions & Search</h4>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-sm py-1.5 border-b border-[var(--border)]">
+              <span class="text-[var(--text-primary)]">Focus History search</span>
+              <kbd class="kbd">/</kbd>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1.5 border-b border-[var(--border)]">
+              <span class="text-[var(--text-primary)]">Open / close shortcuts guide</span>
+              <kbd class="kbd">?</kbd>
+            </div>
+            <div class="flex items-center justify-between text-sm py-1.5">
+              <span class="text-[var(--text-primary)]">Close modal or dialog</span>
+              <kbd class="kbd">Esc</kbd>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

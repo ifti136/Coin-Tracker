@@ -170,6 +170,17 @@ In the Firestore console, find the user's document under `users/{userId}` and se
 
 ---
 
+## 🆕 Web v4.0.2
+
+Keyboard Shortcuts & Help Guide — intuitive power-user navigation and shortcut discovery.
+
+- Added sequential page navigation shortcuts (`G` then `D` for Dashboard, `A` for Analytics, `H` for History, `N` for Notifications, `S` for Settings).
+- Quick search shortcut (`/`) to jump to and focus the History search input.
+- Interactive Keyboard Shortcuts dialog accessible via `?`, top bar icon button, or Settings.
+- Input and dialog focus isolation ensuring typing in form fields is never hijacked.
+
+---
+
 ## 🆕 Web v4.0.1
 
 Transaction Undo — accessible undo snackbar extended to Add Coins, Spend Coins, and Quick Actions with safe Firestore rollback and balance recalculation.
