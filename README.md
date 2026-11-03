@@ -170,6 +170,17 @@ In the Firestore console, find the user's document under `users/{userId}` and se
 
 ---
 
+## 🆕 Web v4.0.4
+
+Web Progress Card Generator & Share Flow — export a branded summary graphic of your current savings and earning pace.
+
+- Generated 900×500 branded progress card using Canvas 2D API mirroring the Android progress card graphic.
+- Displays balance, goal, progress track with 25/50/75% milestone markers, stats breakdown, and 7-day rate.
+- Uses Web Share API (`navigator.share`) for mobile browsers, with instant PNG download fallback for desktop.
+- Share button integrated seamlessly into the dashboard focal panel.
+
+---
+
 ## 🆕 Web v4.0.3
 
 Chart-to-History Navigation & Accessible Chart Data Tables — click any chart element to jump straight to matching transactions.

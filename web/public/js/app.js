@@ -685,6 +685,9 @@ class CoinTrackerApp {
     // Chart selection bar dismiss (v4.0.3)
     document.getElementById("chartSelectionDismissBtn")?.addEventListener("click", () => this._clearChartSelection());
 
+    // Progress card share (v4.0.4)
+    document.getElementById("shareCardBtn")?.addEventListener("click", () => this.shareProgressCard());
+
     this.setupKeyboardShortcuts();
   }
 
@@ -2488,6 +2491,213 @@ class CoinTrackerApp {
       return;
     }
     this.closeModal(id);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Progress card generator (v4.0.4)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Draw an 900×500 branded progress card onto an offscreen canvas and
+   * return it as a Blob (PNG). Uses only the Canvas 2D API — no new deps.
+   * @returns {Promise<Blob>}
+   */
+  async generateProgressCard() {
+    const W = 900, H = 500;
+    const canvas = document.createElement("canvas");
+    canvas.width  = W * window.devicePixelRatio;
+    canvas.height = H * window.devicePixelRatio;
+    canvas.style.width  = W + "px";
+    canvas.style.height = H + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    // ── Read design tokens from the live stylesheet ──
+    const cs       = getComputedStyle(document.documentElement);
+    const BG       = cs.getPropertyValue("--surface").trim()       || "#1a1a1a";
+    const SURFACE  = cs.getPropertyValue("--surface-subtle").trim() || "#222222";
+    const BRAND    = cs.getPropertyValue("--brand").trim()          || "#C9A84C";
+    const INCOME   = cs.getPropertyValue("--income").trim()         || "#4ade80";
+    const EXPENSE  = cs.getPropertyValue("--expense").trim()        || "#f87171";
+    const TEXT1    = cs.getPropertyValue("--text-primary").trim()   || "#f5f5f5";
+    const TEXT2    = cs.getPropertyValue("--text-secondary").trim() || "#a3a3a3";
+    const BORDER   = cs.getPropertyValue("--border").trim()         || "#2e2e2e";
+
+    // ── Helpers ──
+    const fmtNum = (n) => n.toLocaleString();
+    const pad    = 40;
+
+    // ── Background ──
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle grid dots
+    ctx.fillStyle = BORDER;
+    for (let x = pad; x < W - pad; x += 32) {
+      for (let y = pad; y < H - pad; y += 32) {
+        ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // ── Left accent bar ──
+    ctx.fillStyle = BRAND;
+    ctx.fillRect(0, 0, 6, H);
+
+    // ── App name + profile ──
+    ctx.fillStyle = BRAND;
+    ctx.font      = "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.fillText("Coin Tracker", pad + 8, pad + 18);
+    ctx.fillStyle = TEXT2;
+    ctx.font      = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    const profileName = this.currentProfile || "Default";
+    ctx.fillText(profileName, pad + 8, pad + 38);
+
+    // ── Balance ──
+    const bal = this.balance;
+    ctx.fillStyle = TEXT1;
+    ctx.font      = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.fillText(`${fmtNum(bal)}`, pad + 8, 140);
+    ctx.fillStyle = TEXT2;
+    ctx.font      = "14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.fillText("coins", pad + 8, 162);
+
+    // ── Progress bar ──
+    const goal    = this.goal;
+    const prog    = this.progress;  // 0–100
+    const barY    = 196, barH = 14, barW = W - pad * 2 - 16;
+    const radius  = barH / 2;
+
+    // Track
+    ctx.fillStyle = SURFACE;
+    this._roundRect(ctx, pad + 8, barY, barW, barH, radius);
+    ctx.fill();
+
+    // Fill
+    const fillW = Math.max(radius * 2, (prog / 100) * barW);
+    ctx.fillStyle = BRAND;
+    this._roundRect(ctx, pad + 8, barY, fillW, barH, radius);
+    ctx.fill();
+
+    // Milestone ticks (25, 50, 75%)
+    ctx.fillStyle = BG;
+    [0.25, 0.5, 0.75].forEach((pct) => {
+      const tickX = pad + 8 + pct * barW;
+      ctx.fillRect(tickX - 1, barY + 2, 2, barH - 4);
+    });
+
+    // Progress label
+    ctx.fillStyle = BRAND;
+    ctx.font      = "bold 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.fillText(`${prog}%`, pad + 8 + barW + 8, barY + 10);
+
+    // Goal text
+    ctx.fillStyle = TEXT2;
+    ctx.font      = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    const goalStr = goal > 0 ? `Goal: ${fmtNum(goal)} coins` : "No goal set";
+    ctx.fillText(goalStr, pad + 8, barY + barH + 20);
+
+    // ── Stat grid (3 cols) ──
+    const stats = this.dashboardStats;
+    const { rate: sevenRate } = this.sevenDayRate;
+    const best = this.bestEarningWeek;
+    const est  = this.estimatedDays;
+
+    const cols = [
+      { label: "Today",       value: `+${fmtNum(stats.today)}`,   color: INCOME  },
+      { label: "This week",   value: `+${fmtNum(stats.week)}`,    color: INCOME  },
+      { label: "This month",  value: `+${fmtNum(stats.month)}`,   color: INCOME  },
+      { label: "7-day rate",  value: `${fmtNum(sevenRate)}/day`,  color: BRAND   },
+      { label: "Best week",   value: best ? `${fmtNum(best.amount)}` : "—", color: BRAND },
+      { label: "Est. days",   value: est === "N/A" ? "—" : (est === 0 ? "Done!" : `${est} days`), color: goal > 0 ? TEXT1 : TEXT2 },
+    ];
+
+    const colW  = (W - pad * 2 - 16) / 3;
+    const boxY  = 270;
+    const boxH  = 90;
+
+    cols.forEach((col, i) => {
+      const row  = Math.floor(i / 3);
+      const col_ = i % 3;
+      const bx   = pad + 8 + col_ * colW;
+      const by   = boxY + row * (boxH + 12);
+      const bw   = colW - 12;
+
+      // Box background
+      ctx.fillStyle = SURFACE;
+      this._roundRect(ctx, bx, by, bw, boxH, 10);
+      ctx.fill();
+
+      // Label
+      ctx.fillStyle = TEXT2;
+      ctx.font      = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      ctx.fillText(col.label, bx + 14, by + 26);
+
+      // Value
+      ctx.fillStyle = col.color;
+      ctx.font      = "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      ctx.fillText(col.value, bx + 14, by + 60);
+    });
+
+    // ── Footer ──
+    const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    ctx.fillStyle = TEXT2;
+    ctx.font      = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.fillText(`Generated ${today}`, pad + 8, H - 18);
+
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  }
+
+  /** Rounded-rect path helper (CanvasRenderingContext2D has native roundRect but coverage varies) */
+  _roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  /**
+   * Generate the progress card and either share it via Web Share API
+   * (supported on mobile browsers) or trigger a PNG download as fallback.
+   */
+  async shareProgressCard() {
+    const btn = document.getElementById("shareCardBtn");
+    if (btn) { btn.disabled = true; btn.textContent = "Generating…"; }
+    try {
+      const blob = await this.generateProgressCard();
+      const file = new File([blob], `coin-tracker-progress-${Date.now()}.png`, { type: "image/png" });
+      const canShare = typeof navigator.share === "function" &&
+        navigator.canShare && navigator.canShare({ files: [file] });
+
+      if (canShare) {
+        await navigator.share({
+          title: "My Coin Tracker Progress",
+          text:  `${this.balance.toLocaleString()} coins — ${this.progress}% of goal`,
+          files: [file],
+        });
+      } else {
+        // Download fallback
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement("a");
+        a.href    = url;
+        a.download = file.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        this.showToast("Progress card saved!", "success");
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        this.showToast("Could not generate card. Try again.", "error");
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Share progress card"; }
+    }
   }
 
   showToast(message, type = "success") {

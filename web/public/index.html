@@ -206,6 +206,13 @@
           <div id="goalEstimate" class="text-[13px] font-medium text-[var(--text-muted)]"></div>
           <span class="text-[11px] text-[var(--text-muted)]">25 · 50 · 75% milestones</span>
         </div>
+        <!-- Share progress card (v4.0.4) -->
+        <div class="mt-4 flex justify-end">
+          <button type="button" id="shareCardBtn" class="btn ghost text-sm flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share progress card
+          </button>
+        </div>
       </section>
 
       <section class="card" aria-labelledby="quickActionsHeading">
@@ -634,7 +641,7 @@
             <div>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-display font-bold text-base text-[var(--text-primary)]">Coin Tracker</span>
-                <span class="status-pill warning">v4.0.3</span>
+                <span class="status-pill warning">v4.0.4</span>
               </div>
               <p class="muted-text m-0">In-game economy and savings tracker</p>
             </div>
@@ -704,7 +711,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--brand)] shrink-0 mt-0.5" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div class="min-w-0">
                   <span class="block">Version history and changelog</span>
-                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.3</span>
+                  <span class="block text-xs text-[var(--text-muted)] font-normal mt-0.5">v1.0.0 → v4.0.4</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0 max-sm:self-start">
@@ -718,8 +725,22 @@
               <div class="relative pl-5 border-l-2 border-[var(--brand)] pb-2">
                 <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
-                  <span class="font-bold text-[var(--text-primary)]">v4.0.3</span>
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.4</span>
                   <span class="status-pill success">Latest</span>
+                  <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
+                </div>
+                <p class="font-medium text-[var(--text-primary)] mb-1">Web progress card generator and share flow</p>
+                <ul class="list-disc pl-4 space-y-0.5 text-[var(--text-muted)]">
+                  <li>Generated 900×500 branded progress card mirroring Android progress card graphics</li>
+                  <li>Shows balance, goal, progress bar with milestone ticks, earnings stats, and 7-day rate</li>
+                  <li>Native Web Share API integration on supported devices with automatic PNG download fallback</li>
+                </ul>
+              </div>
+
+              <div class="relative pl-5 border-l-2 border-[var(--border)] pb-2">
+                <div class="absolute -left-[5px] top-0.5 w-2 h-2 rounded-full bg-[var(--brand)]"></div>
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="font-bold text-[var(--text-primary)]">v4.0.3</span>
                   <span class="text-[var(--text-muted)] text-[11px]">— 2026</span>
                 </div>
                 <p class="font-medium text-[var(--text-primary)] mb-1">Chart-to-History navigation and accessible data tables</p>
