@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -180,63 +181,69 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             setActionLoading("refreshData", true)
             _uiState.update { it.copy(error = null) }
-
-            val cached   = localCache.load(session.userId, session.currentProfile)
-            val dbResult = repo.loadProfile(session.userId, session.currentProfile)
-            val dbOk     = dbResult.isSuccess
-            val dbEnv    = dbResult.getOrNull()
-
-            when (val sync = SyncManager.compare(cached, dbOk, dbEnv)) {
-
-                is SyncResult.Synced, is SyncResult.DbNewer, is SyncResult.DbOnly -> {
-                    val env = when (sync) {
-                        is SyncResult.Synced  -> sync.env
-                        is SyncResult.DbNewer -> sync.env
-                        is SyncResult.DbOnly  -> sync.env
-                        else -> dbEnv!!
-                    }
-                    updateCacheBg(session, env)
-                    applyEnvelope(env, session, SyncState.Idle)
-                }
-
-                is SyncResult.RestoreFromCache -> {
-                    val offlineEnv = localCache.buildOfflineEnvelope(sync.cached)
-                    applyEnvelope(offlineEnv, session, SyncState.RestoredFromCache)
-                    launch(Dispatchers.IO) {
-                        val r = repo.importData(session, sync.cached.transactions, sync.cached.settings)
-                        if (r.isSuccess) {
-                            val fresh = r.getOrThrow()
-                            updateCacheBg(session, fresh)
-                            _uiState.update { it.copy(profileEnvelope = fresh) }
-                        }
-                    }
-                }
-
-                is SyncResult.UseCache -> {
-                    val offlineEnv = localCache.buildOfflineEnvelope(sync.cached)
-                    applyEnvelope(offlineEnv, session, SyncState.Offline)
-                }
-
-                is SyncResult.CacheNewer -> {
-                    val offlineEnv = localCache.buildOfflineEnvelope(sync.cached)
-                    applyEnvelope(offlineEnv, session, SyncState.PushedCacheToDb)
-                    launch(Dispatchers.IO) {
-                        val r = repo.importData(session, sync.cached.transactions, sync.cached.settings)
-                        if (r.isSuccess) {
-                            val fresh = r.getOrThrow()
-                            updateCacheBg(session, fresh)
-                            _uiState.update { it.copy(profileEnvelope = fresh, syncState = SyncState.Idle) }
-                        }
-                    }
-                }
-
-                is SyncResult.ConflictDetected ->
-                    applyEnvelope(sync.db, session, SyncState.Conflict(sync.cached, sync.db))
-
-                SyncResult.BothEmpty ->
-                    _uiState.update { it.copy(syncState = SyncState.Idle) }
+            try {
+                refreshDataInternal(session)
+            } finally {
+                setActionLoading("refreshData", false)
             }
-            setActionLoading("refreshData", false)
+        }
+    }
+
+    private suspend fun refreshDataInternal(session: UserSession) {
+        val cached   = localCache.load(session.userId, session.currentProfile)
+        val dbResult = repo.loadProfile(session.userId, session.currentProfile)
+        val dbOk     = dbResult.isSuccess
+        val dbEnv    = dbResult.getOrNull()
+
+        when (val sync = SyncManager.compare(cached, dbOk, dbEnv)) {
+
+            is SyncResult.Synced, is SyncResult.DbNewer, is SyncResult.DbOnly -> {
+                val env = when (sync) {
+                    is SyncResult.Synced  -> sync.env
+                    is SyncResult.DbNewer -> sync.env
+                    is SyncResult.DbOnly  -> sync.env
+                    else -> dbEnv!!
+                }
+                updateCacheBg(session, env)
+                applyEnvelope(env, session, SyncState.Idle)
+            }
+
+            is SyncResult.RestoreFromCache -> {
+                val offlineEnv = localCache.buildOfflineEnvelope(sync.cached)
+                applyEnvelope(offlineEnv, session, SyncState.RestoredFromCache)
+                withContext(Dispatchers.IO) {
+                    val r = repo.importData(session, sync.cached.transactions, sync.cached.settings)
+                    if (r.isSuccess) {
+                        val fresh = r.getOrThrow()
+                        updateCacheBg(session, fresh)
+                        _uiState.update { it.copy(profileEnvelope = fresh) }
+                    }
+                }
+            }
+
+            is SyncResult.UseCache -> {
+                val offlineEnv = localCache.buildOfflineEnvelope(sync.cached)
+                applyEnvelope(offlineEnv, session, SyncState.Offline)
+            }
+
+            is SyncResult.CacheNewer -> {
+                val offlineEnv = localCache.buildOfflineEnvelope(sync.cached)
+                applyEnvelope(offlineEnv, session, SyncState.PushedCacheToDb)
+                withContext(Dispatchers.IO) {
+                    val r = repo.importData(session, sync.cached.transactions, sync.cached.settings)
+                    if (r.isSuccess) {
+                        val fresh = r.getOrThrow()
+                        updateCacheBg(session, fresh)
+                        _uiState.update { it.copy(profileEnvelope = fresh, syncState = SyncState.Idle) }
+                    }
+                }
+            }
+
+            is SyncResult.ConflictDetected ->
+                applyEnvelope(sync.db, session, SyncState.Conflict(sync.cached, sync.db))
+
+            SyncResult.BothEmpty ->
+                _uiState.update { it.copy(syncState = SyncState.Idle) }
         }
     }
 
@@ -270,14 +277,18 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             setActionLoading("switchProfile", true)
             _uiState.update { it.copy(error = null) }
-            val r = repo.switchProfile(session, profile)
-            if (r.isSuccess) {
-                val updated = r.getOrThrow()
-                saveSession(updated)
-                _uiState.update { it.copy(session = updated) }
-                refreshData(); loadProfiles()
-            } else {
-                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+            try {
+                val r = repo.switchProfile(session, profile)
+                if (r.isSuccess) {
+                    val updated = r.getOrThrow()
+                    saveSession(updated)
+                    _uiState.update { it.copy(session = updated) }
+                    refreshDataInternal(updated)
+                    loadProfiles()
+                } else {
+                    _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                }
+            } finally {
                 setActionLoading("switchProfile", false)
             }
         }
@@ -293,10 +304,15 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             setActionLoading("createProfile", true)
             _uiState.update { it.copy(error = null) }
-            val r = repo.createProfile(session, trimmed)
-            if (r.isSuccess) { _uiState.update { it.copy(profiles = r.getOrThrow()) }; switchProfile(trimmed) }
-            else {
-                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+            try {
+                val r = repo.createProfile(session, trimmed)
+                if (r.isSuccess) {
+                    _uiState.update { it.copy(profiles = r.getOrThrow()) }
+                    switchProfile(trimmed)
+                } else {
+                    _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                }
+            } finally {
                 setActionLoading("createProfile", false)
             }
         }
@@ -307,13 +323,16 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             setActionLoading("deleteProfile", true)
             _uiState.update { it.copy(error = null) }
-            val r = repo.deleteProfile(session, profile)
-            if (r.isSuccess) {
-                localCache.delete(session.userId, profile)
-                _uiState.update { it.copy(profiles = r.getOrThrow()) }
-                switchProfile("Default")
-            } else {
-                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+            try {
+                val r = repo.deleteProfile(session, profile)
+                if (r.isSuccess) {
+                    localCache.delete(session.userId, profile)
+                    _uiState.update { it.copy(profiles = r.getOrThrow()) }
+                    switchProfile("Default")
+                } else {
+                    _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                }
+            } finally {
                 setActionLoading("deleteProfile", false)
             }
         }
@@ -324,10 +343,15 @@ class CoinTrackerViewModel @Inject constructor(
         viewModelScope.launch {
             setActionLoading("deleteAllData", true)
             _uiState.update { it.copy(error = null) }
-            val r = repo.deleteAllData(session)
-            if (r.isSuccess) { localCache.delete(session.userId, session.currentProfile); switchProfile("Default") }
-            else {
-                _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+            try {
+                val r = repo.deleteAllData(session)
+                if (r.isSuccess) {
+                    localCache.delete(session.userId, session.currentProfile)
+                    switchProfile("Default")
+                } else {
+                    _uiState.update { it.copy(error = r.exceptionOrNull()?.message) }
+                }
+            } finally {
                 setActionLoading("deleteAllData", false)
             }
         }
