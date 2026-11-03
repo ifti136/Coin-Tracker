@@ -181,3 +181,10 @@ Quick actions are the one-click buttons on the dashboard (e.g. "Login +50", "Box
 | Firestore permission denied | Re-deploy `firestore.rules`; check user has correct `role` field |
 | Admin panel redirects to `/` | User `role` in Firestore is not `"admin"` |
 | Emulator not connecting | Add `connectFirestoreEmulator` / `connectAuthEmulator` calls in JS files |
+
+
+---
+
+## Changelog
+
+For a detailed breakdown of all past releases, see **[CHANGELOG.md](CHANGELOG.md)**.

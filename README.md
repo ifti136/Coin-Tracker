@@ -170,59 +170,12 @@ In the Firestore console, find the user's document under `users/{userId}` and se
 
 ---
 
-## 🆕 Web v4.0.4
+## 📋 Changelogs & Release Notes
 
-Web Progress Card Generator & Share Flow — export a branded summary graphic of your current savings and earning pace.
+Detailed version histories and release notes are maintained separately per platform:
 
-- Generated 900×500 branded progress card using Canvas 2D API mirroring the Android progress card graphic.
-- Displays balance, goal, progress track with 25/50/75% milestone markers, stats breakdown, and 7-day rate.
-- Uses Web Share API (`navigator.share`) for mobile browsers, with instant PNG download fallback for desktop.
-- Share button integrated seamlessly into the dashboard focal panel.
-
----
-
-## 🆕 Web v4.0.3
-
-Chart-to-History Navigation & Accessible Chart Data Tables — click any chart element to jump straight to matching transactions.
-
-- Clicking a point on the Balance Timeline pre-fills the History date range for that exact day.
-- Clicking a segment on the Earnings or Spending doughnut pre-fills the source/category filter in History.
-- A selection bar appears below the charts describing the chosen data point with a "View matching transactions" button.
-- Dismiss action on the bar and full ARIA region announcement for assistive technology.
-
----
-
-## 🆕 Web v4.0.2
-
-Keyboard Shortcuts & Help Guide — intuitive power-user navigation and shortcut discovery.
-
-- Added sequential page navigation shortcuts (`G` then `D` for Dashboard, `A` for Analytics, `H` for History, `N` for Notifications, `S` for Settings).
-- Quick search shortcut (`/`) to jump to and focus the History search input.
-- Interactive Keyboard Shortcuts dialog accessible via `?`, top bar icon button, or Settings.
-- Input and dialog focus isolation ensuring typing in form fields is never hijacked.
-
----
-
-## 🆕 Web v4.0.1
-
-Transaction Undo — accessible undo snackbar extended to Add Coins, Spend Coins, and Quick Actions with safe Firestore rollback and balance recalculation.
-
-- Added undo action to Add Coins, Spend Coins, and Quick Action success snackbars.
-- Reverting a newly added transaction cleanly rolls back the record, recalculates running balances, and persists state without race conditions.
-- Accessible undo button with explicit aria-label and keyboard-navigable feedback.
-
----
-
-## 🆕 Web v4.0.0
-
-Web UI overhaul — gold/graphite design system, single `base.css` stylesheet, accessible dialogs, and safer writes.
-
-- New design tokens and components across dashboard, analytics, history, notifications, settings, login, and admin.
-- Add, spend, quick-action, and edit writes now prevent duplicate submission, show truthful pending states, validate inline, and preserve input on failure.
-- Goal panel handles missing/zero/reached goals without invalid percentages or negative remaining values; ETA hidden when unsupported.
-- Dialog lifecycle now uses `.modal.open` with focus trap/restore and Escape handling.
-- Removed dead `style.css`, `login.css`, and `admin.css`; service worker now caches `base.css`, Tailwind CDN, fonts, and Chart.js under `v6` caches.
-- Manifest and theme colors aligned to graphite `#11151B` / gold `#E8B84A`.
+- **[Web Changelog (v4.0.5) →](web/CHANGELOG.md)** — Gold & graphite UI overhaul, full-width desktop layout, design tokens, safe writes, transaction undo, keyboard shortcuts, chart navigation, and progress card generator.
+- **[Android Changelog (v3.3.0) →](android/CHANGELOG.md)** — Feature parity, Jetpack Compose UI, Glance widget, WorkManager reminders, and offline safety cache.
 
 ---
 

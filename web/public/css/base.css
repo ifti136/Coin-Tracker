@@ -613,14 +613,10 @@ input[aria-invalid="true"], .field-error input, .field-error select { border-col
 .top-bar-icon-btn { width: 44px !important; height: 44px !important; min-width: 44px; min-height: 44px; }
 .top-bar-logo { min-height: 44px; }
 
-/* ── Responsive: desktop (1024–1279) ────────────────────── */
-@media (min-width: 1024px) and (max-width: 1279px) {
-  .main-content { max-width: 900px; }
-}
-
-/* ── Responsive: wide desktop (≥1280) ───────────────────── */
-@media (min-width: 1280px) {
-  .main-content { max-width: 1080px; }
+/* ── Responsive: desktop layout (fill available screen width) ── */
+.main-content {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Reduced motion ────────────────────────────────────── */
