@@ -226,16 +226,17 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                             Spacer(Modifier.width(8.dp))
                                             val isSyncing = viewModel.isActionLoading("refreshData") || viewModel.isActionLoading("switchProfile")
                                             val isOffline = syncState is SyncState.Offline
+                                            val badgeColor = when {
+                                                isSyncing -> MaterialTheme.colorScheme.tertiary
+                                                isOffline -> MaterialTheme.colorScheme.error
+                                                else -> MaterialTheme.colorScheme.secondary
+                                            }
                                             Surface(
                                                 shape = RoundedCornerShape(50),
-                                                color = when {
-                                                    isSyncing -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                                    isOffline -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
-                                                    else -> WebSuccess.copy(alpha = 0.12f)
-                                                }
+                                                color = badgeColor.copy(alpha = 0.14f)
                                             ) {
                                                 Row(
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
@@ -243,13 +244,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                                         modifier = Modifier
                                                             .size(6.dp)
                                                             .clip(CircleShape)
-                                                            .background(
-                                                                when {
-                                                                    isSyncing -> MaterialTheme.colorScheme.primary
-                                                                    isOffline -> MaterialTheme.colorScheme.tertiary
-                                                                    else -> WebSuccess
-                                                                }
-                                                            )
+                                                            .background(badgeColor)
                                                     )
                                                     Text(
                                                         text = when {
@@ -257,13 +252,9 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                                             isOffline -> "Offline"
                                                             else -> "Synced"
                                                         },
-                                                        fontSize = 10.sp,
+                                                        fontSize = 11.sp,
                                                         fontWeight = FontWeight.Medium,
-                                                        color = when {
-                                                            isSyncing -> MaterialTheme.colorScheme.primary
-                                                            isOffline -> MaterialTheme.colorScheme.tertiary
-                                                            else -> WebSuccess
-                                                        }
+                                                        color = badgeColor
                                                     )
                                                 }
                                             }

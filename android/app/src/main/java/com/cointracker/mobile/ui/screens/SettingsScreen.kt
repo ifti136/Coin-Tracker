@@ -662,7 +662,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            "v3.3.0",
+                            "v4.0.0",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
@@ -834,6 +834,12 @@ fun SettingsScreen(
                             Spacer(Modifier.height(10.dp))
 
                             val changelogs = listOf(
+                                "v4.0.0 (2026)" to listOf(
+                                    "Gold & graphite design system overhaul",
+                                    "Material 3 token palette alignment (design-tokens.json)",
+                                    "Refined app shell, status pills, and login experience",
+                                    "Non-blocking profile switching and robust state lifecycle"
+                                ),
                                 "v3.3.0 (2026)" to listOf(
                                     "Web & Mobile feature parity",
                                     "6 new achievements, streaks, and Material 3 vector icons",

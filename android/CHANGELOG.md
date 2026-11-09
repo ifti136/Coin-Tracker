@@ -4,6 +4,21 @@ All notable changes to the Android app will be documented in this file.
 
 ---
 
+## [v4.0.0] — 2026
+
+### Changed
+- **Gold & Graphite Design Overhaul**: Full migration from the legacy blue palette to the unified gold & graphite design system (`design-tokens.json`).
+  - Dark Theme: Deep graphite canvas (`#11151B`), surface raised (`#222B35`), brand gold (`#E8B84A`), income emerald (`#47D7A0`), expense coral (`#F28B82`).
+  - Light Theme: Crisp light canvas (`#F5F6F8`), brand gold (`#9A6A08`), income emerald (`#06734F`), expense coral (`#B93832`).
+- **Material 3 Palette & Semantic Extensions**: Integrated token color extensions (`income`, `expense`, `brand`, `surfaceSubtle`, etc.) for clean, idiomatic Compose usage.
+- **App Shell & Top Bar**: Refined top bar card, brand gold navigation indicators, and compact sync status pill.
+- **Login Experience**: Redesigned login and registration cards with brand logo mark, consistent padding, and gold primary button.
+
+### Fixed
+- **Profile Switching Freeze**: Resolved permanent loading freeze when changing profiles by awaiting profile data in `refreshDataInternal` and safely releasing action state in a guaranteed `finally` block.
+
+---
+
 ## [v3.3.0] — 2026
 
 ### Web & Mobile Feature Parity
