@@ -4,6 +4,23 @@ All notable changes to the Android app will be documented in this file.
 
 ---
 
+## [v4.1.0] — 2026
+
+### Added
+- **Dashboard Focal Balance Panel**:
+  - Prominent balance display with bold display typography and coin metadata.
+  - Interactive goal progress bar with **25%, 50%, and 75% milestone markers**.
+  - Dynamic remaining-goal pill (`⚡ X to goal` / `🎉 Goal Achieved!`).
+  - Integrated "Share progress card" action embedded directly in the focal panel.
+- **Branded Progress Card Generator (`ProgressCardGenerator.kt`)**:
+  - Complete overhaul to 900×500 gold/graphite graphics matching Web v4.0.4.
+  - Features dark canvas background, gold accent strip, dot grid, balance, progress bar with milestone ticks, and 6 stat boxes (Today, Week, Month, 7d Rate, Best Week, Estimated Days).
+- **Refined Quick Actions & Entry Forms**:
+  - Clean `+ New Action` tile navigating directly to settings.
+  - Income and Expense entry forms with container tinting, semantic badges (`Income +` / `Expense −`), and proper error handling.
+
+---
+
 ## [v4.0.0] — 2026
 
 ### Changed
