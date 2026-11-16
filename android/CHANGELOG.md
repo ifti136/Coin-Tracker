@@ -4,6 +4,26 @@ All notable changes to the Android app will be documented in this file.
 
 ---
 
+## [v4.2.0] — 2026
+
+### Added
+- **Analytics Timeline Canvas Chart**:
+  - Custom Compose `Canvas` line chart with continuous gold curve, data points, and vertical gradient fill.
+  - Formatted horizontal date axis and adaptive vertical grid lines.
+- **Doughnut Breakdown Chart**:
+  - Multi-category doughnut chart using five-token palette from `design-tokens.json`.
+  - Detailed legend breakdown showing percentage shares and formatted coin amounts.
+- **Analytics Stat Cards**:
+  - Highlights for Best Week, 7-Day Daily Earning Rate, and Net Coins with semantic container tinting.
+- **Transaction History Overhaul**:
+  - Refined summary cards for Total Income, Total Spent, and Net Change.
+  - Enhanced filter panel with search bar, source selector dropdown, and date-range picker.
+  - Improved swipe-to-delete interaction with smooth danger background and delete action label.
+  - Transaction rows featuring semantic badge pills (`+` income in green, `−` expense in red) and edit modal.
+  - Modern bottom pill pagination with gold active indicator and smooth page windowing.
+
+---
+
 ## [v4.1.0] — 2026
 
 ### Added

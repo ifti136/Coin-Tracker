@@ -662,7 +662,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            "v4.1.0",
+                            "v4.2.0",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
@@ -834,6 +834,13 @@ fun SettingsScreen(
                             Spacer(Modifier.height(10.dp))
 
                             val changelogs = listOf(
+                                "v4.2.0 (2026)" to listOf(
+                                    "Canvas timeline chart with vertical gradient fill and gold curve",
+                                    "Interactive doughnut chart with 5-token palette breakdown",
+                                    "Refined analytics stat cards: daily rate, best week, net coins",
+                                    "Modern transaction history with swipe-to-delete and pill pagination",
+                                    "Semantic income and expense chips with formatted coin counts"
+                                ),
                                 "v4.1.0 (2026)" to listOf(
                                     "Dashboard focal balance panel with 25%, 50%, and 75% milestone markers",
                                     "Branded 900×500 gold/graphite progress card generator",

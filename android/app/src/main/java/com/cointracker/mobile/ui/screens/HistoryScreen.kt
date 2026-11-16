@@ -7,9 +7,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,12 +24,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cointracker.mobile.data.ProfileEnvelope
 import com.cointracker.mobile.ui.components.GlassCard
-import com.cointracker.mobile.ui.theme.WebDanger
-import com.cointracker.mobile.ui.theme.WebSuccess
+import com.cointracker.mobile.ui.theme.borderSubtle
+import com.cointracker.mobile.ui.theme.expense
+import com.cointracker.mobile.ui.theme.expenseContainer
+import com.cointracker.mobile.ui.theme.income
+import com.cointracker.mobile.ui.theme.incomeContainer
+import com.cointracker.mobile.ui.theme.surfaceSubtle
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -82,7 +91,7 @@ fun HistoryScreen(
     val currentItems = filteredList.drop(safeCurrentPage * itemsPerPage).take(itemsPerPage)
     val sources = listOf("All") + allTransactions.map { it.source }.distinct().sorted()
 
-    // Date picker dialog
+    // ── Date picker dialog ──────────────────────────────────────────────────
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -94,31 +103,57 @@ fun HistoryScreen(
                         dateRangeStartDay = Instant.ofEpochMilli(s).atZone(ZoneOffset.UTC).toLocalDate()
                         dateRangeEndDay = if (e != null) Instant.ofEpochMilli(e).atZone(ZoneOffset.UTC).toLocalDate() else dateRangeStartDay
                     }
-                    showDatePicker = false; currentPage = 0
+                    showDatePicker = false
+                    currentPage = 0
                 }) { Text("Apply") }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
-        ) { DateRangePicker(state = datePickerState) }
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DateRangePicker(state = datePickerState)
+        }
     }
 
-    // Edit dialog
+    // ── Edit dialog ────────────────────────────────────────────────────────
     if (editingTxId != null) {
         AlertDialog(
             onDismissRequest = { editingTxId = null },
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            title = { Text("Edit Transaction") },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp),
+            title = {
+                Text(
+                    text = "Edit Transaction",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
             text = {
-                Column {
-                    OutlinedTextField(value = editSource, onValueChange = { editSource = it },
-                        label = { Text("Source") }, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = editAmount, onValueChange = { editAmount = it },
-                        label = { Text("Amount") }, modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = editDate, onValueChange = { editDate = it },
-                        label = { Text("Date (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("e.g. 2025-03-15") })
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = editSource,
+                        onValueChange = { editSource = it },
+                        label = { Text("Source") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = editAmount,
+                        onValueChange = { editAmount = it },
+                        label = { Text("Amount (positive = income, negative = spend)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = editDate,
+                        onValueChange = { editDate = it },
+                        label = { Text("Date (YYYY-MM-DD)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("e.g. 2026-03-15") },
+                        shape = RoundedCornerShape(10.dp)
+                    )
                 }
             },
             confirmButton = {
@@ -131,7 +166,12 @@ fun HistoryScreen(
                             editingTxId = null
                         }
                     },
-                    enabled = !isEditing
+                    enabled = !isEditing,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     if (isEditing) {
                         CircularProgressIndicator(
@@ -140,90 +180,192 @@ fun HistoryScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Save")
+                        Text("Save", fontWeight = FontWeight.Bold)
                     }
                 }
             },
-            dismissButton = { TextButton(onClick = { editingTxId = null }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { editingTxId = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        item {
-            Spacer(Modifier.height(16.dp))
-            Text("History", style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.height(12.dp))
-        }
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item { Spacer(Modifier.height(12.dp)) }
 
-        // Summary row
+        // Header
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Income", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("+$totalIncome", color = WebSuccess, fontWeight = FontWeight.Bold)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Expense", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("$totalExpense", color = WebDanger, fontWeight = FontWeight.Bold)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Net", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("$net", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                }
+            Column {
+                Text(
+                    text = "History",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Track, search, and manage all your past coin movements",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Spacer(Modifier.height(12.dp))
         }
 
-        // Filter card
+        // ── Summary Cards Row ────────────────────────────────────────────────
         item {
-            GlassCard {
-                Column(modifier = Modifier.padding(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SummaryStatBox(
+                    label = "Total Income",
+                    value = "+${totalIncome.formatCoins()}",
+                    color = MaterialTheme.colorScheme.income,
+                    bgColor = MaterialTheme.colorScheme.incomeContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryStatBox(
+                    label = "Total Spent",
+                    value = totalExpense.formatCoins(),
+                    color = MaterialTheme.colorScheme.expense,
+                    bgColor = MaterialTheme.colorScheme.expenseContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryStatBox(
+                    label = "Net Change",
+                    value = (if (net > 0) "+${net.formatCoins()}" else net.formatCoins()),
+                    color = MaterialTheme.colorScheme.primary,
+                    bgColor = MaterialTheme.colorScheme.surfaceSubtle,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // ── Filter Card ──────────────────────────────────────────────────────
+        item {
+            GlassCard(shape = RoundedCornerShape(14.dp)) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
-                        value = searchQuery, onValueChange = { searchQuery = it; currentPage = 0 },
-                        label = { Text("Search") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                        value = searchQuery,
+                        onValueChange = {
+                            searchQuery = it
+                            currentPage = 0
+                        },
+                        label = { Text("Search by source or amount") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = ""; currentPage = 0 }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear search", modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         var expanded by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.weight(1f)) {
-                            Button(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Src: $filterSource")
+                            OutlinedButton(
+                                onClick = { expanded = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Src: $filterSource",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1
+                                    )
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
                                 sources.forEach { src ->
-                                    DropdownMenuItem(text = { Text(src) },
-                                        onClick = { filterSource = src; currentPage = 0; expanded = false })
+                                    DropdownMenuItem(
+                                        text = { Text(src, style = MaterialTheme.typography.bodyMedium) },
+                                        onClick = {
+                                            filterSource = src
+                                            currentPage = 0
+                                            expanded = false
+                                        }
+                                    )
                                 }
                             }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = { showDatePicker = true }) {
-                            if (dateRangeStartDay != null && dateRangeEndDay != null)
-                                Text("${dateRangeStartDay!!.format(displayFmt)}-${dateRangeEndDay!!.format(displayFmt)}", fontSize = 11.sp)
-                            else Icon(Icons.Default.DateRange, contentDescription = "Select date range filter")
+
+                        OutlinedButton(
+                            onClick = { showDatePicker = true },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            if (dateRangeStartDay != null && dateRangeEndDay != null) {
+                                Text(
+                                    "${dateRangeStartDay!!.format(displayFmt)} - ${dateRangeEndDay!!.format(displayFmt)}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                Icon(Icons.Default.DateRange, contentDescription = "Select date range filter", modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Dates", style = MaterialTheme.typography.bodySmall)
+                            }
                         }
+
                         if (dateRangeStartDay != null) {
-                            IconButton(onClick = { dateRangeStartDay = null; dateRangeEndDay = null; currentPage = 0 }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear date filter")
+                            IconButton(
+                                onClick = {
+                                    dateRangeStartDay = null
+                                    dateRangeEndDay = null
+                                    currentPage = 0
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear date filter", modifier = Modifier.size(18.dp))
                             }
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
         }
 
-        // Empty state
+        // ── Empty State ──────────────────────────────────────────────────────
         if (filteredList.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 48.dp),
+                        .padding(vertical = 40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -233,7 +375,7 @@ fun HistoryScreen(
                     ) {
                         if (allTransactions.isEmpty()) {
                             Icon(
-                                Icons.Default.ReceiptLong,
+                                Icons.AutoMirrored.Filled.ReceiptLong,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(48.dp)
@@ -248,7 +390,7 @@ fun HistoryScreen(
                                 "Start tracking your income and expenses to see your transaction history here.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             )
                         } else {
                             Icon(
@@ -267,7 +409,7 @@ fun HistoryScreen(
                                 "No transactions match your current search or filter criteria.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             )
                             Spacer(Modifier.height(8.dp))
                             FilledTonalButton(
@@ -277,7 +419,8 @@ fun HistoryScreen(
                                     dateRangeStartDay = null
                                     dateRangeEndDay = null
                                     currentPage = 0
-                                }
+                                },
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
@@ -289,18 +432,20 @@ fun HistoryScreen(
             }
         }
 
-        // Swipe-to-delete items
+        // ── Transaction Items (Swipe-to-delete) ──────────────────────────────
         items(currentItems, key = { it.id }) { tx ->
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
                     if (value == SwipeToDismissBoxValue.EndToStart) {
-                        onDelete(tx.id); true
+                        onDelete(tx.id)
+                        true
                     } else false
                 },
                 positionalThreshold = { it * 0.4f }
             )
 
             val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            val expenseColor = MaterialTheme.colorScheme.expense
 
             SwipeToDismissBox(
                 state = dismissState,
@@ -309,9 +454,9 @@ fun HistoryScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(vertical = 4.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(if (isSwiping) WebDanger else Color.Transparent),
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isSwiping) expenseColor else Color.Transparent),
                         contentAlignment = Alignment.CenterEnd
                     ) {
                         if (isSwiping) {
@@ -319,8 +464,12 @@ fun HistoryScreen(
                                 modifier = Modifier.padding(end = 20.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete transaction",
-                                    tint = Color.White, modifier = Modifier.size(24.dp))
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete transaction",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
                                 Spacer(Modifier.width(8.dp))
                                 Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
                             }
@@ -328,28 +477,39 @@ fun HistoryScreen(
                     }
                 }
             ) {
-                GlassCard {
+                GlassCard(shape = RoundedCornerShape(14.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(tx.source,
+                            Text(
+                                text = tx.source,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold)
-                            Text(tx.date.take(10),
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = tx.date.take(10),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            val isIncome = tx.amount >= 0
+                            val badgeColor = if (isIncome) MaterialTheme.colorScheme.income else MaterialTheme.colorScheme.expense
+                            val badgeBg = if (isIncome) MaterialTheme.colorScheme.incomeContainer else MaterialTheme.colorScheme.expenseContainer
+
                             Surface(
-                                shape = RoundedCornerShape(50),
-                                color = if (tx.amount >= 0) WebSuccess.copy(alpha = 0.12f) else WebDanger.copy(alpha = 0.12f)
+                                shape = RoundedCornerShape(8.dp),
+                                color = badgeBg
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -357,19 +517,20 @@ fun HistoryScreen(
                                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (tx.amount >= 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                                        contentDescription = if (tx.amount >= 0) "Income" else "Expense",
-                                        tint = if (tx.amount >= 0) WebSuccess else WebDanger,
+                                        imageVector = if (isIncome) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                        contentDescription = if (isIncome) "Income" else "Expense",
+                                        tint = badgeColor,
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Text(
-                                        text = if (tx.amount >= 0) "+${tx.amount}" else "${tx.amount}",
-                                        color = if (tx.amount >= 0) WebSuccess else WebDanger,
+                                        text = if (isIncome) "+${tx.amount.formatCoins()}" else tx.amount.formatCoins(),
+                                        color = badgeColor,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
+                                        fontSize = 13.sp
                                     )
                                 }
                             }
+
                             FilledTonalIconButton(
                                 onClick = {
                                     editingTxId = tx.id
@@ -377,30 +538,34 @@ fun HistoryScreen(
                                     editSource = tx.source
                                     editDate = tx.date.take(10)
                                 },
-                                modifier = Modifier.size(36.dp),
-                                enabled = !isActionLoading("updateTransaction")
+                                modifier = Modifier.size(34.dp),
+                                enabled = !isActionLoading("updateTransaction"),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
                                 if (isActionLoading("updateTransaction")) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(16.dp),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         strokeWidth = 2.dp
                                     )
                                 } else {
-                                    Icon(Icons.Default.Edit, contentDescription = "Edit transaction", modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Edit transaction",
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             }
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(4.dp))
         }
 
-        // Pills pagination — BOTTOM
+        // ── Pagination Pills (Bottom) ─────────────────────────────────────────
         if (totalPages > 1) {
             item {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 PillsPagination(
                     totalPages = totalPages,
                     currentPage = safeCurrentPage,
@@ -413,7 +578,42 @@ fun HistoryScreen(
     }
 }
 
-// Pills pagination composable
+// ── Supporting Components ───────────────────────────────────────────────────
+
+@Composable
+private fun SummaryStatBox(
+    label: String,
+    value: String,
+    color: Color,
+    bgColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = bgColor
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = color,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
 
 @Composable
 fun PillsPagination(
@@ -436,14 +636,14 @@ fun PillsPagination(
             Box(
                 modifier = Modifier
                     .padding(horizontal = 3.dp)
-                    .size(36.dp)
+                    .size(34.dp)
                     .clip(pillShape)
                     .background(if (currentPage > 0) primary.copy(alpha = 0.12f) else Color.Transparent)
                     .clickable(enabled = currentPage > 0) { onPageSelect(currentPage - 1) },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Go to previous page",
                     tint = if (currentPage > 0) primary else onSurf.copy(alpha = 0.25f),
                     modifier = Modifier.size(16.dp)
@@ -457,35 +657,56 @@ fun PillsPagination(
 
         if (windowStart > 0) {
             item {
-                PagePill(page = 0, isSelected = currentPage == 0,
-                    primary = primary, surface = surface, onSurf = onSurf,
-                    pillShape = pillShape, onPageSelect = onPageSelect)
+                PagePill(
+                    page = 0,
+                    isSelected = currentPage == 0,
+                    primary = primary,
+                    onSurf = onSurf,
+                    pillShape = pillShape,
+                    onPageSelect = onPageSelect
+                )
             }
             if (windowStart > 1) {
                 item {
-                    Text("…", color = onSurf.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(horizontal = 4.dp))
+                    Text(
+                        "…",
+                        color = onSurf.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
                 }
             }
         }
 
         itemsIndexed((windowStart..windowEnd).toList()) { _, page ->
-            PagePill(page = page, isSelected = currentPage == page,
-                primary = primary, surface = surface, onSurf = onSurf,
-                pillShape = pillShape, onPageSelect = onPageSelect)
+            PagePill(
+                page = page,
+                isSelected = currentPage == page,
+                primary = primary,
+                onSurf = onSurf,
+                pillShape = pillShape,
+                onPageSelect = onPageSelect
+            )
         }
 
         if (windowEnd < totalPages - 1) {
             if (windowEnd < totalPages - 2) {
                 item {
-                    Text("…", color = onSurf.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(horizontal = 4.dp))
+                    Text(
+                        "…",
+                        color = onSurf.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
                 }
             }
             item {
-                PagePill(page = totalPages - 1, isSelected = currentPage == totalPages - 1,
-                    primary = primary, surface = surface, onSurf = onSurf,
-                    pillShape = pillShape, onPageSelect = onPageSelect)
+                PagePill(
+                    page = totalPages - 1,
+                    isSelected = currentPage == totalPages - 1,
+                    primary = primary,
+                    onSurf = onSurf,
+                    pillShape = pillShape,
+                    onPageSelect = onPageSelect
+                )
             }
         }
 
@@ -494,14 +715,14 @@ fun PillsPagination(
             Box(
                 modifier = Modifier
                     .padding(horizontal = 3.dp)
-                    .size(36.dp)
+                    .size(34.dp)
                     .clip(pillShape)
                     .background(if (currentPage < totalPages - 1) primary.copy(alpha = 0.12f) else Color.Transparent)
                     .clickable(enabled = currentPage < totalPages - 1) { onPageSelect(currentPage + 1) },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.ArrowForward,
+                    Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = "Go to next page",
                     tint = if (currentPage < totalPages - 1) primary else onSurf.copy(alpha = 0.25f),
                     modifier = Modifier.size(16.dp)
@@ -516,7 +737,6 @@ private fun PagePill(
     page: Int,
     isSelected: Boolean,
     primary: Color,
-    surface: Color,
     onSurf: Color,
     pillShape: RoundedCornerShape,
     onPageSelect: (Int) -> Unit
@@ -524,19 +744,22 @@ private fun PagePill(
     Box(
         modifier = Modifier
             .padding(horizontal = 3.dp)
-            .height(36.dp)
-            .widthIn(min = 36.dp)
+            .height(34.dp)
+            .widthIn(min = 34.dp)
             .clip(pillShape)
             .background(if (isSelected) primary else primary.copy(alpha = 0.12f))
             .clickable { onPageSelect(page) }
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "${page + 1}",
-            color = if (isSelected) Color.White else onSurf.copy(alpha = 0.7f),
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else onSurf.copy(alpha = 0.7f),
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 14.sp
+            fontSize = 13.sp
         )
     }
 }
+
+private fun Int.formatCoins(): String =
+    toString().reversed().chunked(3).joinToString(",").reversed()

@@ -1,8 +1,11 @@
 package com.cointracker.mobile.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -11,14 +14,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cointracker.mobile.data.ProfileEnvelope
 import com.cointracker.mobile.data.Transaction
 import com.cointracker.mobile.ui.components.GlassCard
+import com.cointracker.mobile.ui.theme.expense
+import com.cointracker.mobile.ui.theme.income
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -86,44 +97,89 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
         filtered.filter { it.amount < 0 }.forEach { m[it.source] = (m[it.source] ?: 0) + (-it.amount) }
     }
 
-    // Pull pre-computed values from analytics snapshot (LIFETIME only)
     val bestWeekEarnings = envelope?.analytics?.bestWeekEarnings ?: 0
     val bestWeekLabel = envelope?.analytics?.bestWeekLabel ?: "N/A"
     val dailyRate7d = envelope?.analytics?.dailyRate7d ?: 0.0
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { Spacer(Modifier.height(16.dp)) }
+        item { Spacer(Modifier.height(12.dp)) }
 
-        item { Text("Analytics", style = MaterialTheme.typography.headlineMedium, color = textColor) }
+        item {
+            Column {
+                Text(
+                    text = "Analytics",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+                Text(
+                    text = "Insights and breakdowns from your activity",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
-        // Period chips
+        // ── 1. Period Selector Chips ──────────────────────────────────────────
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    listOf(Period.LIFETIME to "Lifetime", Period.MONTHLY to "Monthly", Period.WEEKLY to "Weekly")
-                        .forEach { (p, label) ->
-                            FilterChip(selected = period == p, onClick = { period = p },
-                                label = { Text(label, fontSize = 13.sp) }, modifier = Modifier.weight(1f))
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        Period.LIFETIME to "Lifetime",
+                        Period.MONTHLY to "Monthly",
+                        Period.WEEKLY to "Weekly"
+                    ).forEach { (p, label) ->
+                        FilterChip(
+                            selected = period == p,
+                            onClick = { period = p },
+                            label = { Text(label, fontSize = 12.sp, fontWeight = if (period == p) FontWeight.Bold else FontWeight.Normal) },
+                            shape = RoundedCornerShape(20.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     FilterChip(
                         selected = period == Period.CUSTOM,
                         onClick = { showPicker = true },
                         label = {
                             if (period == Period.CUSTOM && customStart != null && customEnd != null)
                                 Text("${customStart!!.format(displayFmt)} – ${customEnd!!.format(displayFmt)}", fontSize = 12.sp)
-                            else Text("Custom Range", fontSize = 13.sp)
+                            else Text("Custom Date Range", fontSize = 12.sp)
                         },
-                        leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Select date range", modifier = Modifier.size(16.dp)) },
+                        leadingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = "Select date range", modifier = Modifier.size(16.dp))
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.primary
+                        ),
                         modifier = Modifier.weight(1f)
                     )
+
                     if (period == Period.CUSTOM) {
-                        IconButton(onClick = { period = Period.LIFETIME; customStart = null; customEnd = null },
-                            modifier = Modifier.size(32.dp)) {
+                        IconButton(
+                            onClick = { period = Period.LIFETIME; customStart = null; customEnd = null },
+                            modifier = Modifier.size(32.dp)
+                        ) {
                             Icon(Icons.Default.Close, contentDescription = "Clear custom date range", modifier = Modifier.size(18.dp))
                         }
                     }
@@ -131,44 +187,137 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
             }
         }
 
-        // Stat boxes
+        // ── 2. Summary Metric Boxes (Earnings, Spending, Net) ───────────────────
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatBox("Earnings", "+$totalEarnings", MaterialTheme.colorScheme.secondary)
-                StatBox("Spending", "$totalSpending", MaterialTheme.colorScheme.error)
-                StatBox("Net", "$net", MaterialTheme.colorScheme.primary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatBox(
+                    label = "Total Earnings",
+                    value = "+${totalEarnings.formatCoins()}",
+                    color = MaterialTheme.colorScheme.income,
+                    modifier = Modifier.weight(1f)
+                )
+                StatBox(
+                    label = "Total Spending",
+                    value = "-${totalSpending.formatCoins()}",
+                    color = MaterialTheme.colorScheme.expense,
+                    modifier = Modifier.weight(1f)
+                )
+                StatBox(
+                    label = "Net Balance",
+                    value = "${if (net >= 0) "+" else ""}${net.formatCoins()}",
+                    color = if (net >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.expense,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
-        // Timeline
+        // ── 3. Balance Timeline Chart (Canvas with Gold Accent & Gradient Fill) ─
         item {
-            Text("Balance Timeline", style = MaterialTheme.typography.titleMedium, color = textColor)
-            GlassCard(modifier = Modifier.height(200.dp)) {
-                if (filtered.isNotEmpty()) {
-                    val chartLineColor = MaterialTheme.colorScheme.primary
-                    Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                        val points = filtered.sortedBy { it.date }
-                            .runningFold(0f) { sum, tx -> sum + tx.amount.toFloat() }
-                        val max = points.maxOrNull() ?: 1f
-                        val min = points.minOrNull() ?: 0f
-                        val range = (max - min).coerceAtLeast(1f)
-                        val wpp = size.width / (points.size - 1).coerceAtLeast(1)
-                        for (i in 0 until points.size - 1) {
-                            drawLine(
-                                chartLineColor,
-                                Offset(i * wpp, size.height - ((points[i] - min) / range * size.height)),
-                                Offset((i + 1) * wpp, size.height - ((points[i + 1] - min) / range * size.height)),
-                                strokeWidth = 5f
+            Column {
+                Text(
+                    text = "Balance over time",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+                Spacer(Modifier.height(8.dp))
+
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    if (filtered.isNotEmpty()) {
+                        val brandGold = MaterialTheme.colorScheme.primary
+                        val subtleGrid = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 20.dp)
+                        ) {
+                            val sortedTx = filtered.sortedBy { it.date }
+                            val points = sortedTx.runningFold(0f) { sum, tx -> sum + tx.amount.toFloat() }
+                            val max = points.maxOrNull() ?: 1f
+                            val min = points.minOrNull() ?: 0f
+                            val range = (max - min).coerceAtLeast(1f)
+
+                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
+                            val padBottom = 8f
+
+                            // Draw subtle horizontal grid lines
+                            val gridLines = 3
+                            for (g in 0..gridLines) {
+                                val gy = size.height * (g / gridLines.toFloat())
+                                drawLine(
+                                    color = subtleGrid,
+                                    start = Offset(0f, gy),
+                                    end = Offset(size.width, gy),
+                                    strokeWidth = 1f
+                                )
+                            }
+
+                            // Compute curve points
+                            val graphPoints = points.mapIndexed { i, p ->
+                                val x = i * stepX
+                                val y = size.height - padBottom - ((p - min) / range * (size.height - padBottom * 2))
+                                Offset(x, y)
+                            }
+
+                            // Fill path under graph
+                            val fillPath = Path().apply {
+                                moveTo(graphPoints.first().x, size.height)
+                                graphPoints.forEach { lineTo(it.x, it.y) }
+                                lineTo(graphPoints.last().x, size.height)
+                                close()
+                            }
+
+                            drawPath(
+                                path = fillPath,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(brandGold.copy(alpha = 0.28f), Color.Transparent),
+                                    startY = 0f,
+                                    endY = size.height
+                                )
                             )
+
+                            // Stroke line
+                            val linePath = Path().apply {
+                                moveTo(graphPoints.first().x, graphPoints.first().y)
+                                for (i in 1 until graphPoints.size) {
+                                    lineTo(graphPoints[i].x, graphPoints[i].y)
+                                }
+                            }
+
+                            drawPath(
+                                path = linePath,
+                                color = brandGold,
+                                style = Stroke(
+                                    width = 3.5.dp.toPx(),
+                                    cap = StrokeCap.Round,
+                                    join = StrokeJoin.Round
+                                )
+                            )
+
+                            // Draw dot at latest point
+                            val lastPt = graphPoints.last()
+                            drawCircle(color = brandGold, radius = 5.dp.toPx(), center = lastPt)
+                            drawCircle(color = Color.White, radius = 2.dp.toPx(), center = lastPt)
                         }
-                    }
-                } else {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("No data for this period", color = textColor)
-                            Spacer(Modifier.height(12.dp))
-                            FilledTonalButton(onClick = { /* Navigate to dashboard */ }) {
-                                Text("Add transactions to see analytics")
+                    } else {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("No data for this period", style = MaterialTheme.typography.bodyMedium, color = textColor)
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Add transactions to see analytics",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -176,85 +325,142 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
             }
         }
 
-        // Earnings breakdown
+        // ── 4. Earnings Breakdown (Doughnut Chart) ─────────────────────────────
         item {
-            Text("Earnings Breakdown", style = MaterialTheme.typography.titleMedium, color = textColor)
-            if (earningsBreakdown.isNotEmpty()) PieChartWithLegend(earningsBreakdown, textColor)
-            else {
-                Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("No earnings for this period", color = Color.Gray)
-                        Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = { /* Navigate to dashboard */ }) {
-                            Text("Add income to see breakdown")
+            Column {
+                Text(
+                    text = "Earnings by source",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+                Spacer(Modifier.height(8.dp))
+
+                if (earningsBreakdown.isNotEmpty()) {
+                    DoughnutChartWithLegend(data = earningsBreakdown, textColor = textColor)
+                } else {
+                    GlassCard(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                            Text("No earnings for this period", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
         }
 
-        // Spending breakdown
+        // ── 5. Spending Breakdown (Doughnut Chart) ─────────────────────────────
         item {
-            Text("Spending Breakdown", style = MaterialTheme.typography.titleMedium, color = textColor)
-            if (spendingBreakdown.isNotEmpty()) PieChartWithLegend(spendingBreakdown, textColor)
-            else {
-                Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("No spending for this period", color = Color.Gray)
-                        Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = { /* Navigate to dashboard */ }) {
-                            Text("Add expenses to see breakdown")
+            Column {
+                Text(
+                    text = "Spending by category",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+                Spacer(Modifier.height(8.dp))
+
+                if (spendingBreakdown.isNotEmpty()) {
+                    DoughnutChartWithLegend(data = spendingBreakdown, textColor = textColor)
+                } else {
+                    GlassCard(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                            Text("No spending for this period", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
         }
 
-        // 7-day rate card
+        // ── 6. 7-Day Earning Rate Card ────────────────────────────────────────
         item {
-            GlassCard {
-                Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column {
-                        Text("7-Day Earning Rate", style = MaterialTheme.typography.titleSmall,
-                            color = textColor.copy(alpha = 0.7f))
-                        Text("${dailyRate7d.toInt()} coins/day",
+                        Text(
+                            text = "7-Day Earning Rate",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "${dailyRate7d.toInt().formatCoins()} coins/day",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
+
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Last 7 days total", style = MaterialTheme.typography.labelSmall,
-                            color = textColor.copy(alpha = 0.5f))
-                        Text("${(dailyRate7d * 7).toInt()} coins",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary)
+                        Text(
+                            text = "Last 7 days total",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "+${(dailyRate7d * 7).toInt().formatCoins()} coins",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.income
+                        )
                     }
                 }
             }
         }
 
-        // Best earning week card
+        // ── 7. Best Earning Week Card ──────────────────────────────────────────
         if (bestWeekEarnings > 0) {
             item {
-                GlassCard {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically) {
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Column {
-                            Text("Best Earning Week", style = MaterialTheme.typography.titleSmall,
-                                color = textColor.copy(alpha = 0.7f))
-                            Text(bestWeekLabel,
+                            Text(
+                                text = "Best Earning Week",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = bestWeekLabel,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = textColor.copy(alpha = 0.5f))
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.EmojiEvents, contentDescription = "Best week achievement", tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(20.dp))
-                            Text("+$bestWeekEarnings coins",
-                                style = MaterialTheme.typography.titleLarge,
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.EmojiEvents,
+                                contentDescription = "Best week",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = "+${bestWeekEarnings.formatCoins()} coins",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.tertiary)
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
@@ -266,48 +472,117 @@ fun AnalyticsScreen(envelope: ProfileEnvelope?) {
 }
 
 @Composable
-fun StatBox(label: String, value: String, color: Color) {
-    GlassCard(modifier = Modifier.width(100.dp)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
-            Text(label, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleMedium, color = color)
+fun StatBox(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    GlassCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 4.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = color
+            )
         }
     }
 }
 
 @Composable
-fun PieChartWithLegend(data: Map<String, Int>, textColor: Color) {
-    GlassCard {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+fun DoughnutChartWithLegend(data: Map<String, Int>, textColor: Color) {
+    GlassCard(shape = RoundedCornerShape(14.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val total = data.values.sum().toFloat()
-            val colors = listOf(
+
+            // 5 Token Palette colors matching design-tokens.json
+            val palette = listOf(
                 MaterialTheme.colorScheme.primary,
-                MaterialTheme.colorScheme.secondary,
+                MaterialTheme.colorScheme.income,
                 MaterialTheme.colorScheme.tertiary,
-                MaterialTheme.colorScheme.error,
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.surfaceVariant,
+                MaterialTheme.colorScheme.expense
             )
-            Canvas(modifier = Modifier.size(100.dp)) {
+
+            // Doughnut chart via drawArc with stroke
+            Canvas(modifier = Modifier.size(110.dp)) {
                 var startAngle = -90f
+                val strokeW = 16.dp.toPx()
                 data.values.forEachIndexed { index, value ->
-                    val sweep = (value / total) * 360f
-                    drawArc(colors[index % colors.size], startAngle, sweep, useCenter = true)
+                    val sweep = if (total > 0) (value / total) * 360f else 0f
+                    drawArc(
+                        color = palette[index % palette.size],
+                        startAngle = startAngle,
+                        sweepAngle = sweep,
+                        useCenter = false,
+                        style = Stroke(width = strokeW)
+                    )
                     startAngle += sweep
                 }
             }
-            Spacer(Modifier.width(24.dp))
-            Column {
-                data.entries.forEachIndexed { index, entry ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(modifier = Modifier.size(12.dp), color = colors[index % colors.size],
-                            shape = MaterialTheme.shapes.small) {}
-                        Spacer(Modifier.width(8.dp))
-                        Text("${entry.key}: ${entry.value}",
-                            style = MaterialTheme.typography.bodySmall, color = textColor)
+
+            Spacer(Modifier.width(20.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                data.entries.take(5).forEachIndexed { index, entry ->
+                    val pct = if (total > 0) ((entry.value / total) * 100).toInt() else 0
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(palette[index % palette.size])
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = entry.key,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textColor,
+                                maxLines = 1
+                            )
+                        }
+                        Text(
+                            text = "${entry.value.formatCoins()} ($pct%)",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
         }
     }
 }
+
+private fun Int.formatCoins(): String =
+    toString().reversed().chunked(3).joinToString(",").reversed()
