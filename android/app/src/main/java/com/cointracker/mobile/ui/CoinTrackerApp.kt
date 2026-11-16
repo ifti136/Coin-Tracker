@@ -293,7 +293,7 @@ fun CoinTrackerApp(viewModel: CoinTrackerViewModel = hiltViewModel()) {
                                                                 }
                                                             }, onClick = { if (!ia) viewModel.switchProfile(p); showMenu = false })
                                                         }
-                                                        Divider()
+                                                        HorizontalDivider()
                                                         DropdownMenuItem({ Text("+ Add Profile") }, { navController.navigate("settings"); showMenu = false })
                                                         if (uiState.session?.role == "admin") DropdownMenuItem({ Text("Admin Panel", color = MaterialTheme.colorScheme.primary) }, { navController.navigate("admin"); showMenu = false })
                                                         DropdownMenuItem({ Text("Log Out", color = MaterialTheme.colorScheme.error) }, { viewModel.logout(); showMenu = false })

@@ -662,7 +662,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            "v4.3.0",
+                            "v4.4.0",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
@@ -834,6 +834,12 @@ fun SettingsScreen(
                             Spacer(Modifier.height(10.dp))
 
                             val changelogs = listOf(
+                                "v4.4.0 (2026)" to listOf(
+                                    "Responsive & adaptive layout refinement across phone and tablet viewports",
+                                    "Comprehensive TalkBack and screen-reader accessibility audit",
+                                    "Touch target optimization (≥ 48dp) across interactive components",
+                                    "Final release packaging with optimized APK build artifacts"
+                                ),
                                 "v4.3.0 (2026)" to listOf(
                                     "Notifications center: activity alerts, milestones, and achievement cards",
                                     "Admin screen polish: user metrics, registration charts, and token colors",

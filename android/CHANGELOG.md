@@ -4,6 +4,21 @@ All notable changes to the Android app will be documented in this file.
 
 ---
 
+## [v4.4.0] — 2026
+
+### Added
+- **Accessibility & Touch Target Optimization**:
+  - Full TalkBack and screen-reader audit with explicit content descriptions and live region semantics.
+  - Interactive touch targets padded to adhere to Android accessibility guidelines (≥ 48dp).
+- **Responsive Layout Polish**:
+  - Refined layout constraints and adaptive maximum content widths across phone and tablet form factors.
+  - Smooth adaptive navigation and status bar handling.
+- **Production Build & Packaging**:
+  - Zero deprecation warnings across all Kotlin and Compose UI modules.
+  - Final verified release-ready debug APK build artifact.
+
+---
+
 ## [v4.3.0] — 2026
 
 ### Added
