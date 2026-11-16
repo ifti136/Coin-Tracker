@@ -1,5 +1,6 @@
 package com.cointracker.mobile.widget
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -10,14 +11,13 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
-import android.content.res.Configuration
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.updateAppWidgetState
@@ -28,12 +28,10 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -46,8 +44,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.ZoneOffset
-import androidx.glance.appwidget.LinearProgressIndicator
-import android.annotation.SuppressLint
 
 // ── State keys ───────────────────────────────────────────────────────────────
 
@@ -58,28 +54,26 @@ private val KEY_RATE      = stringPreferencesKey("w_rate")
 private val KEY_PROFILE   = stringPreferencesKey("w_profile")
 private val KEY_IS_DARK   = stringPreferencesKey("w_is_dark")   // "true" / "false"
 
-// ── App gradient palette (matches CoinTrackerTheme) ──────────────────────────
+// ── Gold & Graphite tokens (matches design-tokens.json) ──────────────────────
 
-private val BG_DARK_START  = Color(0xFF1E1B3A)   // GradientDark1
-private val BG_DARK_END    = Color(0xFF0B3A5D)   // GradientDark3
-private val BG_LIGHT_START = Color(0xFFC3AED6)   // GradientLight1
-private val BG_LIGHT_END   = Color(0xFFA1C4FD)   // GradientLight3
-private val TEXT_DARK      = Color(0xFFE2E8F0)
-private val TEXT_LIGHT     = Color(0xFF1E293B)
-private val PRIMARY_DARK   = Color(0xFF60A5FA)
-private val PRIMARY_LIGHT  = Color(0xFF3B82F6)
-private val SUCCESS        = Color(0xFF10B981)
-private val MUTED_DARK     = Color(0xFF94A3B8)
-private val MUTED_LIGHT    = Color(0xFF64748B)
-private val TRACK          = Color(0x33FFFFFF)
+private val BG_DARK        = Color(0xFF181F26)   // DarkSurface
+private val BG_LIGHT       = Color(0xFFFFFFFF)   // LightSurface
+private val TEXT_DARK      = Color(0xFFF1F5F9)   // DarkTextPrimary
+private val TEXT_LIGHT     = Color(0xFF0F172A)   // LightTextPrimary
+private val PRIMARY_DARK   = Color(0xFFE8B84A)   // Brand Gold
+private val PRIMARY_LIGHT  = Color(0xFF9A6A08)   // Brand Gold (Light)
+private val SUCCESS_DARK   = Color(0xFF47D7A0)   // Income Emerald
+private val SUCCESS_LIGHT  = Color(0xFF06734F)   // Income Emerald (Light)
+private val MUTED_DARK     = Color(0xFF94A3B8)   // Slate 400
+private val MUTED_LIGHT    = Color(0xFF64748B)   // Slate 500
+private val TRACK_DARK     = Color(0xFF222B35)   // Surface Subtle Dark
+private val TRACK_LIGHT    = Color(0xFFE2E8F0)   // Surface Subtle Light
 
 // ── Widget ───────────────────────────────────────────────────────────────────
 
 class CoinTrackerWidget : GlanceAppWidget() {
 
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
-
-    // Allow any size — the layout adapts
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -98,29 +92,22 @@ class CoinTrackerWidget : GlanceAppWidget() {
         val isDark   = prefs[KEY_IS_DARK]  != "false"   // default dark
         val pct      = progress.coerceIn(0, 100)
 
-        val bgColor    = if (isDark) BG_DARK_START  else BG_LIGHT_START
-        val textColor  = if (isDark) TEXT_DARK      else TEXT_LIGHT
-        val primary    = if (isDark) PRIMARY_DARK   else PRIMARY_LIGHT
-        val muted      = if (isDark) MUTED_DARK     else MUTED_LIGHT
+        val bgColor    = if (isDark) BG_DARK      else BG_LIGHT
+        val textColor  = if (isDark) TEXT_DARK    else TEXT_LIGHT
+        val primary    = if (isDark) PRIMARY_DARK else PRIMARY_LIGHT
+        val success    = if (isDark) SUCCESS_DARK else SUCCESS_LIGHT
+        val muted      = if (isDark) MUTED_DARK   else MUTED_LIGHT
+        val track      = if (isDark) TRACK_DARK   else TRACK_LIGHT
 
-        // Outer container mimics app gradient with rounded corners + padding
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(ColorProvider(bgColor))
-                .cornerRadius(20.dp)
+                .cornerRadius(18.dp)
                 .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
                 .padding(16.dp),
             contentAlignment = Alignment.TopStart
         ) {
-            // Subtle overlay for depth (dark strip at top-left)
-            Box(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(ColorProvider(Color(0x18FFFFFF)))
-                    .cornerRadius(20.dp)
-            ) {}
-
             Column(modifier = GlanceModifier.fillMaxSize()) {
 
                 // ── Header ────────────────────────────────────────────────────
@@ -143,13 +130,13 @@ class CoinTrackerWidget : GlanceAppWidget() {
                     )
                 }
 
-                Spacer(GlanceModifier.height(6.dp))
+                Spacer(GlanceModifier.height(8.dp))
 
                 // ── Balance ───────────────────────────────────────────────────
                 Text(
                     "${balance.formatCoins()} coins",
                     style = TextStyle(
-                        fontSize = 24.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorProvider(primary)
                     )
@@ -165,15 +152,15 @@ class CoinTrackerWidget : GlanceAppWidget() {
 
                 Spacer(GlanceModifier.height(8.dp))
 
-                // Progress bar — automatically handles fractional width for any widget size
+                // ── Progress bar ──────────────────────────────────────────────
                 LinearProgressIndicator(
                     progress = pct / 100f,
                     modifier = GlanceModifier
                         .fillMaxWidth()
                         .height(8.dp)
                         .cornerRadius(4.dp),
-                    color = ColorProvider(Color(0xFF10B981)),         // Your green fill
-                    backgroundColor = ColorProvider(Color(0xFFE2E8F0)) // Your gray track
+                    color = ColorProvider(primary),
+                    backgroundColor = ColorProvider(track)
                 )
 
                 Spacer(GlanceModifier.height(8.dp))

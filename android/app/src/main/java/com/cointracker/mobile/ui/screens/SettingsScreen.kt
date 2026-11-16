@@ -25,7 +25,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ExpandLess
@@ -353,7 +353,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()) { Text("Cancel Edit") }
                 }
                 if (envelope?.settings?.quickActions?.isNotEmpty() == true) {
-                    Divider(Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     envelope.settings.quickActions.forEachIndexed { index, action ->
                         val isDeleting = isActionLoading("deleteQuickAction_$index")
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -662,7 +662,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            "v4.2.0",
+                            "v4.3.0",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
@@ -762,7 +762,7 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
-                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text("GitHub", style = MaterialTheme.typography.labelSmall)
                             }
@@ -776,7 +776,7 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
-                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text("Web App", style = MaterialTheme.typography.labelSmall)
                             }
@@ -834,6 +834,12 @@ fun SettingsScreen(
                             Spacer(Modifier.height(10.dp))
 
                             val changelogs = listOf(
+                                "v4.3.0 (2026)" to listOf(
+                                    "Notifications center: activity alerts, milestones, and achievement cards",
+                                    "Admin screen polish: user metrics, registration charts, and token colors",
+                                    "Home screen Glance widget updated with gold & graphite design tokens",
+                                    "Modern Material 3 components and resolved deprecated icon usages"
+                                ),
                                 "v4.2.0 (2026)" to listOf(
                                     "Canvas timeline chart with vertical gradient fill and gold curve",
                                     "Interactive doughnut chart with 5-token palette breakdown",

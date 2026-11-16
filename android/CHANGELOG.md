@@ -4,6 +4,24 @@ All notable changes to the Android app will be documented in this file.
 
 ---
 
+## [v4.3.0] — 2026
+
+### Added
+- **Notifications & Milestone Center (`NotificationsScreen.kt`)**:
+  - Activity alerts for goal reached, 50%/75% milestones, strong earning days, and remaining-goal proximity.
+  - Achievement cards styled with gold & graphite container tokens, achievement badge icons, and green completion checkmarks.
+- **Admin Panel Polish (`AdminScreen.kt`)**:
+  - System overview stat cards (Users, Coins Tracked, Transactions) with brand gold typography.
+  - 7-day user registration bar chart with tokenized progress indicators.
+  - User list with semantic balance coloring, join dates, and delete confirmation dialogs.
+- **Glance App Widget (`CoinTrackerWidget.kt`)**:
+  - Complete overhaul to gold & graphite design tokens matching the app theme.
+  - Responsive layout displaying profile name, live balance, progress bar, and 7-day average rate.
+- **Modernized Material 3 Components**:
+  - Upgraded to `HorizontalDivider` and AutoMirrored icons (`ArrowBack`, `TrendingUp`, `OpenInNew`).
+
+---
+
 ## [v4.2.0] — 2026
 
 ### Added
