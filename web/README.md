@@ -48,7 +48,7 @@ web/
 - **Multiple profiles** — stored as subcollection under `user_data/{uid}/profiles/`; last active profile persisted in Firestore.
 - **Admin panel** — total users/coins/transactions, 7-day new-user bar chart, user list with sortable columns, search, delete user, broadcast message.
 - **Dark / light theme** — toggle persisted in `localStorage` and synced to Firestore `settings.dark_mode`.
-- **Responsive** — desktop sidebar nav + mobile bottom nav bar with hamburger menu.
+- **Responsive** — desktop sidebar navigation + dedicated mobile bottom navigation bar.
 - **Broadcast** — admin can set a message shown as a toast to all users on app load.
 
 ---

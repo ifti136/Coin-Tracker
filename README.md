@@ -174,7 +174,7 @@ In the Firestore console, find the user's document under `users/{userId}` and se
 
 Detailed version histories and release notes are maintained separately per platform:
 
-- **[Web Changelog (v4.0.5) →](web/CHANGELOG.md)** — Gold & graphite UI overhaul, full-width desktop layout, design tokens, safe writes, transaction undo, keyboard shortcuts, chart navigation, and progress card generator.
+- **[Web Changelog (v4.0.6) →](web/CHANGELOG.md)** — Gold & graphite UI overhaul, unified mobile navigation, full-width desktop layout, design tokens, safe writes, transaction undo, keyboard shortcuts, chart navigation, and progress card generator.
 - **[Android Changelog (v4.4.0) →](android/CHANGELOG.md)** — Gold & graphite UI overhaul, responsive and accessibility polish, notifications & achievements, admin panel, Glance widget, and analytics & history charts.
 
 ---

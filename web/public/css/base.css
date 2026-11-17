@@ -696,21 +696,6 @@ input[aria-invalid="true"], .field-error input, .field-error select { border-col
 .nav-btn.active { background: var(--surface-subtle); color: var(--text-primary); font-weight: 600; }
 .nav-btn.active .nav-marker { background: var(--brand); }
 
-@media (max-width: 599px) {
-  .sidebar.nav-expanded {
-    max-height: calc(100vh - var(--bottom-nav-h));
-    overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-  }
-  .sidebar.nav-expanded .navbar {
-    display: flex;
-    border-top: 1px solid var(--border);
-    padding: 8px;
-  }
-  .sidebar.nav-expanded .profile-section { display: block; }
-  .sidebar.nav-expanded .nav-btn .nav-label { opacity: 1; pointer-events: auto; }
-}
-
 .mobile-nav-label { font-size: 11px; }
 
 .history-table th:nth-child(4),
@@ -734,7 +719,6 @@ input[aria-invalid="true"], .field-error input, .field-error select { border-col
   .category-add-row .btn { width: 100%; }
 }
 
-.hamburger-btn { min-width: 44px; min-height: 44px; }
 .mobile-control-links button { min-height: 44px; }
 
 /* ── Keyboard shortcut badges ──────────────────────────── */

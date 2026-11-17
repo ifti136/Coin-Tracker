@@ -478,12 +478,12 @@ class CoinTrackerApp {
   //  Event listeners
   // ─────────────────────────────────────────────────────────────
   setupEventListeners() {
-    document.getElementById("hamburgerBtn").addEventListener("click", () => this.toggleMobileNav());
+    document.getElementById("hamburgerBtn")?.addEventListener("click", () => this.toggleMobileNav());
 
     document.querySelectorAll("nav.nav > .nav-btn, nav.navbar > .nav-btn, .navbar > .nav-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         this.showPage(e.currentTarget.dataset.page);
-        if (document.querySelector(".sidebar").classList.contains("nav-expanded")) this.toggleMobileNav();
+        if (document.querySelector(".sidebar")?.classList.contains("nav-expanded")) this.toggleMobileNav();
       });
     });
 
@@ -529,7 +529,7 @@ class CoinTrackerApp {
       }
       const sidebar = document.querySelector(".sidebar");
       const hamburgerBtn = document.getElementById("hamburgerBtn");
-      if (sidebar && sidebar.classList.contains("nav-expanded") && !sidebar.contains(e.target) && e.target !== hamburgerBtn && !hamburgerBtn.contains(e.target)) {
+      if (sidebar && sidebar.classList.contains("nav-expanded") && !sidebar.contains(e.target) && (!hamburgerBtn || (e.target !== hamburgerBtn && !hamburgerBtn.contains(e.target)))) {
         this.toggleMobileNav();
       }
     });
@@ -2343,11 +2343,14 @@ class CoinTrackerApp {
 
   toggleMobileNav() {
     const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
     sidebar.classList.toggle("nav-expanded");
     const expanded = sidebar.classList.contains("nav-expanded");
     const hamburger = document.getElementById("hamburgerBtn");
-    hamburger.setAttribute("aria-expanded", expanded);
-    hamburger.setAttribute("aria-label", expanded ? "Close navigation menu" : "Open navigation menu");
+    if (hamburger) {
+      hamburger.setAttribute("aria-expanded", expanded);
+      hamburger.setAttribute("aria-label", expanded ? "Close navigation menu" : "Open navigation menu");
+    }
   }
 
   // Sidebar pinned state (desktop)
@@ -2764,34 +2767,32 @@ class CoinTrackerApp {
   }
 
   updateSyncStatus(status, label) {
-    const dots = [document.getElementById("dbSyncDot"), document.getElementById("mobileDbSyncDot")];
-    const texts = [document.getElementById("dbSyncText"), document.getElementById("mobileDbSyncText")];
+    const dot = document.getElementById("dbSyncDot");
+    const text = document.getElementById("dbSyncText");
 
-    dots.forEach((dot) => {
-      if (!dot) return;
-      dot.className = dot.id === "mobileDbSyncDot"
-        ? "w-1.5 h-1.5 rounded-full"
-        : "w-2 h-2 rounded-full";
+    if (dot) {
+      dot.className = "w-2 h-2 rounded-full";
       if (status === "loading") {
         dot.style.background = "var(--warning)";
         dot.classList.add("animate-pulse");
       } else if (status === "error") {
         dot.style.background = "var(--expense)";
+        dot.classList.remove("animate-pulse");
       } else {
         dot.style.background = "var(--income)";
+        dot.classList.remove("animate-pulse");
       }
-    });
+    }
 
-    texts.forEach((text) => {
-      if (!text) return;
+    if (text) {
       if (status === "loading") {
-        text.textContent = text.id === "mobileDbSyncText" ? "Retrieving..." : (label || "Retrieving data...");
+        text.textContent = label || "Retrieving data...";
       } else if (status === "error") {
-        text.textContent = text.id === "mobileDbSyncText" ? "Error" : (label || "Database disconnected");
+        text.textContent = label || "Database disconnected";
       } else {
-        text.textContent = text.id === "mobileDbSyncText" ? "Synced" : (label || "Database synced");
+        text.textContent = label || "Database synced";
       }
-    });
+    }
   }
 }
 

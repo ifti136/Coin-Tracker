@@ -4,6 +4,14 @@ All notable changes to the web client will be documented in this file.
 
 ---
 
+## [v4.0.6] — 2026
+
+### Changed
+- **Unified Mobile Navigation**: Removed the redundant top hamburger menu drawer on mobile viewports (< 640px). The persistent mobile bottom navigation bar is now the dedicated, primary navigation interface for mobile users (Dashboard, Analytics, History, Alerts, Settings).
+- **Persistent Mobile Top Bar**: Promoted the top header to all viewports, providing clean brand identity, real-time database sync status, theme toggle, and profile management across both mobile and desktop screens.
+
+---
+
 ## [v4.0.5] — 2026
 
 ### Fixed
